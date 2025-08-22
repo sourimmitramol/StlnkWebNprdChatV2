@@ -1,0 +1,380 @@
+2025-08-20 10:24:01,450 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-20 10:24:01,450 - shipping_chatbot - INFO - Agent created with 12 tools
+2025-08-20 10:24:01,450 - shipping_chatbot - INFO - Agent initialized for CLI
+2025-08-20 10:24:37,839 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2025-08-20 10:26:19,519 - shipping_chatbot - INFO - Fetched 4748 rows
+2025-08-20 10:26:19,522 - shipping_chatbot - INFO - Starting preprocessing on 4748 rows
+2025-08-20 10:26:19,542 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2025-08-20 10:26:19,650 - shipping_chatbot - INFO - Added `delay_days` column
+2025-08-20 10:56:18,507 - shipping_chatbot - ERROR - Agent failed
+Traceback (most recent call last):
+  File "D:\molchatbot_version6\cli\run.py", line 36, in run_azure_chatbot_cli
+    answer = agent.run(user)
+             ^^^^^^^^^^^^^^^
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain_core\_api\deprecation.py", line 180, in warning_emitting_wrapper
+    return wrapped(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain\chains\base.py", line 600, in run
+    return self(args[0], callbacks=callbacks, tags=tags, metadata=metadata)[
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain_core\_api\deprecation.py", line 180, in warning_emitting_wrapper
+    return wrapped(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain\chains\base.py", line 383, in __call__
+    return self.invoke(
+           ^^^^^^^^^^^^
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain\chains\base.py", line 166, in invoke
+    raise e
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain\chains\base.py", line 156, in invoke
+    self._call(inputs, run_manager=run_manager)
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain\agents\agent.py", line 1433, in _call
+    next_step_output = self._take_next_step(
+                       ^^^^^^^^^^^^^^^^^^^^^
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain\agents\agent.py", line 1139, in _take_next_step
+    [
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain\agents\agent.py", line 1139, in <listcomp>
+    [
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain\agents\agent.py", line 1224, in _iter_next_step
+    yield self._perform_agent_action(
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain\agents\agent.py", line 1246, in _perform_agent_action
+    observation = tool.run(
+                  ^^^^^^^^^
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain_core\tools\base.py", line 586, in run
+    raise error_to_raise
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain_core\tools\base.py", line 555, in run
+    response = context.run(self._run, *tool_args, **tool_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain_core\tools\simple.py", line 84, in _run
+    return self.func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\molchatbot_version6\agents\tools.py", line 161, in get_container_eta
+    out["eta_dp"] = out["eta_dp"].dt.strftime("%Y-%m-%d")
+                    ^^^^^^^^^^^^^^^^
+  File "D:\molchatbot_version6\venv\Lib\site-packages\pandas\core\generic.py", line 6318, in __getattr__
+    return object.__getattribute__(self, name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\molchatbot_version6\venv\Lib\site-packages\pandas\core\accessor.py", line 224, in __get__
+    accessor_obj = self._accessor(obj)
+                   ^^^^^^^^^^^^^^^^^^^
+  File "D:\molchatbot_version6\venv\Lib\site-packages\pandas\core\indexes\accessors.py", line 643, in __new__
+    raise AttributeError("Can only use .dt accessor with datetimelike values")
+AttributeError: Can only use .dt accessor with datetimelike values
+2025-08-20 10:56:51,307 - shipping_chatbot - ERROR - Agent failed
+Traceback (most recent call last):
+  File "D:\molchatbot_version6\cli\run.py", line 36, in run_azure_chatbot_cli
+    answer = agent.run(user)
+             ^^^^^^^^^^^^^^^
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain_core\_api\deprecation.py", line 180, in warning_emitting_wrapper
+    return wrapped(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain\chains\base.py", line 600, in run
+    return self(args[0], callbacks=callbacks, tags=tags, metadata=metadata)[
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain_core\_api\deprecation.py", line 180, in warning_emitting_wrapper
+    return wrapped(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain\chains\base.py", line 383, in __call__
+    return self.invoke(
+           ^^^^^^^^^^^^
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain\chains\base.py", line 166, in invoke
+    raise e
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain\chains\base.py", line 156, in invoke
+    self._call(inputs, run_manager=run_manager)
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain\agents\agent.py", line 1433, in _call
+    next_step_output = self._take_next_step(
+                       ^^^^^^^^^^^^^^^^^^^^^
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain\agents\agent.py", line 1139, in _take_next_step
+    [
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain\agents\agent.py", line 1139, in <listcomp>
+    [
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain\agents\agent.py", line 1224, in _iter_next_step
+    yield self._perform_agent_action(
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain\agents\agent.py", line 1246, in _perform_agent_action
+    observation = tool.run(
+                  ^^^^^^^^^
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain_core\tools\base.py", line 586, in run
+    raise error_to_raise
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain_core\tools\base.py", line 555, in run
+    response = context.run(self._run, *tool_args, **tool_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain_core\tools\simple.py", line 84, in _run
+    return self.func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\molchatbot_version6\agents\tools.py", line 161, in get_container_eta
+    out["eta_dp"] = out["eta_dp"].dt.strftime("%Y-%m-%d")
+                    ^^^^^^^^^^^^^^^^
+  File "D:\molchatbot_version6\venv\Lib\site-packages\pandas\core\generic.py", line 6318, in __getattr__
+    return object.__getattribute__(self, name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\molchatbot_version6\venv\Lib\site-packages\pandas\core\accessor.py", line 224, in __get__
+    accessor_obj = self._accessor(obj)
+                   ^^^^^^^^^^^^^^^^^^^
+  File "D:\molchatbot_version6\venv\Lib\site-packages\pandas\core\indexes\accessors.py", line 643, in __new__
+    raise AttributeError("Can only use .dt accessor with datetimelike values")
+AttributeError: Can only use .dt accessor with datetimelike values
+2025-08-20 10:58:10,491 - shipping_chatbot - ERROR - Agent failed
+Traceback (most recent call last):
+  File "D:\molchatbot_version6\cli\run.py", line 36, in run_azure_chatbot_cli
+    try:
+         
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain_core\_api\deprecation.py", line 180, in warning_emitting_wrapper
+    return wrapped(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain\chains\base.py", line 600, in run
+    return self(args[0], callbacks=callbacks, tags=tags, metadata=metadata)[
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain_core\_api\deprecation.py", line 180, in warning_emitting_wrapper
+    return wrapped(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain\chains\base.py", line 383, in __call__
+    return self.invoke(
+           ^^^^^^^^^^^^
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain\chains\base.py", line 166, in invoke
+    raise e
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain\chains\base.py", line 156, in invoke
+    self._call(inputs, run_manager=run_manager)
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain\agents\agent.py", line 1433, in _call
+    next_step_output = self._take_next_step(
+                       ^^^^^^^^^^^^^^^^^^^^^
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain\agents\agent.py", line 1139, in _take_next_step
+    [
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain\agents\agent.py", line 1139, in <listcomp>
+    [
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain\agents\agent.py", line 1224, in _iter_next_step
+    yield self._perform_agent_action(
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain\agents\agent.py", line 1246, in _perform_agent_action
+    observation = tool.run(
+                  ^^^^^^^^^
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain_core\tools\base.py", line 586, in run
+    raise error_to_raise
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain_core\tools\base.py", line 555, in run
+    response = context.run(self._run, *tool_args, **tool_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\molchatbot_version6\venv\Lib\site-packages\langchain_core\tools\simple.py", line 84, in _run
+    return self.func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\molchatbot_version6\agents\tools.py", line 161, in get_container_eta
+    out["eta_dp"] = out["eta_dp"].dt.strftime("%Y-%m-%d")
+                    ^^^^^^^^^^^^^^^^
+  File "D:\molchatbot_version6\venv\Lib\site-packages\pandas\core\generic.py", line 6318, in __getattr__
+    return object.__getattribute__(self, name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\molchatbot_version6\venv\Lib\site-packages\pandas\core\accessor.py", line 224, in __get__
+    accessor_obj = self._accessor(obj)
+                   ^^^^^^^^^^^^^^^^^^^
+  File "D:\molchatbot_version6\venv\Lib\site-packages\pandas\core\indexes\accessors.py", line 643, in __new__
+    raise AttributeError("Can only use .dt accessor with datetimelike values")
+AttributeError: Can only use .dt accessor with datetimelike values
+2025-08-20 11:23:13,382 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-20 11:23:13,394 - shipping_chatbot - INFO - Agent created with 12 tools
+2025-08-20 11:23:13,394 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2025-08-20 11:23:17,848 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-20 11:23:17,848 - shipping_chatbot - INFO - Agent created with 12 tools
+2025-08-20 11:23:17,848 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2025-08-20 11:26:33,032 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2025-08-20 11:27:23,420 - shipping_chatbot - INFO - Fetched 4748 rows
+2025-08-20 11:27:23,420 - shipping_chatbot - INFO - Starting preprocessing on 4748 rows
+2025-08-20 11:27:23,447 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2025-08-20 11:27:23,560 - shipping_chatbot - INFO - Added `delay_days` column
+2025-08-20 11:28:14,364 - shipping_chatbot - WARNING - Agent failed: Can only use .dt accessor with datetimelike values
+2025-08-20 11:33:56,126 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-20 11:33:56,128 - shipping_chatbot - INFO - Agent created with 12 tools
+2025-08-20 11:33:56,129 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2025-08-20 11:34:00,363 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-20 11:34:00,363 - shipping_chatbot - INFO - Agent created with 12 tools
+2025-08-20 11:34:00,363 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2025-08-20 11:34:38,307 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2025-08-20 11:35:46,621 - shipping_chatbot - INFO - Fetched 4748 rows
+2025-08-20 11:35:46,623 - shipping_chatbot - INFO - Starting preprocessing on 4748 rows
+2025-08-20 11:35:46,647 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2025-08-20 11:35:46,736 - shipping_chatbot - INFO - Added `delay_days` column
+2025-08-20 11:37:04,735 - shipping_chatbot - WARNING - Agent failed: Can only use .dt accessor with datetimelike values
+2025-08-20 11:38:05,688 - shipping_chatbot - WARNING - Agent failed: Can only use .dt accessor with datetimelike values
+2025-08-20 11:39:41,020 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-20 11:39:41,023 - shipping_chatbot - INFO - Agent created with 12 tools
+2025-08-20 11:39:41,023 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2025-08-20 11:39:45,433 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-20 11:39:45,436 - shipping_chatbot - INFO - Agent created with 12 tools
+2025-08-20 11:39:45,436 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2025-08-20 11:40:16,560 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2025-08-20 11:44:26,892 - shipping_chatbot - INFO - Fetched 4748 rows
+2025-08-20 11:44:26,892 - shipping_chatbot - INFO - Starting preprocessing on 4748 rows
+2025-08-20 11:44:26,907 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2025-08-20 11:44:27,011 - shipping_chatbot - INFO - Added `delay_days` column
+2025-08-20 11:44:29,044 - shipping_chatbot - WARNING - Agent failed: Can only use .dt accessor with datetimelike values
+2025-08-20 11:49:49,295 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-20 11:49:49,295 - shipping_chatbot - INFO - Agent created with 12 tools
+2025-08-20 11:49:49,295 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2025-08-20 11:49:53,859 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-20 11:49:53,859 - shipping_chatbot - INFO - Agent created with 12 tools
+2025-08-20 11:49:53,859 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2025-08-20 12:02:31,067 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2025-08-20 12:05:49,337 - shipping_chatbot - INFO - Fetched 4748 rows
+2025-08-20 12:05:49,341 - shipping_chatbot - INFO - Starting preprocessing on 4748 rows
+2025-08-20 12:05:49,399 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2025-08-20 12:05:49,740 - shipping_chatbot - INFO - Added `delay_days` column
+2025-08-20 15:13:35,916 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-20 15:13:35,918 - shipping_chatbot - INFO - Agent created with 12 tools
+2025-08-20 15:13:35,918 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2025-08-20 15:13:40,699 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-20 15:13:40,702 - shipping_chatbot - INFO - Agent created with 12 tools
+2025-08-20 15:13:40,702 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2025-08-20 16:02:15,879 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-20 16:02:15,985 - shipping_chatbot - INFO - Agent created with 13 tools
+2025-08-20 16:02:20,717 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-20 16:02:20,816 - shipping_chatbot - INFO - Agent created with 13 tools
+2025-08-20 16:02:59,228 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-20 16:02:59,331 - shipping_chatbot - INFO - Agent created with 13 tools
+2025-08-20 16:02:59,331 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2025-08-20 16:03:05,475 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-20 16:03:05,598 - shipping_chatbot - INFO - Agent created with 13 tools
+2025-08-20 16:03:05,599 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2025-08-20 16:09:51,966 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-20 16:09:51,966 - shipping_chatbot - INFO - Agent created with 13 tools
+2025-08-20 16:09:51,966 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2025-08-20 16:10:47,034 - shipping_chatbot - WARNING - Agent failed: Completions.create() got an unexpected keyword argument 'prompt'
+2025-08-20 16:10:47,035 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2025-08-20 16:14:09,924 - shipping_chatbot - INFO - Fetched 4748 rows
+2025-08-20 16:14:09,926 - shipping_chatbot - INFO - Starting preprocessing on 4748 rows
+2025-08-20 16:14:09,953 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2025-08-20 16:14:10,046 - shipping_chatbot - INFO - Added `delay_days` column
+2025-08-20 16:16:51,775 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-20 16:16:51,775 - shipping_chatbot - INFO - Agent created with 13 tools
+2025-08-20 16:16:51,775 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2025-08-20 16:16:56,931 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-20 16:16:56,931 - shipping_chatbot - INFO - Agent created with 13 tools
+2025-08-20 16:16:56,931 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2025-08-20 16:17:50,739 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2025-08-20 16:19:46,979 - shipping_chatbot - INFO - Fetched 4748 rows
+2025-08-20 16:19:46,984 - shipping_chatbot - INFO - Starting preprocessing on 4748 rows
+2025-08-20 16:19:47,032 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2025-08-20 16:19:47,229 - shipping_chatbot - INFO - Added `delay_days` column
+2025-08-20 16:26:09,165 - shipping_chatbot - WARNING - Agent failed: Can only use .dt accessor with datetimelike values
+2025-08-20 16:29:07,111 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-20 16:29:07,112 - shipping_chatbot - INFO - Agent created with 13 tools
+2025-08-20 16:29:07,112 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2025-08-20 16:29:11,830 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-20 16:29:11,830 - shipping_chatbot - INFO - Agent created with 13 tools
+2025-08-20 16:29:11,830 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2025-08-20 16:29:43,072 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2025-08-20 16:30:39,395 - shipping_chatbot - INFO - Fetched 4748 rows
+2025-08-20 16:30:39,395 - shipping_chatbot - INFO - Starting preprocessing on 4748 rows
+2025-08-20 16:30:39,453 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2025-08-20 16:30:39,620 - shipping_chatbot - INFO - Added `delay_days` column
+2025-08-20 16:35:06,330 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-20 16:35:06,330 - shipping_chatbot - INFO - Agent created with 13 tools
+2025-08-20 16:35:06,330 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2025-08-20 16:35:11,061 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-20 16:35:11,072 - shipping_chatbot - INFO - Agent created with 13 tools
+2025-08-20 16:35:11,072 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2025-08-20 16:36:18,288 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2025-08-20 16:40:45,625 - shipping_chatbot - INFO - Fetched 4748 rows
+2025-08-20 16:40:45,625 - shipping_chatbot - INFO - Starting preprocessing on 4748 rows
+2025-08-20 16:40:45,656 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2025-08-20 16:40:45,769 - shipping_chatbot - INFO - Added `delay_days` column
+2025-08-20 16:40:45,798 - shipping_chatbot - WARNING - Agent failed: Can only use .dt accessor with datetimelike values
+2025-08-20 16:47:05,454 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-20 16:47:05,455 - shipping_chatbot - INFO - Agent created with 13 tools
+2025-08-20 16:47:05,455 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2025-08-20 16:47:14,296 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2025-08-20 16:48:58,409 - shipping_chatbot - INFO - Fetched 4748 rows
+2025-08-20 16:48:58,411 - shipping_chatbot - INFO - Starting preprocessing on 4748 rows
+2025-08-20 16:48:58,460 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2025-08-20 16:48:58,610 - shipping_chatbot - INFO - Added `delay_days` column
+2025-08-20 17:24:47,925 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-20 17:24:47,927 - shipping_chatbot - INFO - Agent created with 13 tools
+2025-08-20 17:24:47,927 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2025-08-20 17:25:19,182 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2025-08-20 17:27:37,847 - shipping_chatbot - INFO - Fetched 4748 rows
+2025-08-20 17:27:37,851 - shipping_chatbot - INFO - Starting preprocessing on 4748 rows
+2025-08-20 17:27:37,916 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2025-08-20 17:27:38,083 - shipping_chatbot - INFO - Added `delay_days` column
+2025-08-20 17:54:03,481 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-20 17:54:03,481 - shipping_chatbot - INFO - Agent created with 13 tools
+2025-08-20 17:54:03,481 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2025-08-20 17:54:53,605 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2025-08-20 17:56:16,553 - shipping_chatbot - INFO - Fetched 4748 rows
+2025-08-20 17:56:16,557 - shipping_chatbot - INFO - Starting preprocessing on 4748 rows
+2025-08-20 17:56:16,637 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2025-08-20 17:56:16,975 - shipping_chatbot - INFO - Added `delay_days` column
+2025-08-20 18:04:04,744 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-20 18:04:04,744 - shipping_chatbot - INFO - Agent created with 13 tools
+2025-08-20 18:04:04,744 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2025-08-20 18:04:29,732 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2025-08-20 18:04:47,540 - shipping_chatbot - INFO - Fetched 4748 rows
+2025-08-20 18:04:47,542 - shipping_chatbot - INFO - Starting preprocessing on 4748 rows
+2025-08-20 18:04:47,577 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2025-08-20 18:04:47,752 - shipping_chatbot - INFO - Added `delay_days` column
+2025-08-20 18:04:47,777 - shipping_chatbot - WARNING - Tool failed: name 'ensure_datetime' is not defined
+2025-08-20 18:04:50,786 - shipping_chatbot - ERROR - Agent also failed: An output parsing error occurred. In order to pass this error back to the agent and have it try again, pass `handle_parsing_errors=True` to the AgentExecutor. This is the error: Could not parse LLM output: `I have gathered all the detailed information about container FSCU7110375.`
+2025-08-20 18:09:06,225 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-20 18:09:06,225 - shipping_chatbot - INFO - Agent created with 13 tools
+2025-08-20 18:09:06,225 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2025-08-20 18:14:07,790 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-20 18:14:07,790 - shipping_chatbot - INFO - Agent created with 13 tools
+2025-08-20 18:14:07,790 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2025-08-20 18:19:09,212 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-20 18:19:09,212 - shipping_chatbot - INFO - Agent created with 13 tools
+2025-08-20 18:19:09,212 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2025-08-20 18:24:10,648 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-20 18:24:10,648 - shipping_chatbot - INFO - Agent created with 13 tools
+2025-08-20 18:24:10,648 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2025-08-20 18:31:51,396 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-20 18:31:51,396 - shipping_chatbot - INFO - Agent created with 13 tools
+2025-08-20 18:31:51,399 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2025-08-20 18:32:37,983 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2025-08-20 18:35:26,366 - shipping_chatbot - INFO - Fetched 4748 rows
+2025-08-20 18:35:26,368 - shipping_chatbot - INFO - Starting preprocessing on 4748 rows
+2025-08-20 18:35:26,415 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2025-08-20 18:35:26,611 - shipping_chatbot - INFO - Added `delay_days` column
+2025-08-20 18:39:44,804 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-20 18:39:44,804 - shipping_chatbot - INFO - Agent created with 13 tools
+2025-08-20 18:39:44,804 - shipping_chatbot - INFO - Agent initialized for CLI
+2025-08-20 18:40:27,527 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2025-08-20 18:54:41,454 - shipping_chatbot - INFO - Fetched 4748 rows
+2025-08-20 18:54:41,464 - shipping_chatbot - INFO - Starting preprocessing on 4748 rows
+2025-08-20 18:54:41,507 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2025-08-20 18:54:41,657 - shipping_chatbot - INFO - Added `delay_days` column
+2025-08-20 19:03:46,420 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-20 19:03:46,421 - shipping_chatbot - INFO - Agent created with 13 tools
+2025-08-20 19:04:22,766 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2025-08-20 19:06:32,114 - shipping_chatbot - INFO - Fetched 4748 rows
+2025-08-20 19:06:32,119 - shipping_chatbot - INFO - Starting preprocessing on 4748 rows
+2025-08-20 19:06:32,153 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2025-08-20 19:06:32,304 - shipping_chatbot - INFO - Added `delay_days` column
+2025-08-21 10:32:04,948 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-21 10:32:04,950 - shipping_chatbot - INFO - Agent created with 13 tools
+2025-08-21 10:32:04,950 - shipping_chatbot - INFO - Agent initialized for CLI
+2025-08-21 10:32:41,139 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2025-08-21 10:32:50,264 - shipping_chatbot - INFO - Fetched 4748 rows
+2025-08-21 10:32:50,281 - shipping_chatbot - INFO - Starting preprocessing on 4748 rows
+2025-08-21 10:32:50,315 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2025-08-21 10:32:50,476 - shipping_chatbot - INFO - Added `delay_days` column
+2025-08-22 09:26:55,579 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-22 09:26:55,579 - shipping_chatbot - INFO - Agent created with 13 tools
+2025-08-22 09:26:55,579 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2025-08-22 09:28:13,960 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2025-08-22 09:28:20,564 - shipping_chatbot - INFO - Fetched 4748 rows
+2025-08-22 09:28:20,564 - shipping_chatbot - INFO - Starting preprocessing on 4748 rows
+2025-08-22 09:28:20,646 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2025-08-22 09:28:21,016 - shipping_chatbot - INFO - Added `delay_days` column
+2025-08-22 11:24:50,317 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-22 11:24:50,317 - shipping_chatbot - INFO - Agent created with 13 tools
+2025-08-22 11:24:50,317 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2025-08-22 11:26:28,577 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2025-08-22 11:26:35,640 - shipping_chatbot - INFO - Fetched 4748 rows
+2025-08-22 11:26:35,640 - shipping_chatbot - INFO - Starting preprocessing on 4748 rows
+2025-08-22 11:26:35,724 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2025-08-22 11:26:36,140 - shipping_chatbot - INFO - Added `delay_days` column
+2025-08-22 11:31:13,796 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-22 11:31:13,796 - shipping_chatbot - INFO - Agent created with 13 tools
+2025-08-22 11:31:13,796 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2025-08-22 11:31:21,909 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-22 11:31:21,909 - shipping_chatbot - INFO - Agent created with 13 tools
+2025-08-22 11:31:21,909 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2025-08-22 11:34:25,137 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-22 11:34:25,137 - shipping_chatbot - INFO - Agent created with 13 tools
+2025-08-22 11:34:25,137 - shipping_chatbot - INFO - Agent ready for HTTP requests
