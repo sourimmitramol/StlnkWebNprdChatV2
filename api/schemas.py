@@ -8,4 +8,4 @@ class AskRequest(BaseModel):
 
 class QueryWithConsigneeBody(BaseModel):
     query: str
-    consignee_codes: str
+    consignee_code: str

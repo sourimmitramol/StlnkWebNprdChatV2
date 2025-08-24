@@ -147,7 +147,7 @@ def ask_with_consignee(body: QueryWithConsigneeBody):
     If no rows match, reply with a clear message.
     """
 
-    q = body.question.strip()
+    q = body.query.strip()
     codes = [c.strip() for c in body.consignee_code.split(",") if c.strip()]
     if not q or not codes:
         raise HTTPException(status_code=400, detail="Both question and consignee_code are required.")
@@ -176,3 +176,47 @@ def ask_with_consignee(body: QueryWithConsigneeBody):
         return {"response": result}
     except Exception as exc:
         return {"response": f"Error processing query: {exc}"}
+
+# @app.post("/ask_with_consignee")
+# def ask_with_consignee(body: QueryWithConsigneeBody):
+#     """
+#     Robust Prompt: You are a shipping data expert.
+#     For every query, filter the dataset so only rows containing any of the provided consignee codes
+#     (even if multiple codes are present in the field) are considered.
+#     If any consignee code from the comma-separated list is present anywhere in the 'consignee_code_multiple' column
+#     (including as part of a comma-separated list or inside parentheses), answer the question using only those rows.
+#     If no rows match, reply with a clear message.
+#     """
+
+#     q = body.query.strip()
+#     codes = [c.strip() for c in body.consignee_code.split(",") if c.strip()]
+#     if not q or not codes:
+#         raise HTTPException(status_code=400, detail="Both question and consignee_code are required.")
+
+#     from services.azure_blob import get_shipment_df
+#     df = get_shipment_df().copy()
+
+#     pattern = r"|".join([rf"\b{re.escape(code)}\b" for code in codes])
+#     mask = df['consignee_code_multiple'].astype(str).apply(
+#         lambda x: bool(re.search(pattern, x))
+#     )
+#     filtered_df = df[mask]
+#     if filtered_df.empty:
+#         return {"response": f"No data found for consignee code(s): {', '.join(codes)}."}
+
+#     # Use your router to get a detailed answer based on the filtered DataFrame
+#     try:
+#         # If your router supports passing a DataFrame, use it:
+#         # answer = route_query(q, df=filtered_df)
+#         # If not, provide a detailed answer manually:
+#         details = filtered_df.head(10).to_dict(orient="records")
+#         detail_text = "\n".join([str(row) for row in details])
+#         return {
+#             "response": (
+#                 #f"Thought: Found {len(filtered_df)} rows matching consignee code(s): {', '.join(codes)}.\n"
+#                 f"Final Answer: Here are the top matching records:\n{detail_text}\n"
+#                 "These records are filtered to only include shipments associated with the provided consignee codes."
+#             )
+#         }
+#     except Exception as exc:
+#         return {"response": f"Error processing query: {exc}"}

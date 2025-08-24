@@ -2,17 +2,22 @@
 import logging
 import re
 from datetime import datetime, timedelta
-
+from langchain_community.agent_toolkits import create_sql_agent
 import pandas as pd
 from fuzzywuzzy import process
 from langchain.agents import Tool
-
+from services.vectorstore import get_vectorstore
 from utils.container import extract_container_number
 from utils.logger import logger
 from services.azure_blob import get_shipment_df
 from utils.misc import to_datetime, clean_container_number
 from agents.prompts import map_synonym_to_column
 from agents.prompts import COLUMN_SYNONYMS
+from services.vectorstore import get_vectorstore
+from langchain_community.chat_models import AzureChatOpenAI
+from config import settings
+import sqlite3
+from sqlalchemy import create_engine
 # ------------------------------------------------------------------
 # Helper – give every tool a clean copy of the DataFrame
 # ------------------------------------------------------------------
@@ -539,9 +544,53 @@ def get_containers_arriving_soon(query: str) -> str:
     subset = ensure_datetime(subset, ["eta_dp"])
     subset["eta_dp"] = subset["eta_dp"].dt.strftime("%Y-%m-%d")
     return subset[["container_number", "eta_dp"]].head(10).to_string(index=False)
-from agents.prompts import map_synonym_to_column
+from agents.prompts import map_synonym_to_column, ROBUST_COLUMN_MAPPING_PROMPT
 
+def answer_with_column_mapping(query: str) -> str:
+    """
+    Uses the robust column mapping prompt and synonym mapping to interpret user queries.
+    Maps synonyms to canonical column names and answers using the correct column.
+    """
+    # Example: extract possible column names from the query using synonyms
+    import re
+    # Try to find all possible column mentions in the query
+    possible_columns = []
+    for synonym in map_synonym_to_column.__globals__['COLUMN_SYNONYMS']:
+        if re.search(rf"\b{re.escape(synonym)}\b", query, re.IGNORECASE):
+            possible_columns.append(synonym)
+    if not possible_columns:
+        return (
+            "Thought: Could not identify a column or field in the query using the provided synonyms.\n"
+            "Final Answer: Please specify which field or column you want information about, using any of the synonyms listed in the prompt."
+        )
+    # Map all found synonyms to canonical columns
+    canonical_columns = [map_synonym_to_column(col) for col in possible_columns]
+    df = _df()
+    missing = [col for col in canonical_columns if col not in df.columns]
+    if missing:
+        return (
+            f"Thought: The following columns were not found in the data after synonym mapping: {', '.join(missing)}.\n"
+            f"Final Answer: Please check your query and use the correct field names or synonyms as listed in the prompt."
+        )
+    # For demonstration, show top 5 values for each column
+    details = []
+    for col in canonical_columns:
+        vc = df[col].value_counts().head(5)
+        if not vc.empty:
+            details.append(f"Top values for '{col}':\n" + "\n".join([f"{val}: {cnt}" for val, cnt in vc.items()]))
+        else:
+            details.append(f"No data available for column '{col}'.")
+    return (
+        f"Thought: Mapped user query columns {possible_columns} to canonical columns {canonical_columns} using the provided prompt and synonyms.\n"
+        f"Final Answer:\n" + "\n\n".join(details) +
+        "\n\nThese results are based on robust synonym mapping as described in the prompt."
+    )
 def get_top_values_for_column(query: str) -> str:
+    """
+    Get the top 5 most frequent values for a specified column.
+    Input: Query should specify the column name or synonym.
+    Output: Top 5 values and their counts.
+    """
     import re
     match = re.search(r"top values for ([\w\s#]+)", query, re.IGNORECASE)
     if not match:
@@ -554,7 +603,82 @@ def get_top_values_for_column(query: str) -> str:
     vc = df[column].value_counts().head(5)
     if vc.empty:
         return f"No data available for column '{column}'."
-    return f"Top values for '{column}':\n" + "\n".join([f"{val}: {cnt}" for val, cnt in vc.items()])
+    details = "\n".join([f"{val}: {cnt}" for val, cnt in vc.items()])
+    return f"Top values for '{column}':\n{details}"
+
+def get_load_port_for_container(query: str) -> str:
+    """
+    Get the load port details for a specific container.
+    Input: Query must mention a container number (partial or full).
+    Output: Load port for the container.
+    """
+    container_no = extract_container_number(query)
+    if not container_no:
+        return "Please specify a valid container number to get load port details."
+    df = _df()
+    port_col = map_synonym_to_column("lp")  # Always maps "lp" to "load_port"
+    if port_col not in df.columns:
+        return "Load port information is not available in the data."
+    row = df[df["container_number"].astype(str).str.contains(container_no, case=False, na=False)]
+    if row.empty:
+        return f"No data found for container {container_no}."
+    load_port = row.iloc[0][port_col]
+    return f"The LP (Load Port) for container {container_no} is {load_port}. This is the port where the container was loaded onto the vessel."
+
+def vector_search_tool(query: str) -> str:
+    """
+    Search the vector database for relevant shipment information using semantic similarity.
+    Input: Natural language query.
+    Output: Top matching records from the vector store.
+    """
+    # Get the vectorstore instance
+    vectorstore = get_vectorstore()
+    # Search for top 5 relevant documents
+    results = vectorstore.similarity_search(query, k=5)
+    if not results:
+        return "No relevant results found in the vector database."
+    # Format results for display
+    details = "\n\n".join([str(doc.page_content) for doc in results])
+    return (
+        f"Thought: Retrieved top results from the vector database using semantic search.\n"
+        f"Final Answer:\n{details}\n"
+        "These results are based on semantic similarity from the vector store."
+    )
+
+from langchain_community.chat_models import AzureChatOpenAI
+from config import settings
+
+def get_sql_agent():
+    # Initialize your LLM (Azure OpenAI)
+    llm = AzureChatOpenAI(
+        azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
+        api_key=settings.AZURE_OPENAI_API_KEY,
+        api_version=settings.AZURE_OPENAI_API_VERSION,
+        azure_deployment=settings.AZURE_OPENAI_DEPLOYMENT,
+    )
+    engine = get_blob_sql_engine()
+    return create_sql_agent(llm, db=engine, agent_type="openai-tools", verbose=False)
+
+def sql_query_tool(query: str) -> str:
+    agent = get_sql_agent()
+    try:
+        result = agent.run(query)
+        return f"Thought: Used SQL agent to answer the query.\nFinal Answer: {result}"
+    except Exception as exc:
+        return f"Error: SQL agent failed to answer the query: {exc}"
+
+def get_blob_sql_engine():
+    """
+    Loads the shipment CSV from Azure Blob and creates an in-memory SQLite engine for SQL queries.
+    """
+    # Load DataFrame from Azure Blob
+    df = get_shipment_df()
+    # Create in-memory SQLite database
+    conn = sqlite3.connect(":memory:")
+    df.to_sql("shipment", conn, index=False, if_exists="replace")
+    # Create SQLAlchemy engine from the SQLite connection
+    engine = create_engine("sqlite://", creator=lambda: conn)
+    return engine
 # ------------------------------------------------------------------
 # TOOLS list – must be at module level, not inside any function!
 # ------------------------------------------------------------------
@@ -623,6 +747,26 @@ TOOLS = [
         name="Get Top Values For Column",
         func=get_top_values_for_column,
         description="Get the top 5 most frequent values for a specified column."
+    ),
+    Tool(
+        name="Get Load Port For Container",
+        func=get_load_port_for_container,
+        description="Get the load port details for a specific container."
+    ),
+    Tool(
+        name="Answer With Column Mapping",
+        func=answer_with_column_mapping,
+        description="Interprets user queries using robust synonym mapping and answers using the correct column(s)."
+    ),
+    Tool(
+        name="Vector Search",
+        func=vector_search_tool,
+        description="Search the vector database for relevant shipment information using semantic similarity."
+    ),
+    Tool(
+        name="SQL Query Shipment Data",
+        func=sql_query_tool,
+        description="Execute SQL queries against the shipment data stored in an in-memory SQLite database."
     ),
 ]
 

@@ -12,6 +12,11 @@ from agents.tools import (
     get_upcoming_pos,
     get_delayed_pos,
     get_containers_arriving_soon,
+    get_load_port_for_container,
+    answer_with_column_mapping,
+    vector_search_tool,
+    get_blob_sql_engine,
+    sql_query_tool  # Make sure this is defined in tools.py
 )
 
 def route_query(query: str) -> str:
@@ -40,6 +45,14 @@ def route_query(query: str) -> str:
         return get_delayed_pos(query)
     elif "container" in q and "arriving soon" in q:
         return get_containers_arriving_soon(query)
+    elif "lp" in q or "load port" in q:
+        return get_load_port_for_container(query)
+    elif "semantic" in q or "vector" in q or "similar" in q:
+        return vector_search_tool(query)
+    elif "sql" in q or "database" in q or "table" in q:
+        return sql_query_tool(query)
+    elif "column" in q or "mapping" in q or "synonym" in q:
+        return answer_with_column_mapping(query)
     else:
         # Fallback: Provide a more detailed default response
         return (
