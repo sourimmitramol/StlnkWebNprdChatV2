@@ -285,7 +285,7 @@ def ask_with_consignee(body: QueryWithConsigneeBody):
         # Convert to records format for serialization
         result = result_df.to_dict(orient="records")
         
-        return {"response": result}
+        return {"response": result[0]}
     except Exception as exc:
         logger.error(f"Error processing query: {exc}", exc_info=True)
         return {"response": f"Error processing query: {str(exc)}"}
