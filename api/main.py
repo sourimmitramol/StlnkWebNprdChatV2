@@ -1,6 +1,7 @@
 # api/main.py
 import logging
 import re
+import ast
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -69,7 +70,18 @@ def ask(body: AskRequest):
     try:
         # Use the Azure agent for answers instead of the tool router
         answer = AGENT.invoke(q)
-        return {"response": answer["output"], "mode": "agent"}
+        output = answer["output"]
+        match = re.search(r"(\[.*\])", output)
+        message = output
+        json_array = []
+
+        if match:
+           # Extract JSON array
+           json_array = ast.literal_eval(match.group(1))
+           # Remove JSON part from original string
+           message = output.replace(match.group(1), "").strip()
+        
+        return {"response": message,"table":json_array, "mode": "agent"}
     except Exception as exc:
         logger.error(f"Agent failed: {exc}")
         raise HTTPException(status_code=500, detail=f"Agent failed: {exc}")
