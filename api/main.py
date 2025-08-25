@@ -69,7 +69,7 @@ def ask(body: AskRequest):
     try:
         # Use the Azure agent for answers instead of the tool router
         answer = AGENT.invoke(q)
-        return {"response": answer, "mode": "agent"}
+        return {"response": answer["output"], "mode": "agent"}
     except Exception as exc:
         logger.error(f"Agent failed: {exc}")
         raise HTTPException(status_code=500, detail=f"Agent failed: {exc}")
