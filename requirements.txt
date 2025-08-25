@@ -1,0 +1,45 @@
+[tool.poetry]
+name = "shipping-chatbot"
+version = "0.1.0"
+description = "Azure‑enabled shipping data chatbot built with LangChain, PandasAI and FastAPI."
+authors = ["Your Name <you@example.com>"]
+license = "MIT"
+readme = "README.md"
+packages = [{include = "shipping_chatbot"}]
+
+[tool.poetry.dependencies]
+python = "^3.11.4"
+
+# Core ML / LangChain
+langchain = "0.2.0"
+langchain-openai = "0.1.7"
+langchain-community = "^0.2.0"
+pandas = "^2.2.2"
+numpy = "^1.26.4"
+faiss-cpu = "^1.8.0"
+azure-storage-blob = "^12.22.0"
+azure-search-documents = "^11.5.0"
+python-dotenv = "^1.0.1"
+fuzzywuzzy = "^0.18.0"
+python-Levenshtein = "^0.25.0"
+pandasai = "^2.0.0"
+streamlit = "^1.36.0"
+fastapi = "^0.115.0"
+uvicorn = {extras = ["standard"], version = "^0.30.0"}
+tenacity = "^8.2.2"
+requests = "^2.32.0"
+pydantic-settings = "^2.0.3"
+
+# Optional extras (dev only)
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.2"
+pytest-cov = "^5.0.0"
+ruff = "^0.7.2"
+black = "^24.8.0"
+isort = "^5.13.2"
+mypy = "^1.13.0"
+pre-commit = "^4.0.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
