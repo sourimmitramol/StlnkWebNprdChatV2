@@ -111,7 +111,8 @@ def get_delayed_containers(query: str) -> str:
     delayed_df = ensure_datetime(delayed_df, ["eta_dp", "ata_dp"])
     delayed_df["eta_dp"] = delayed_df["eta_dp"].dt.strftime("%Y-%m-%d")
     delayed_df["ata_dp"] = delayed_df["ata_dp"].dt.strftime("%Y-%m-%d")
-    return f"Containers delayed by at least {days} days:\n\n{delayed_df.to_string(index=False)}"
+    #return f"Containers delayed by at least {days} days:\n\n{delayed_df.to_string(index=False)}"
+    return delayed_df.to_dict(orient="records")
 
 
 # ------------------------------------------------------------------
