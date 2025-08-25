@@ -84,16 +84,13 @@ Instructions:
 - If a query is ambiguous, ask for clarification using the synonyms above.
 - Use these mappings for all search, filter, and reporting operations.
 - Display JSON outputs as markdown tables.Never say 'listed above'.
-- When you display container numbers, always enclose them in <con> and </con> tags.
+- When you display container numbers, always enclose them in 'con:' and ':con' tags.
 
 Example:
 If a user asks for "vessel no and ETA at destination port for container ABCD1234567", you should map:
 - "vessel no" → container_number (if context is container) or vessel_name (if context is vessel)
 - "ETA at destination port" → eta_dp
 - "container ABCD1234567" → container_number
-
-When you display container numbers, always append "con:" at start and ":con" at the end of container number like below:
- - "TCNU5994674" → con:TCNU5994674:con.
 
 Always use this mapping logic for every query.
 """
