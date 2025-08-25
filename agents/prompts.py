@@ -92,8 +92,8 @@ If a user asks for "vessel no and ETA at destination port for container ABCD1234
 - "ETA at destination port" → eta_dp
 - "container ABCD1234567" → container_number
 
-When you display container numbers, always enclose them in <con> and </con> tags like below:
- - TCNU5994674 → <con>TCNU5994674</con>.
+When you display container numbers, always append "con:" at start and ":con" at the end of container number like below:
+ - "TCNU5994674" → con:TCNU5994674:con.
 
 Always use this mapping logic for every query.
 """
