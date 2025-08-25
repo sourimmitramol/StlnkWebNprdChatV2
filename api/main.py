@@ -62,7 +62,7 @@ def health():
 # ----------------------------------------------------------------------
 @app.post("/ask")
 def ask(body: AskRequest):
-    q = body.query.strip()
+    q = body.question.strip()
     if not q:
         raise HTTPException(status_code=400, detail="Empty query")
 
@@ -196,7 +196,7 @@ def ask_with_consignee(body: QueryWithConsigneeBody):
     If the user asks about specific containers, verify they belong to the authorized consignee
     before providing any information.
     """
-    q = body.query.strip()
+    q = body.question.strip()
     consignee_codes = [c.strip() for c in body.consignee_code.split(",") if c.strip()]
     
     if not q or not consignee_codes:
