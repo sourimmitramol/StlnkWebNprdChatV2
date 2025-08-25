@@ -455,3 +455,57 @@ AttributeError: Can only use .dt accessor with datetimelike values
 2025-08-24 21:36:17,204 - shipping_chatbot - INFO - Starting preprocessing on 4748 rows
 2025-08-24 21:36:17,250 - shipping_chatbot - INFO - Removed 0 duplicate rows
 2025-08-24 21:36:17,433 - shipping_chatbot - INFO - Added `delay_days` column
+2025-08-25 10:14:24,322 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-25 10:14:24,323 - shipping_chatbot - INFO - Agent created with 17 tools
+2025-08-25 10:14:24,323 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2025-08-25 10:19:23,544 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2025-08-25 10:19:30,572 - shipping_chatbot - INFO - Fetched 4748 rows
+2025-08-25 10:19:30,578 - shipping_chatbot - INFO - Starting preprocessing on 4748 rows
+2025-08-25 10:19:30,668 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2025-08-25 10:19:31,035 - shipping_chatbot - INFO - Added `delay_days` column
+2025-08-25 10:31:35,386 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-25 10:31:35,387 - shipping_chatbot - INFO - Agent created with 17 tools
+2025-08-25 10:31:35,387 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2025-08-25 10:31:54,336 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2025-08-25 10:32:00,285 - shipping_chatbot - INFO - Fetched 4748 rows
+2025-08-25 10:32:00,289 - shipping_chatbot - INFO - Starting preprocessing on 4748 rows
+2025-08-25 10:32:00,314 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2025-08-25 10:32:00,509 - shipping_chatbot - INFO - Added `delay_days` column
+2025-08-25 10:37:45,537 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-25 10:37:45,538 - shipping_chatbot - INFO - Agent created with 17 tools
+2025-08-25 10:37:45,538 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2025-08-25 10:38:55,038 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2025-08-25 10:39:01,425 - shipping_chatbot - INFO - Fetched 4748 rows
+2025-08-25 10:39:01,429 - shipping_chatbot - INFO - Starting preprocessing on 4748 rows
+2025-08-25 10:39:01,463 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2025-08-25 10:39:01,641 - shipping_chatbot - INFO - Added `delay_days` column
+2025-08-25 10:42:48,781 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-25 10:42:48,784 - shipping_chatbot - INFO - Agent created with 17 tools
+2025-08-25 10:42:48,784 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2025-08-25 10:44:45,283 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2025-08-25 10:44:51,253 - shipping_chatbot - INFO - Fetched 4748 rows
+2025-08-25 10:44:51,258 - shipping_chatbot - INFO - Starting preprocessing on 4748 rows
+2025-08-25 10:44:51,306 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2025-08-25 10:44:51,471 - shipping_chatbot - INFO - Added `delay_days` column
+2025-08-25 11:22:26,753 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-25 11:22:26,754 - shipping_chatbot - INFO - Agent created with 17 tools
+2025-08-25 11:22:26,755 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2025-08-25 11:22:31,917 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-25 11:22:31,918 - shipping_chatbot - INFO - Agent created with 17 tools
+2025-08-25 11:22:31,918 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2025-08-25 11:23:02,448 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2025-08-25 11:23:07,728 - shipping_chatbot - INFO - Fetched 4748 rows
+2025-08-25 11:23:07,731 - shipping_chatbot - INFO - Starting preprocessing on 4748 rows
+2025-08-25 11:23:07,765 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2025-08-25 11:23:07,924 - shipping_chatbot - INFO - Added `delay_days` column
+2025-08-25 11:32:32,514 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-25 11:32:32,514 - shipping_chatbot - INFO - Agent created with 17 tools
+2025-08-25 11:32:32,514 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2025-08-25 11:32:37,728 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2025-08-25 11:32:37,729 - shipping_chatbot - INFO - Agent created with 17 tools
+2025-08-25 11:32:37,729 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2025-08-25 11:32:50,735 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2025-08-25 11:32:56,784 - shipping_chatbot - INFO - Fetched 4748 rows
+2025-08-25 11:32:56,786 - shipping_chatbot - INFO - Starting preprocessing on 4748 rows
+2025-08-25 11:32:56,818 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2025-08-25 11:32:56,970 - shipping_chatbot - INFO - Added `delay_days` column
