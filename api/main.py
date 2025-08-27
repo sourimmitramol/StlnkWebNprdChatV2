@@ -176,7 +176,7 @@ def ask_with_consignee(body: QueryWithConsigneeBody):
     authorized_df = df[mask]
    
     if authorized_df.empty:
-        return {"response": f"No data found for consignee code(s): {', '.join(consignee_codes)}.", "table": []}
+        return {"response": "No data found.", "table": []}
    
     # Check if the query is about specific containers
     container_pattern = r'(?:container(?:s)?\s+(?:number(?:s)?)?(?:\s+is|\s+are)?\s+)?([A-Z]{4}\d{7}(?:\s*,\s*[A-Z]{4}\d{7})*)'
@@ -301,3 +301,4 @@ def ask_with_consignee(body: QueryWithConsigneeBody):
         except Exception as inner_exc:
             logger.error(f"Fallback processing failed: {inner_exc}", exc_info=True)
             return {"response": f"Error processing query: {str(exc)}", "table": [], "mode": "agent"}
+
