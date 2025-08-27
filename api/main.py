@@ -4,6 +4,7 @@ import re
 import ast
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+import pandas as pd
 
 from .schemas import AskRequest, QueryWithConsigneeBody  #AskRequest,
 from agents.azure_agent import initialize_azure_agent
@@ -148,130 +149,99 @@ def containers_arriving_soon(days: int = Query(7, ge=0)):
 # add to api/main.py
 
 
-# @app.post("/ask_with_consignee")
-# def ask_with_consignee(body: QueryWithConsigneeBody):
-#     """
-#     Robust Prompt: You are a shipping data expert.
-#     For every query, filter the dataset so only rows containing any of the provided consignee codes
-#     (even if multiple codes are present in the field) are considered.
-#     If any consignee code from the comma-separated list is present anywhere in the 'consignee_code_multiple' column
-#     (including as part of a comma-separated list or inside parentheses), answer the question using only those rows.
-#     If no rows match, reply with a clear message.
-#     """
-
-#     q = body.query.strip()
-#     codes = [c.strip() for c in body.consignee_code.split(",") if c.strip()]
-#     if not q or not codes:
-#         raise HTTPException(status_code=400, detail="Both query and consignee_code are required.")
-
-#     # Get the DataFrame (replace with your actual DataFrame source)
-#     from services.azure_blob import get_shipment_df
-#     df = get_shipment_df().copy()
-
-#     # Build a regex pattern to match any code as a whole word, allowing for comma-separated, parentheses, or spaces
-#     pattern = r"|".join([rf"\b{re.escape(code)}\b" for code in codes])
-#     mask = df['consignee_code_multiple'].astype(str).apply(
-#         lambda x: bool(re.search(pattern, x))
-#     )
-#     filtered_df = df[mask]
-#     if filtered_df.empty:
-#         return {"response": f"No data found for consignee code(s): {', '.join(codes)}."}
-
-#     # Now answer the user's question using only the filtered DataFrame
-#     try:
-#         # Handle all non-JSON compliant values before serialization
-#         # Replace NaN, inf, and -inf with None
-#         filtered_df = filtered_df.replace([float('nan'), float('inf'), float('-inf')], None)
-        
-#         # Make sure all numeric data can be safely converted to JSON
-#         for col in filtered_df.select_dtypes(include=['float64', 'int64']).columns:
-#             filtered_df[col] = filtered_df[col].astype('object').where(filtered_df[col].notna(), None)
-        
-#         # Convert to records format for serialization
-#         result = filtered_df.head(10).to_dict(orient="records")
-        
-#         # If you want to include analysis based on the query:
-#         # analyzed_result = analyze_data_with_pandas(q, filtered_df)
-#         # return {"response": analyzed_result, "records": result}
-        
-#         return {"response": result}
-#     except Exception as exc:
-#         logger.error(f"Error processing query: {exc}", exc_info=True)
-#         return {"response": f"Error processing query: {str(exc)}"}
-
 @app.post("/ask_with_consignee")
 def ask_with_consignee(body: QueryWithConsigneeBody):
     """
-    Shipping data expert that only answers questions about containers 
+    Shipping data expert that only answers questions about containers
     that belong to the specified consignee codes.
-    
+   
     If the user asks about specific containers, verify they belong to the authorized consignee
     before providing any information.
     """
     q = body.question.strip()
     consignee_codes = [c.strip() for c in body.consignee_code.split(",") if c.strip()]
-    
+   
     if not q or not consignee_codes:
-        raise HTTPException(status_code=400, detail="Both query and consignee_code are required.")
-
+        raise HTTPException(status_code=400, detail="Both question and consignee_code are required.")
+ 
     # Get the DataFrame from blob storage
     from services.azure_blob import get_shipment_df
     df = get_shipment_df().copy()
-    
+   
     # First, filter by the consignee codes the user is authorized to see
     pattern = r"|".join([rf"\b{re.escape(code)}\b" for code in consignee_codes])
     mask = df['consignee_code_multiple'].astype(str).apply(
         lambda x: bool(re.search(pattern, x))
     )
     authorized_df = df[mask]
-    
+   
     if authorized_df.empty:
         return {"response": f"No data found for consignee code(s): {', '.join(consignee_codes)}."}
-    
+   
     # Check if the query is about specific containers
     container_pattern = r'(?:container(?:s)?\s+(?:number(?:s)?)?(?:\s+is|\s+are)?\s+)?([A-Z]{4}\d{7}(?:\s*,\s*[A-Z]{4}\d{7})*)'
     container_match = re.search(container_pattern, q, re.IGNORECASE)
-    
+   
     if container_match:
         # Extract container numbers from the query
         container_str = container_match.group(1)
         requested_containers = [c.strip() for c in re.split(r'\s*,\s*', container_str)]
-        
+       
         # Check if these containers belong to the authorized consignees
-        # Fixed: Use container_number instead of container_no
         container_auth_mask = authorized_df['container_number'].isin(requested_containers)
-        
+       
         if not container_auth_mask.any():
             return {
-                "response": "You are not authorized to access information about the requested container(s). "
-                           "Please verify the container numbers or your consignee codes."
+                "response": "Not a valid shippement. "
+                           
             }
-        
+       
         # Filter to only show data about the requested AND authorized containers
         filtered_df = authorized_df[container_auth_mask]
     else:
         # If no specific containers mentioned, use all data for authorized consignees
         filtered_df = authorized_df
-    
+   
     try:
-        # Handle non-JSON compliant values
-        filtered_df = filtered_df.replace([float('nan'), float('inf'), float('-inf')], None)
-        
-        # Convert numeric columns to objects and replace NaN with None
-        for col in filtered_df.select_dtypes(include=['float64', 'int64']).columns:
-            filtered_df[col] = filtered_df[col].astype('object').where(filtered_df[col].notna(), None)
-        
-        # If the query is about a specific field for the containers
-        if container_match:
-            # Try to identify what information they want about the container
+        # Use the agent for more sophisticated responses
+        consignee_context = f"For consignee codes {', '.join(consignee_codes)}: {q}"
+        answer = AGENT.invoke(consignee_context)
+		
+		output = answer["output"]
+        match = re.search(r"(\[.*\])", output)
+        message = output
+        json_array = []
+		
+		if match:
+           # Extract JSON array
+           json_array = ast.literal_eval(match.group(1))
+           # Remove JSON part from original string
+           message = output.replace(match.group(1), "").strip()
+       
+        return {
+            "response": message,
+			"table":json_array,
+            "mode": "agent"
+        }
+    except Exception as exc:
+        logger.error(f"Error processing query: {exc}", exc_info=True)
+       
+        # Fallback to simpler response if agent fails
+        try:
+            # Handle non-JSON compliant values
+            filtered_df = filtered_df.replace([float('nan'), float('inf'), float('-inf')], None)
+           
+            # Convert numeric columns to objects and replace NaN with None
+            for col in filtered_df.select_dtypes(include=['float64', 'int64']).columns:
+                filtered_df[col] = filtered_df[col].astype('object').where(filtered_df[col].notna(), None)
+           
+            # Extract relevant fields based on query patterns
+            result_fields = ['container_number']
+           
             po_pattern = r'(po\s+number|purchase\s+order|order\s+number)'
             eta_pattern = r'(eta|estimated\s+time\s+of\s+arrival|arrival\s+date)'
             vessel_pattern = r'(vessel|ship)'
-            
-            # Extract relevant fields based on query
-            # Fixed: Use container_number instead of container_no
-            result_fields = ['container_number']  # Always include container number
-            
+           
             if re.search(po_pattern, q, re.IGNORECASE):
                 result_fields.extend(['po_number_multiple', 'consignee_code_multiple'])
             elif re.search(eta_pattern, q, re.IGNORECASE):
@@ -279,25 +249,55 @@ def ask_with_consignee(body: QueryWithConsigneeBody):
             elif re.search(vessel_pattern, q, re.IGNORECASE):
                 result_fields.extend(['first_vessel_name', 'first_voyage_code', 'consignee_code_multiple'])
             else:
-                # Default to returning a standard set of important fields
                 result_fields.extend(['po_number_multiple', 'eta_dp', 'first_vessel_name', 'discharge_port', 'consignee_code_multiple'])
-            
-            # Make sure we only include columns that actually exist
+           
             existing_fields = [field for field in result_fields if field in filtered_df.columns]
-            
-            # Filter columns to only include the relevant fields
-            if existing_fields:
-                result_df = filtered_df[existing_fields].head(20)
-            else:
-                result_df = filtered_df.head(20)
-        else:
-            # If no specific container is mentioned, limit the fields and rows returned
-            result_df = filtered_df.head(10)
-            
-        # Convert to records format for serialization
-        result = result_df.to_dict(orient="records")
-        
-        return {"response": result[0]}
-    except Exception as exc:
-        logger.error(f"Error processing query: {exc}", exc_info=True)
-        return {"response": f"Error processing query: {str(exc)}"}
+           
+            # Create a formatted response string
+            if container_match:
+                container_no = requested_containers[0]
+               
+                # Format response based on what was asked
+                if re.search(po_pattern, q, re.IGNORECASE) and 'po_number_multiple' in filtered_df.columns:
+                    po_numbers = filtered_df.iloc[0]['po_number_multiple']
+                    po_list = [po.strip() for po in str(po_numbers).split(',') if po.strip()]
+                    return {
+                        "response": f"The PO numbers for container {container_no} are {', '.join(po_list)}.",
+                        "mode": "agent"
+                    }
+                elif re.search(eta_pattern, q, re.IGNORECASE) and 'eta_dp' in filtered_df.columns:
+                    eta = filtered_df.iloc[0]['eta_dp']
+                    if pd.notnull(eta) and isinstance(eta, pd.Timestamp):
+                        eta_str = eta.strftime('%Y-%m-%d')
+                    else:
+                        eta_str = str(eta)
+                    return {
+                        "response": f"The ETA for container {container_no} is {eta_str}.",
+                        "mode": "agent"
+                    }
+                elif re.search(vessel_pattern, q, re.IGNORECASE) and 'first_vessel_name' in filtered_df.columns:
+                    vessel = filtered_df.iloc[0]['first_vessel_name']
+                    return {
+                        "response": f"The vessel for container {container_no} is {vessel}.",
+                        "mode": "agent"
+                    }
+           
+            # Generic fallback
+            result = filtered_df[existing_fields].head(1).to_dict(orient="records")[0]	
+            output = str(result)
+            match = re.search(r"(\[.*\])", output)
+            message = output
+            json_array = []	
+
+            if match:
+                 # Extract JSON array
+                 json_array = ast.literal_eval(match.group(1))
+                 # Remove JSON part from original string
+                 message = output.replace(match.group(1), "").strip()			
+
+			
+            return {"response": message, "table":json_array, "mode": "agent"}
+           
+        except Exception as inner_exc:
+            logger.error(f"Fallback processing failed: {inner_exc}", exc_info=True)
+            return {"response": f"Error processing query: {str(exc)}", "mode": "agent"}
