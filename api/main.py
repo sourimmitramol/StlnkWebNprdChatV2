@@ -192,8 +192,7 @@ def ask_with_consignee(body: QueryWithConsigneeBody):
        
         if not container_auth_mask.any():
             return {
-                "response": "Not a valid shippement. "
-                           
+                "response": "Not a valid shippement."
             }
        
         # Filter to only show data about the requested AND authorized containers
@@ -206,21 +205,21 @@ def ask_with_consignee(body: QueryWithConsigneeBody):
         # Use the agent for more sophisticated responses
         consignee_context = f"For consignee codes {', '.join(consignee_codes)}: {q}"
         answer = AGENT.invoke(consignee_context)
-		
-		output = answer["output"]
+        
+        output = answer["output"]
         match = re.search(r"(\[.*\])", output)
         message = output
         json_array = []
-		
-		if match:
-           # Extract JSON array
-           json_array = ast.literal_eval(match.group(1))
-           # Remove JSON part from original string
-           message = output.replace(match.group(1), "").strip()
+        
+        if match:
+            # Extract JSON array
+            json_array = ast.literal_eval(match.group(1))
+            # Remove JSON part from original string
+            message = output.replace(match.group(1), "").strip()
        
         return {
             "response": message,
-			"table":json_array,
+            "table": json_array,
             "mode": "agent"
         }
     except Exception as exc:
@@ -290,14 +289,14 @@ def ask_with_consignee(body: QueryWithConsigneeBody):
             json_array = []	
 
             if match:
-                 # Extract JSON array
-                 json_array = ast.literal_eval(match.group(1))
-                 # Remove JSON part from original string
-                 message = output.replace(match.group(1), "").strip()			
+                # Extract JSON array
+                json_array = ast.literal_eval(match.group(1))
+                # Remove JSON part from original string
+                message = output.replace(match.group(1), "").strip()			
 
-			
-            return {"response": message, "table":json_array, "mode": "agent"}
+            return {"response": message, "table": json_array, "mode": "agent"}
            
         except Exception as inner_exc:
             logger.error(f"Fallback processing failed: {inner_exc}", exc_info=True)
             return {"response": f"Error processing query: {str(exc)}", "mode": "agent"}
+
