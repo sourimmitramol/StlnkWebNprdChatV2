@@ -40,79 +40,46 @@ def get_container_milestones(input_str: str) -> str:
     container_no = extract_container_number(input_str)
     if not container_no:
         return "Please specify a valid container number."
+
+    df = _df()
+    df["container_number"] = df["container_number"].astype(str)
+
     # exact match after normalising
     clean = clean_container_number(container_no)
-    rows = df[df["container_number"].str.contains(container_no, case=False, na=False)]
+    rows = df[df["container_number"].str.replace(" ", "").str.upper() == clean]
+
+    # fallback to contains‑match
+    if rows.empty:
+        rows = df[df["container_number"].str.contains(container_no, case=False, na=False)]
+
     if rows.empty:
         return f"No data found for container {container_no}."
+
     row = rows.iloc[0]
-    row_milestone_map = [
-        ("Departed From", row.get("load_port"), row.get("atd_lp")),
-        ("Final Load Port Arrival", row.get("final_load_port"), row.get("ata_flp")),
-        ("Final Load Port Departure", row.get("final_load_port"), row.get("atd_flp")),
-        ("Reached at Discharge Port", row.get("discharge_port"), row.get("ata_dp")),
-        ("Reached at Last CY", row.get("last_cy_location"), row.get("equipment_arrived_at_last_cy")),
-        ("Out Gate at Last CY", row.get("out_gate_at_last_cy_lcn"), row.get("out_gate_at_last_cy")),
-        ("Delivered at", row.get("delivery_date_to_consignee_lcn"), row.get("delivery_date_to_consignee")),
-        ("Container Returned to", row.get("empty_container_return_lcn"), row.get("empty_container_return_date")),
+
+    # -------------------------------------------------
+    # Build the milestone list (only keep non‑null dates)
+    # -------------------------------------------------
+    milestone_map = [
+        ("Load Port ETD", row.get("etd_lp")),
+        ("Load Port ATD", row.get("atd_lp")),
+        ("Final Load Port ETD", row.get("etd_flp")),
+        ("Final Load Port ATA", row.get("ata_flp")),
+        ("Discharge Port ETA", row.get("eta_dp")),
+        ("Discharge Port ATA", row.get("ata_dp")),
+        ("Final Destination ETA", row.get("eta_fd")),
+        ("Revised ETA", row.get("revised_eta")),
+        ("Predictive ETA", row.get("predictive_eta")),
     ]
- 
-    c_df = pd.DataFrame(row_milestone_map)
-# print(c_df)
-    f_df = c_df.dropna(subset=2)
-# print(f_df)
-    f_line = f_df.iloc[0]
-    l_line = f_df.iloc[-1]
-# print(l_line)
- 
-# print("Bot Answer:_____")
-    res = f"The <con>{ccn}</con> {l_line.get(0)} {l_line.get(1)} on {l_line.get(2)}\n\n{f_df.to_string(index=False, header=False)}."
-# print(res)
-    # return "\n".join(status_lines)
-    return res
-    # container_no = extract_container_number(input_str)
-    # if not container_no:
-    #     return "Please specify a valid container number."
 
-    # df = _df()
-    # df["container_number"] = df["container_number"].astype(str)
+    milestones = [(lbl, d) for lbl, d in milestone_map if pd.notnull(d)]
+    milestones.sort(key=lambda x: x[1])
 
-    # # exact match after normalising
-    # clean = clean_container_number(container_no)
-    # rows = df[df["container_number"].str.replace(" ", "").str.upper() == clean]
+    if not milestones:
+        return f"No milestone dates stored for container {container_no}."
 
-    # # fallback to contains‑match
-    # if rows.empty:
-    #     rows = df[df["container_number"].str.contains(container_no, case=False, na=False)]
-
-    # if rows.empty:
-    #     return f"No data found for container {container_no}."
-
-    # row = rows.iloc[0]
-
-    # # -------------------------------------------------
-    # # Build the milestone list (only keep non‑null dates)
-    # # -------------------------------------------------
-    # milestone_map = [
-    #     ("Load Port ETD", row.get("etd_lp")),
-    #     ("Load Port ATD", row.get("atd_lp")),
-    #     ("Final Load Port ETD", row.get("etd_flp")),
-    #     ("Final Load Port ATA", row.get("ata_flp")),
-    #     ("Discharge Port ETA", row.get("eta_dp")),
-    #     ("Discharge Port ATA", row.get("ata_dp")),
-    #     ("Final Destination ETA", row.get("eta_fd")),
-    #     ("Revised ETA", row.get("revised_eta")),
-    #     ("Predictive ETA", row.get("predictive_eta")),
-    # ]
-
-    # milestones = [(lbl, d) for lbl, d in milestone_map if pd.notnull(d)]
-    # milestones.sort(key=lambda x: x[1])
-
-    # if not milestones:
-    #     return f"No milestone dates stored for container {container_no}."
-
-    # lines = [f"- {lbl}: {d.date()}" for lbl, d in milestones]
-    # return f"Milestones for container {container_no}:\n" + "\n".join(lines)
+    lines = [f"- {lbl}: {d.date()}" for lbl, d in milestones]
+    return f"Milestones for container {container_no}:\n" + "\n".join(lines)
 
 
 # ------------------------------------------------------------------
