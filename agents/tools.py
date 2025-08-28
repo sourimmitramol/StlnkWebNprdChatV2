@@ -37,24 +37,24 @@ def get_container_milestones(input_str: str) -> str:
     Output: List of milestone events and their dates for the container.
     If no container is found, prompts for a valid container number.
     """
-        container_no = extract_container_number(input_str)
+    container_no = extract_container_number(input_str)
     if not container_no:
         return "Please specify a valid container number."
     # exact match after normalising
     clean = clean_container_number(container_no)
-    rows = df[df["Container Number"].str.contains(container_no, case=False, na=False)]
+    rows = df[df["container_number"].str.contains(container_no, case=False, na=False)]
     if rows.empty:
         return f"No data found for container {container_no}."
     row = rows.iloc[0]
     row_milestone_map = [
-        ("Departed From", row.get("Load Port"), row.get("ATD LP")),
-        ("Final Load Port Arrival", row.get("Final Load Port"), row.get("ATA FLP")),
-        ("Final Load Port Departure", row.get("Final Load Port"), row.get("ATD FLP")),
-        ("Reached at Discharge Port", row.get("Discharge Port"), row.get("ATA DP")),
-        ("Reached at Last CY", row.get("Last CY Location"), row.get("Equipment Arrived at Last CY")),
-        ("Out Gate at Last CY", row.get("Out gate at Last CY Lcn"), row.get("Out gate at Last CY")),
-        ("Delivered at", row.get("Delivery Date To Consignee Lcn"), row.get("Delivery Date To Consignee")),
-        ("Container Returned to", row.get("Empty Container Return Lcn"), row.get("Empty Container Return Date")),
+        ("Departed From", row.get("load_port"), row.get("atd_lp")),
+        ("Final Load Port Arrival", row.get("final_load_port"), row.get("ata_flp")),
+        ("Final Load Port Departure", row.get("final_load_port"), row.get("atd_flp")),
+        ("Reached at Discharge Port", row.get("discharge_port"), row.get("ata_dp")),
+        ("Reached at Last CY", row.get("last_cy_location"), row.get("equipment_arrived_at_last_cy")),
+        ("Out Gate at Last CY", row.get("out_gate_at_last_cy_lcn"), row.get("out_gate_at_last_cy")),
+        ("Delivered at", row.get("delivery_date_to_consignee_lcn"), row.get("delivery_date_to_consignee")),
+        ("Container Returned to", row.get("empty_container_return_lcn"), row.get("empty_container_return_date")),
     ]
  
     c_df = pd.DataFrame(row_milestone_map)
