@@ -240,39 +240,6 @@ def ask(body: QueryWithConsigneeBody):
         logger.error(f"Agent failed: {exc}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Agent failed: {exc}")
 
-# ----------------------------------------------------------------------
-# Light‑weight wrappers for each tool - all now require consignee header
-# ----------------------------------------------------------------------
-@app.get("/tool/container_milestones")
-def container_milestones(
-    q: str = Query(..., description="e.g. 'container ABCD1234567'"),
-    x_consignee_code: str = Header(..., description="Comma-separated list of authorized consignee codes")
-):
-    consignee_codes = [c.strip() for c in x_consignee_code.split(",") if c.strip()]
-    if not consignee_codes:
-        raise HTTPException(status_code=400, detail="Consignee code is required")
-        
-    # Extract container number from query
-    from utils.container import extract_container_number
-    container_no = extract_container_number(q)
-    
-    if not container_no:
-        return {"result": "Please specify a valid container number."}
-    
-    # Check authorization
-    from services.azure_blob import get_shipment_df
-    df = get_shipment_df().copy()
-    
-    # Check if container belongs to authorized consignee
-    container_df, is_authorized = check_container_authorization(df, [container_no], consignee_codes)
-    
-    if not is_authorized:
-        return {"result": f"You are not authorized to access information about container {container_no}."}
-        
-    return {"result": get_container_milestones(q)}
-
-# Similar modifications would be applied to all other tool endpoints
-# For brevity, I'm only showing one example
 
 # ----------------------------------------------------------------------
 # Keep the existing ask_with_consignee endpoint
@@ -406,4 +373,5 @@ def ask_with_consignee(body: QueryWithConsigneeBody):
             logger.error(f"Fallback processing failed: {inner_exc}", exc_info=True)
 
             return {"response": f"Error processing query: {str(exc)}", "mode": "agent"}
+
 
