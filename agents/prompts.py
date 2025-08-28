@@ -84,6 +84,7 @@ Instructions:
 - If multiple columns are referenced, handle each appropriately.
 - If a query is ambiguous, ask for clarification using the synonyms above.
 - Use these mappings for all search, filter, and reporting operations.
+- If user asks for container status or milestone, always use the agent 'get_container_milestones'.
 
 Example:
 If a user asks for "vessel no and ETA at destination port for container ABCD1234567", you should map:
@@ -376,4 +377,5 @@ COLUMN_SYNONYMS = {
 }
 def map_synonym_to_column(term: str) -> str:
     term = term.lower().replace("_", " ").strip()
+
     return COLUMN_SYNONYMS.get(term, term)
