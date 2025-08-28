@@ -146,9 +146,6 @@ def delayed_pos():
 def containers_arriving_soon(days: int = Query(7, ge=0)):
     return {"result": get_containers_arriving_soon(f"next {days} days")}
 
-# add to api/main.py
-
-
 @app.post("/ask_with_consignee")
 def ask_with_consignee(body: QueryWithConsigneeBody):
     """
@@ -224,8 +221,8 @@ def ask_with_consignee(body: QueryWithConsigneeBody):
         }
     except Exception as exc:
         logger.error(f"Error processing query: {exc}", exc_info=True)
-		return (f"excption: {exc}")
-        print(f"Exception: {exc}")
+        return (f"excption: {exc}")
+        
         # Fallback to simpler response if agent fails
         try:
             # Handle non-JSON compliant values
@@ -262,7 +259,8 @@ def ask_with_consignee(body: QueryWithConsigneeBody):
                     po_numbers = filtered_df.iloc[0]['po_number_multiple']
                     po_list = [po.strip() for po in str(po_numbers).split(',') if po.strip()]
                     return {
-                        "response": f"The PO numbers for container {container_no} are {', '.join(po_list)}.","table": [],
+                        "response": f"The PO numbers for container {container_no} are {', '.join(po_list)}.",
+                        "table": [],
                         "mode": "agent"
                     }
                 elif re.search(eta_pattern, q, re.IGNORECASE) and 'eta_dp' in filtered_df.columns:
@@ -273,33 +271,33 @@ def ask_with_consignee(body: QueryWithConsigneeBody):
                         eta_str = str(eta)
                     return {
                         "response": f"The ETA for container {container_no} is {eta_str}.",
-						"table": [],
+                        "table": [],
                         "mode": "agent"
                     }
                 elif re.search(vessel_pattern, q, re.IGNORECASE) and 'first_vessel_name' in filtered_df.columns:
                     vessel = filtered_df.iloc[0]['first_vessel_name']
                     return {
                         "response": f"The vessel for container {container_no} is {vessel}.",
-						"table": [],
+                        "table": [],
                         "mode": "agent"
                     }
            
             # Generic fallback
-            result = filtered_df[existing_fields].head(1).to_dict(orient="records")[0]	
+            result = filtered_df[existing_fields].head(1).to_dict(orient="records")[0]    
             output = str(result)
             match = re.search(r"(\[.*\])", output)
             message = output
-            json_array = []	
+            json_array = []    
 
             if match:
                 # Extract JSON array
                 json_array = ast.literal_eval(match.group(1))
                 # Remove JSON part from original string
-                message = output.replace(match.group(1), "").strip()			
+                message = output.replace(match.group(1), "").strip()            
 
             return {"response": message, "table": json_array, "mode": "agent"}
-           
-        except Exception as inner_exc:
-            logger.error(f"Fallback processing failed: {inner_exc}", exc_info=True)
-            return {"response": f"Error processing query: {str(exc)}", "table": [], "mode": "agent"}
+
+
+
+
 
