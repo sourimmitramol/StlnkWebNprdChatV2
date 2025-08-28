@@ -86,8 +86,7 @@ def get_container_milestones(input_str: str) -> str:
     # print(res)
 
     # return "\n".join(status_lines)
-    # return res
-    return c_df.to_dict(orient="records")
+    return res
 
 
 # ------------------------------------------------------------------
@@ -778,6 +777,7 @@ TOOLS = [
         description="Execute SQL queries against the shipment data stored in an in-memory SQLite database."
     ),
 ]
+
 
 
 
