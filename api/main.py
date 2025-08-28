@@ -221,6 +221,7 @@ def ask_with_consignee(body: QueryWithConsigneeBody):
         }
     except Exception as exc:
         logger.error(f"Error processing query: {exc}", exc_info=True)
+        return {"response": f"Error: {exc}", "table": [], "mode": "error"}
         
         # Fallback to simpler response if agent fails
         try:
