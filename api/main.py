@@ -221,7 +221,6 @@ def ask_with_consignee(body: QueryWithConsigneeBody):
         }
     except Exception as exc:
         logger.error(f"Error processing query: {exc}", exc_info=True)
-        return (f"excption: {exc}")
         
         # Fallback to simpler response if agent fails
         try:
@@ -296,6 +295,10 @@ def ask_with_consignee(body: QueryWithConsigneeBody):
                 message = output.replace(match.group(1), "").strip()            
 
             return {"response": message, "table": json_array, "mode": "agent"}
+            
+        except Exception as fallback_exc:
+            logger.error(f"Fallback also failed: {fallback_exc}", exc_info=True)
+            return {"response": f"Error: {fallback_exc}", "table": [], "mode": "error"}
 
 
 
