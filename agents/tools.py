@@ -82,7 +82,7 @@ def get_container_milestones(input_str: str) -> str:
     # print(l_line)
 
     # print("Bot Answer:_____")
-    res = f"The <con>{ccn}</con> {l_line.get(0)} {l_line.get(1)} on {l_line.get(2)}\n\n{f_df.to_string(index=False, header=False)}."
+    res = f"The <con>{container_no}</con> {l_line.get(0)} {l_line.get(1)} on {l_line.get(2)}\n\n{f_df.to_string(index=False, header=False)}."
     # print(res)
 
     # return "\n".join(status_lines)
