@@ -198,7 +198,8 @@ def ask(body: AskRequest, x_consignee_code: str = Header(..., description="Comma
     
     try:
         # Modify the question to include consignee context
-        consignee_context = f"For consignee codes {', '.join(consignee_codes)}: {q}"
+        # consignee_context = f"For consignee codes {', '.join(consignee_codes)}: {q}"
+        consignee_context = f"user: {q}"
         
         # Use the Azure agent for answers
         answer = AGENT.invoke(consignee_context)
@@ -474,4 +475,5 @@ def ask_with_consignee(body: QueryWithConsigneeBody):
             
         except Exception as inner_exc:
             logger.error(f"Fallback processing failed: {inner_exc}", exc_info=True)
+
             return {"response": f"Error processing query: {str(exc)}", "mode": "agent"}
