@@ -85,81 +85,10 @@ def check_container_authorization(df, container_numbers: List[str], consignee_co
     return authorized_df[container_mask], not authorized_df[container_mask].empty
 
 
-# ----------------------------------------------------------------------
-# Consignee-protected Q&A endpoint
-# ----------------------------------------------------------------------
-# @app.post("/ask")
-# def ask(body: AskRequest, x_consignee_code: str = Header(..., description="Comma-separated list of authorized consignee codes")):
-#     q = body.question.strip()
-#     consignee_codes = [c.strip() for c in x_consignee_code.split(",") if c.strip()]
-    
-#     if not q:
-#         raise HTTPException(status_code=400, detail="Empty question")
-    
-#     if not consignee_codes:
-#         raise HTTPException(status_code=400, detail="Consignee code is required")
-
-#     # Get the DataFrame from blob storage
-#     from services.azure_blob import get_shipment_df
-#     df = get_shipment_df().copy()
-    
-#     # Filter by consignee codes
-#     authorized_df = filter_by_consignee(df, consignee_codes)
-    
-#     if authorized_df.empty:
-#         return {"response": f"No data found for consignee code(s): {', '.join(consignee_codes)}.", "mode": "agent"}
-
-#     # Extract container numbers from the query if present
-#     container_pattern = r'(?:container(?:s)?\s+(?:number(?:s)?)?(?:\s+is|\s+are)?\s+)?([A-Z]{4}\d{7}(?:\s*,\s*[A-Z]{4}\d{7})*)'
-#     container_match = re.search(container_pattern, q, re.IGNORECASE)
-    
-#     if container_match:
-#         # Extract container numbers
-#         container_str = container_match.group(1)
-#         requested_containers = [c.strip() for c in re.split(r'\s*,\s*', container_str)]
-        
-#         # Check if these containers belong to the authorized consignees
-#         _, is_authorized = check_container_authorization(df, requested_containers, consignee_codes)
-        
-#         if not is_authorized:
-#             return {
-#                 "response": "You are not authorized to access information about the requested container(s). "
-#                            "Please verify the container numbers or your consignee codes.",
-#                 "mode": "agent"
-#             }
-    
-#     try:
-#         # Modify the question to include consignee context
-#         consignee_context = f"For consignee codes {', '.join(consignee_codes)}: {q}"
-        
-#         # Use the Azure agent for answers
-#         # We'll need to modify the agent to respect consignee restrictions
-#         # This could be done by passing the authorized_df to the agent or setting a context
-        
-#         # For now, let's add the consignee restriction directly to the prompt
-#         answer = AGENT.invoke(consignee_context)
-#         output = answer["output"]
-#         match = re.search(r"(\[.*\])", output)
-#         message = output
-#         json_array = []
-
-#         if match:
-#            # Extract JSON array
-#            json_array = ast.literal_eval(match.group(1))
-#            # Remove JSON part from original string
-#            message = output.replace(match.group(1), "").strip()
-
-        
-#         # Ensure the answer is formatted correctly
-#         return {"response": message,"table":json_array, "mode": "agent"}
-#     except Exception as exc:
-#         logger.error(f"Agent failed: {exc}")
-#         raise HTTPException(status_code=500, detail=f"Agent failed: {exc}")
-
 @app.post("/ask")
-def ask(body: AskRequest, x_consignee_code: str = Header(..., description="Comma-separated list of authorized consignee codes")):
+def ask(body: QueryWithConsigneeBody):
     q = body.question.strip()
-    consignee_codes = [c.strip() for c in x_consignee_code.split(",") if c.strip()]
+    consignee_codes = [c.strip() for c in body.consignee_code.split(",") if c.strip()]
     
     if not q:
         raise HTTPException(status_code=400, detail="Empty question")
@@ -477,3 +406,4 @@ def ask_with_consignee(body: QueryWithConsigneeBody):
             logger.error(f"Fallback processing failed: {inner_exc}", exc_info=True)
 
             return {"response": f"Error processing query: {str(exc)}", "mode": "agent"}
+
