@@ -25,6 +25,7 @@ def initialize_azure_agent(tools: List[Tool] | None = None) -> Tuple[object, Azu
         api_key=settings.AZURE_OPENAI_API_KEY,
         api_version=settings.AZURE_OPENAI_API_VERSION,
         azure_deployment=settings.AZURE_OPENAI_DEPLOYMENT,
+        temperature=0.5  # Adjust temperature for creativity (0.0 = deterministic, 1.0 = creative)
     )
     # Pass system prompt as a message if needed
     system_message = {"role": "system", "content": ROBUST_COLUMN_MAPPING_PROMPT}

@@ -1,5 +1,6 @@
 from agents.prompts import map_synonym_to_column
 from agents.tools import (
+    sql_query_tool,
     get_container_milestones,
     get_delayed_containers,
     get_upcoming_arrivals,
@@ -16,12 +17,13 @@ from agents.tools import (
     answer_with_column_mapping,
     vector_search_tool,
     get_blob_sql_engine,
-    sql_query_tool  # Make sure this is defined in tools.py
+    #  # Make sure this is defined in tools.py
 )
 
 def route_query(query: str) -> str:
     q = query.lower()
-    if "milestone" or "status" in q:
+    """provide a response in the tabular form"""
+    if "milestone or status" in q:
         return get_container_milestones(query)
     elif "delay" in q:
         return get_delayed_containers(query)
