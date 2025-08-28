@@ -104,7 +104,7 @@ def ask(body: QueryWithConsigneeBody):
     authorized_df = filter_by_consignee(df, consignee_codes)
     
     if authorized_df.empty:
-        return {"response": f"No data found for consignee code(s): {', '.join(consignee_codes)}.", "mode": "agent"}
+        return {"response": f"No data found for this consignee.", "table": [], "mode": "agent"}
 
     # Extract container numbers from the query if present
     container_pattern = r'(?:container(?:s)?\s+(?:number(?:s)?)?(?:\s+is|\s+are)?\s+)?([A-Z]{4}\d{7}(?:\s*,\s*[A-Z]{4}\d{7})*)'
@@ -120,8 +120,8 @@ def ask(body: QueryWithConsigneeBody):
         
         if not is_authorized:
             return {
-                "response": "You are not authorized to access information about the requested container(s). "
-                           "Please verify the container numbers or your consignee codes.",
+                "response": "No data found for this consignee.",
+                "table": [],
                 "mode": "agent"
             }
     
@@ -373,5 +373,6 @@ def ask_with_consignee(body: QueryWithConsigneeBody):
             logger.error(f"Fallback processing failed: {inner_exc}", exc_info=True)
 
             return {"response": f"Error processing query: {str(exc)}", "mode": "agent"}
+
 
 
