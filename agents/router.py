@@ -21,7 +21,7 @@ from agents.tools import (
 
 def route_query(query: str) -> str:
     q = query.lower()
-    if "milestone" in q:
+    if "milestone" or "status" in q:
         return get_container_milestones(query)
     elif "delay" in q:
         return get_delayed_containers(query)
