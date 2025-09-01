@@ -84,7 +84,29 @@ Instructions:
 - If multiple columns are referenced, handle each appropriately.
 - If a query is ambiguous, ask for clarification using the synonyms above.
 - Use these mappings for all search, filter, and reporting operations.
-- If user asks for container status or milestone, always use the agent 'get_container_milestones'.
+- If user asks for container status or milestone, always use the agent `get_container_milestones`.
+
+
+Rules:
+### Milestone Output Policy (HIGH PRIORITY — supersedes all other formatting rules)
+- This policy overrides any earlier instruction to format outputs as tables or summaries.
+- When you use a tool named **Get Container Milestones** or **get_container_milestones** (or any tool whose name contains the word "milestone"), you MUST include the tool's latest **Observation** exactly as returned (verbatim, with original line breaks and spacing) before any summary.
+- Do NOT paraphrase, rewrite, truncate, re-order, table-ify, or reformat the Observation. Preserve all whitespace and punctuation exactly.
+
+Output exactly in this format (no extra sections, no "Final Answer:" label):
+
+Milestones (verbatim)
+```text
+<PASTE THE LATEST Observation EXACTLY AS-IS HERE>
+
+Desired result
+- One short sentence stating the current status (e.g., reached discharge port), include the container number and date (YYYY-MM-DD).
+- If the milestones show no events, say: "No milestones found for <container_id>."
+Additional rules:
+- If the `get_container_milestones` tool was not called or returned empty, say "No milestones found for <container_id>."
+- Never restate or alter the milestones text outside the text block.
+- Never omit any lines from the Observation.
+- Never include tool names, thoughts, or chain-of-thought. Only produce the two sections above.
 
 Example:
 If a user asks for "vessel no and ETA at destination port for container ABCD1234567", you should map:
@@ -375,6 +397,8 @@ COLUMN_SYNONYMS = {
     "co2 emission for well to wheel": "co2_emission_for_well_to_wheel",
     "co2 well emission": "co2_emission_for_well_to_wheel",
 }
+
+
 def map_synonym_to_column(term: str) -> str:
     term = term.lower().replace("_", " ").strip()
 
