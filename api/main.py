@@ -252,10 +252,8 @@ def ask(body: QueryWithConsigneeBody):
         # - If we captured milestones, print them verbatim first (fenced as text),
         #   then append the cleaned summary as the "Desired result".
         if milestone_obs:
-            message = (
-                f"{output.strip()}\n",
-                f"Milestones are in below :\n{str(milestone_obs).rstrip()}"
-            )
+            message = f"{output.strip()}\n Milestones are in below :\n{str(milestone_obs).rstrip()}"
+
         else:
             message = re.sub(r'\n\s*\n', '\n\n', output).strip() or "No milestones found for the given container."
 
@@ -402,6 +400,7 @@ def ask_with_consignee(body: QueryWithConsigneeBody):
             logger.error(f"Fallback processing failed: {inner_exc}", exc_info=True)
 
             return {"response": f"Error processing query: {str(exc)}", "mode": "agent"}
+
 
 
 
