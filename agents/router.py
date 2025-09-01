@@ -23,7 +23,7 @@ from agents.tools import (
 def route_query(query: str) -> str:
     q = query.lower()
     """provide a response in the tabular form"""
-    if "milestone" in q or "status" in q or "where" in q:
+    if any("milestone", "status", "track", "event history", "journey", "where") in q:
         return get_container_milestones(query)
     elif "delay" in q:
         return get_delayed_containers(query)
@@ -66,3 +66,4 @@ def route_query(query: str) -> str:
 # from agents.router import route_query
 
 # result = route_query(user_query)
+
