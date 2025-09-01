@@ -4,7 +4,7 @@ from io import StringIO
 
 import pandas as pd
 from azure.storage.blob import BlobServiceClient
-from langchain_community.chat_models import AzureChatOpenAI
+from langchain_openai import AzureChatOpenAI
 
 from config import settings
 from .preprocess import preprocess_data
