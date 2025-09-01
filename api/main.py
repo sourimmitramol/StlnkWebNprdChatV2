@@ -104,7 +104,7 @@ def ask(body: QueryWithConsigneeBody):
     authorized_df = filter_by_consignee(df, consignee_codes)
     
     if authorized_df.empty:
-        return {"response": f"No data found for this consignee.", "table": [], "mode": "agent"}
+        return {"response": "No data found for this consignee.", "table": [], "mode": "agent"}
 
     # Extract container numbers from the query if present
     container_pattern = r'(?:container(?:s)?\s+(?:number(?:s)?)?(?:\s+is|\s+are)?\s+)?([A-Z]{4}\d{7}(?:\s*,\s*[A-Z]{4}\d{7})*)'
@@ -117,55 +117,86 @@ def ask(body: QueryWithConsigneeBody):
         
         # Check if these containers belong to the authorized consignees
         _, is_authorized = check_container_authorization(df, requested_containers, consignee_codes)
-        
         if not is_authorized:
-            return {
-                "response": "No data found for this consignee.",
-                "table": [],
-                "mode": "agent"
-            }
+            return {"response": "No data found for this consignee.", "table": [], "mode": "agent"}
     
+    # ---------- NEW: helper to pull milestone Observation ----------
+    MILESTONE_TOOL_NAMES = {"Get Container Milestones", "get_container_milestones"}
+    def _extract_milestone_observation(intermediate_steps):
+        """
+        Return the latest observation text from the milestones tool, if any.
+        Supports LC tuples (AgentAction, observation) and dict payloads.
+        """
+        if not intermediate_steps:
+            return None
+        obs = None
+        for step in intermediate_steps:
+            if isinstance(step, tuple) and len(step) == 2:
+                action, observation = step
+                tool = getattr(action, "tool", None) or getattr(action, "tool_name", None)
+            elif isinstance(step, dict):
+                action = step.get("action")
+                observation = step.get("observation")
+                tool = None
+                if action is not None:
+                    tool = getattr(action, "tool", None)
+                    if tool is None and isinstance(action, dict):
+                        tool = action.get("tool")
+            else:
+                continue
+
+            tool_name = (tool or "").strip()
+            if tool_name in MILESTONE_TOOL_NAMES or ("milestone" in tool_name.lower() if tool_name else False):
+                obs = observation  # keep last (often the most complete)
+        return obs
+    # ---------------------------------------------------------------
+
     try:
-        # Modify the question to include consignee context
-        # consignee_context = f"For consignee codes {', '.join(consignee_codes)}: {q}"
+        # Keep your original idea of a lightweight context wrapper
         consignee_context = f"user: {q}"
-        
-        # Use the Azure agent for answers
-        answer = AGENT.invoke(consignee_context)
-        output = answer["output"]
-        
-        # Extract table data if present
+
+        # ---------- CHANGED: call agent to get dict with output + steps ----------
+        try:
+            result = AGENT({"input": consignee_context})
+        except TypeError:
+            result = AGENT.invoke({"input": consignee_context})
+        # Fallback if some versions return a raw string
+        if isinstance(result, str):
+            result = {"output": result, "intermediate_steps": []}
+        # ------------------------------------------------------------------------
+
+        # Agent's final summary (we'll parse tables from this *only*)
+        output = (result.get("output") or "").strip()
+
+        # Try to extract the milestone Observation
+        milestone_obs = _extract_milestone_observation(result.get("intermediate_steps", []))
+
+        # -------- existing table extraction logic (operates on `output` only) ---
         table_data = []
-        
+
         # First try to extract JSON array from the text using regex
         json_match = re.search(r"(\[{.*?}\])", output, re.DOTALL)
         if json_match:
             try:
-                # Try to parse the JSON array
                 json_text = json_match.group(1)
                 table_data = ast.literal_eval(json_text)
-                # Remove the JSON part from the response text
                 output = output.replace(json_text, "").strip()
-                # Clean up any remaining markdown table syntax or brackets
                 output = re.sub(r'```(json|python)?\s*', '', output)
                 output = re.sub(r'\s*```', '', output)
                 output = re.sub(r'\[\s*\]', '', output).strip()
             except (SyntaxError, ValueError) as e:
                 logger.warning(f"Failed to parse JSON in response: {e}")
                 
-        # If no JSON found or parsing failed, look for markdown tables
+        # If no JSON found or parsing failed, look for markdown tables/code blocks
         if not table_data and "```" in output:
             try:
-                # Try to extract markdown code blocks that might contain data
                 code_blocks = re.findall(r'```(?:json|python)?\s*([\s\S]*?)```', output)
                 if code_blocks:
                     for block in code_blocks:
-                        # Try to parse the code block as JSON or Python literal
                         try:
                             parsed_data = ast.literal_eval(block.strip())
-                            if isinstance(parsed_data, list) and len(parsed_data) > 0 and isinstance(parsed_data[0], dict):
+                            if isinstance(parsed_data, list) and parsed_data and isinstance(parsed_data[0], dict):
                                 table_data = parsed_data
-                                # Remove the code block from the output
                                 output = output.replace(f"```{block}```", "").strip()
                                 break
                         except (SyntaxError, ValueError):
@@ -173,23 +204,19 @@ def ask(body: QueryWithConsigneeBody):
             except Exception as e:
                 logger.warning(f"Failed to extract table data from markdown: {e}")
         
-        # If using SQL query tool or vector search produced results, they might be in specific format
-        # This additional check handles cases where the LLM didn't properly format the response
+        # Look for tool-labeled outputs you already handle
         if not table_data:
             try:
-                # Check for SQL or vector search results in the standard tools output
                 for tool_name in ["SQL Query Shipment Data", "Vector Search"]:
                     tool_pattern = fr"{tool_name}:\s*([\s\S]*?)(?:\n\n|$)"
                     tool_match = re.search(tool_pattern, output)
                     if tool_match:
                         tool_output = tool_match.group(1).strip()
                         try:
-                            # Try to parse tool output as JSON or Python literal
                             if tool_output.startswith("[") and tool_output.endswith("]"):
                                 parsed_tool_data = ast.literal_eval(tool_output)
-                                if isinstance(parsed_tool_data, list) and len(parsed_tool_data) > 0:
+                                if isinstance(parsed_tool_data, list) and parsed_tool_data:
                                     table_data = parsed_tool_data
-                                    # Clean up the output by removing the tool result
                                     output = output.replace(tool_match.group(0), "").strip()
                                     break
                         except (SyntaxError, ValueError):
@@ -199,12 +226,9 @@ def ask(body: QueryWithConsigneeBody):
         
         # If we found table data, ensure it's JSON serializable
         if table_data:
-            # Replace NaN, inf, -inf with None
             import pandas as pd
             import numpy as np
             import json
-            
-            # Helper function to convert non-serializable values
             def clean_non_serializable(obj):
                 if isinstance(obj, dict):
                     return {k: clean_non_serializable(v) for k, v in obj.items()}
@@ -216,26 +240,31 @@ def ask(body: QueryWithConsigneeBody):
                     return obj.strftime('%Y-%m-%d')
                 else:
                     return obj
-            
             table_data = clean_non_serializable(table_data)
-            
-            # Ensure we can actually serialize it
             try:
                 json.dumps(table_data)
             except TypeError:
                 logger.error("Failed to serialize table data to JSON")
                 table_data = []
-        
-        # Clean up the response text
-        message = re.sub(r'\n\s*\n', '\n\n', output).strip()
-        
-        # Return formatted response with both the message and table data
+        # ------------------------------------------------------------------------
+
+        # Compose the final message:
+        # - If we captured milestones, print them verbatim first (fenced as text),
+        #   then append the cleaned summary as the "Desired result".
+        if milestone_obs:
+            message = (
+                f"{output.strip()}\n",
+                f"Milestones are in below :\n{str(milestone_obs).rstrip()}"
+            )
+        else:
+            message = re.sub(r'\n\s*\n', '\n\n', output).strip() or "No milestones found for the given container."
+
         return {
-            
             "response": message,
             "table": table_data,
             "mode": "agent"
         }
+
     except Exception as exc:
         logger.error(f"Agent failed: {exc}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Agent failed: {exc}")
@@ -373,6 +402,7 @@ def ask_with_consignee(body: QueryWithConsigneeBody):
             logger.error(f"Fallback processing failed: {inner_exc}", exc_info=True)
 
             return {"response": f"Error processing query: {str(exc)}", "mode": "agent"}
+
 
 
 
