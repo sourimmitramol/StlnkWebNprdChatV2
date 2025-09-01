@@ -37,6 +37,7 @@ def initialize_azure_agent(tools: List[Tool] | None = None) -> Tuple[object, Azu
         agent_type=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
         verbose=True,
         handle_parsing_errors=True,
+        return_intermediate_steps=True,
         system_message=ROBUST_COLUMN_MAPPING_PROMPT  # <-- Add this argument
         # If using custom prompt, set it here
         #prompt=CustomPromptTemplate.from_messages([system_message])
@@ -81,3 +82,4 @@ def initialize_sql_agent():
 # Example usage:
 # sql_agent = initialize_sql_agent()
 # result = sql_agent.run("Show me all containers delayed by more than 5 days")
+
