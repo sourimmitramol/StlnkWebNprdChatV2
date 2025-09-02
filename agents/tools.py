@@ -633,6 +633,104 @@ def get_load_port_for_container(query: str) -> str:
     load_port = row.iloc[0][port_col]
     return f"The LP (Load Port) for container {container_no} is {load_port}. This is the port where the container was loaded onto the vessel."
 
+
+def check_arrival_status(input_str: str) -> str:
+    """
+    Check if a container or PO has arrived by examining ata_dp and derived_ata_dp.
+    If ata_dp is null, checks derived_ata_dp against today's date.
+    Returns arrival status with discharge port information.
+    """
+    import re
+    from datetime import datetime
+    import pandas as pd
+
+    # Extract container number or PO number from input
+    container_match = re.search(r'([A-Z]{4}\d{7})', input_str)
+    po_match = re.search(r'(?:po|purchase order)\s*[:\s]*([A-Z0-9]+)', input_str, re.IGNORECASE)
+
+    df = _df()
+    df = ensure_datetime(df, ["ata_dp", "derived_ata_dp", "eta_dp"])
+    today = datetime.now().date()
+
+    if container_match:
+        container_number = container_match.group(1)
+        # Search for container
+        container_df = df[df['container_number'] == container_number]
+
+        if container_df.empty:
+            return f"No data found for container {container_number}."
+
+        # Get the first record (or you might want to handle multiple records differently)
+        record = container_df.iloc[0]
+        discharge_port = record.get('discharge_port', 'Unknown Port')
+
+        # Check ata_dp first
+        if pd.notnull(record['ata_dp']):
+            ata_date = (
+                record['ata_dp'].date()
+                if hasattr(record['ata_dp'], 'date')
+                else record['ata_dp']
+            )
+            return f"Container <con>{container_number}</con> reached on {ata_date} at {discharge_port} discharge port."
+
+        # If ata_dp is null, check derived_ata_dp
+        elif pd.notnull(record['derived_ata_dp']):
+            derived_ata = (
+                record['derived_ata_dp'].date()
+                if hasattr(record['derived_ata_dp'], 'date')
+                else record['derived_ata_dp']
+            )
+            if derived_ata <= today:
+                return f"Container <con>{container_number}</con> reached on {derived_ata} at {discharge_port} discharge port."
+            else:
+                return f"Container <con>{container_number}</con> is on the water, expected at {discharge_port} discharge port on {derived_ata}."
+        else:
+            return f"Container <con>{container_number}</con> is on the water, discharge port: {discharge_port}."
+
+    elif po_match:
+        po_number = po_match.group(1)
+        # Search for PO
+        po_df = df[df['po_number'].astype(str).str.contains(po_number, case=False, na=False)]
+
+        if po_df.empty:
+            return f"No data found for PO {po_number}."
+
+        # For PO, we might have multiple containers, so let's handle the most recent or relevant one
+        if len(po_df) > 1:
+            po_df = po_df.sort_values(['etd_lp', 'eta_dp'], ascending=[False, False])
+
+        record = po_df.iloc[0]
+        discharge_port = record.get('discharge_port', 'Unknown Port')
+
+        # Check ata_dp first
+        if pd.notnull(record['ata_dp']):
+            ata_date = (
+                record['ata_dp'].date()
+                if hasattr(record['ata_dp'], 'date')
+                else record['ata_dp']
+            )
+            return f"PO {po_number} reached on {ata_date} at {discharge_port} discharge port."
+
+        # If ata_dp is null, check derived_ata_dp
+        elif pd.notnull(record['derived_ata_dp']):
+            derived_ata = (
+                record['derived_ata_dp'].date()
+                if hasattr(record['derived_ata_dp'], 'date')
+                else record['derived_ata_dp']
+            )
+            if derived_ata <= today:
+                return f"PO {po_number} reached on {derived_ata} at {discharge_port} discharge port."
+            else:
+                return f"PO {po_number} is on the water, expected at {discharge_port} discharge port on {derived_ata}."
+        else:
+            return f"PO {po_number} is on the water, discharge port: {discharge_port}."
+
+    else:
+        return "Please provide a valid container number (e.g., TCLU8579495) or PO number to check arrival status."
+
+
+
+
 def vector_search_tool(query: str) -> str:
     """
     Search the vector database for relevant shipment information using semantic similarity.
@@ -757,6 +855,11 @@ TOOLS = [
         description="Get the top 5 most frequent values for a specified column."
     ),
     Tool(
+        name="Check Arrival Status",
+        func=check_arrival_status,
+        description="Check if a container or PO has arrived based on ATA_DP and derived_ATA_DP logic."
+    ),
+    Tool(
         name="Get Load Port For Container",
         func=get_load_port_for_container,
         description="Get the load port details for a specific container."
@@ -777,6 +880,7 @@ TOOLS = [
         description="Execute SQL queries against the shipment data stored in an in-memory SQLite database."
     ),
 ]
+
 
 
 
