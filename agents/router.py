@@ -15,6 +15,7 @@ from agents.tools import (
     get_containers_arriving_soon,
     get_load_port_for_container,
     check_arrival_status,
+    get_container_carrier,
     answer_with_column_mapping,
     vector_search_tool,
     get_blob_sql_engine,
@@ -67,5 +68,6 @@ def route_query(query: str) -> str:
 # from agents.router import route_query
 
 # result = route_query(user_query)
+
 
 
