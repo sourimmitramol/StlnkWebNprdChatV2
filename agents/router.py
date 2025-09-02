@@ -25,15 +25,17 @@ from agents.tools import (
 def route_query(query: str) -> str:
     q = query.lower()
     """provide a response in the tabular form"""
+   
+    # Add carrier routing - check for carrier keywords
     if ("carrier" in q or "shipping line" in q) and ("container" in q or "po" in q or any(char.isdigit() for char in q)):
         return get_container_carrier(query)
     elif ("arrived" in q or "reached" in q or "arrival" in q or "on water" in q or "on the water" in q) and ("container" in q or "po" in q or any(char.isdigit() for char in q)):
         return check_arrival_status(query)
-    #elif any("milestone", "status", "track", "event history", "where is") in q:
-        #return get_container_milestones(query)
+    elif "status" in q and ("container" in q or any(char.isdigit() for char in q)):
+        return get_container_status(query)
     elif "milestone or status" in q:
         return get_container_milestones(query)
-    elif "milestone or status or where or track" in q and ("container" in q or any(char.isdigit() for char in q)):
+    elif "milestone" in q and ("container" in q or any(char.isdigit() for char in q)):
         return get_container_milestones(query)
     elif "delay" in q:
         return get_delayed_containers(query)
@@ -76,6 +78,7 @@ def route_query(query: str) -> str:
 # from agents.router import route_query
 
 # result = route_query(user_query)
+
 
 
 
