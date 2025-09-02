@@ -152,7 +152,8 @@ def get_upcoming_arrivals(query: str) -> str:
     upcoming = upcoming[cols].sort_values(eta_col).head(15)
     upcoming = ensure_datetime(upcoming, [eta_col])
     upcoming[eta_col] = upcoming[eta_col].dt.strftime("%Y-%m-%d")
-    return upcoming.to_string(index=False)
+    return upcoming.to_dict(orient="records")
+    #return upcoming.to_string(index=False)
 
 
 # ------------------------------------------------------------------
@@ -1039,6 +1040,7 @@ TOOLS = [
         description="Execute SQL queries against the shipment data stored in an in-memory SQLite database."
     ),
 ]
+
 
 
 
