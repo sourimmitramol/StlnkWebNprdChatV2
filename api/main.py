@@ -24,6 +24,8 @@ from agents.tools import (
     get_delayed_pos,
     get_containers_arriving_soon,
     get_load_port_for_container,
+    get_container_carrier,
+    check_arrival_status,
     answer_with_column_mapping,
     vector_search_tool,
     get_blob_sql_engine,
@@ -400,6 +402,7 @@ def ask_with_consignee(body: QueryWithConsigneeBody):
             logger.error(f"Fallback processing failed: {inner_exc}", exc_info=True)
 
             return {"response": f"Error processing query: {str(exc)}", "mode": "agent"}
+
 
 
 
