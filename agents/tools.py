@@ -68,7 +68,7 @@ def get_container_milestones(input_str: str) -> str:
         ("<strong>Reached at Last CY</strong>", row.get("last_cy_location"), row.get("equipment_arrived_at_last_cy")),
         ("<strong>Out Gate at Last CY</strong>", row.get("out_gate_at_last_cy_lcn"), row.get("out_gate_at_last_cy")),
         ("<strong>Delivered at</strong>", row.get("delivery_date_to_consignee_lcn"), row.get("delivery_date_to_consignee")),
-        ("<strong>Container Returned to</strong>", row.get("empty_container_return_lcn"), row.get("empty_container_return_date")),
+        ("<strong>Empty Container Returned to</strong>", row.get("empty_container_return_lcn"), row.get("empty_container_return_date")),
     ]
 
     c_df = pd.DataFrame(row_milestone_map)
@@ -1039,6 +1039,7 @@ TOOLS = [
         description="Execute SQL queries against the shipment data stored in an in-memory SQLite database."
     ),
 ]
+
 
 
 
