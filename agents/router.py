@@ -51,9 +51,9 @@ def route_query(query: str) -> str:
         return get_containers_arriving_soon(query)
     elif "lp" in q or "load port" in q:
         return get_load_port_for_container(query)
-    elif ("carrier" in q or "shipping line" in q) and ("container" in q or "po" in q or any(char.isdigit() for char in q)):    
+    elif any("carrier", "shipping line") in q:    
         return get_container_carrier(query)
-    elif ("arrived" in q or "reached" in q or "arrival" in q or "on water" in q or "on the water" in q) and ("container" in q or "po" in q or any(char.isdigit() for char in q)):
+    elif any("arrived", "reached", "arrival","on water","on the water") in q:
         return check_arrival_status(query)
     elif "semantic" in q or "vector" in q or "similar" in q:
         return vector_search_tool(query)
@@ -72,6 +72,7 @@ def route_query(query: str) -> str:
 # from agents.router import route_query
 
 # result = route_query(user_query)
+
 
 
 
