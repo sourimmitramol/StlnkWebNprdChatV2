@@ -729,6 +729,160 @@ def check_arrival_status(input_str: str) -> str:
         return "Please provide a valid container number (e.g., TCLU8579495) or PO number to check arrival status."
 
 
+def get_container_carrier(input_str: str) -> str:
+    """
+    Get the carrier information for a specific container or PO.
+    Input: Query should mention a container number or PO number (partial or full).
+    Output: Carrier details including carrier name, code, and SCAC code if available.
+    For PO queries: Shows final carrier. If multiple records, shows latest w.r.t. ETD/ETA.
+    If no container/PO is found, prompts for a valid identifier.
+    """
+    # Try to extract container number first
+    container_no = extract_container_number(input_str)
+
+    # Try to extract PO number if no container found
+    po_no = None
+    if not container_no:
+        # Extract PO number from input - look for patterns like PO followed by alphanumeric
+        po_pattern = r'(?:po\s+|po#|po:|purchase\s+order\s+)([a-zA-Z0-9\-_]+)'
+        po_match = re.search(po_pattern, input_str, re.IGNORECASE)
+        if po_match:
+            po_no = po_match.group(1).strip()
+        else:
+            # Try to find standalone alphanumeric that could be a PO
+            standalone_pattern = r'\b([A-Z0-9]{4,})\b'
+            standalone_match = re.search(standalone_pattern, input_str, re.IGNORECASE)
+            if standalone_match:
+                po_no = standalone_match.group(1).strip()
+
+    if not container_no and not po_no:
+        return "Please specify a valid container number or PO number to get carrier information."
+
+    df = _df()
+
+    # Search by container number first
+    if container_no:
+        df["container_number"] = df["container_number"].astype(str)
+
+        # Exact match after normalizing
+        clean = clean_container_number(container_no)
+        rows = df[df["container_number"].str.replace(" ", "").str.upper() == clean]
+
+        # Fallback to contains match
+        if rows.empty:
+            rows = df[df["container_number"].str.contains(container_no, case=False, na=False)]
+
+        identifier = f"container {container_no}"
+
+        if rows.empty:
+            return f"No data found for {identifier}."
+
+        # For containers, use the first match
+        row = rows.iloc[0]
+
+    # Search by PO number if container not found
+    elif po_no:
+        po_col = "po_number_multiple" if "po_number_multiple" in df.columns else "po_number"
+        if po_col in df.columns:
+            # Search for PO in the comma-separated field
+            rows = df[df[po_col].astype(str).str.contains(po_no, case=False, na=False)]
+            identifier = f"PO {po_no}"
+        else:
+            return "PO number column not found in the data."
+
+        if rows.empty:
+            return f"No data found for {identifier}."
+
+        # For PO queries: If multiple records, show latest w.r.t. ETD/ETA
+        if len(rows) > 1:
+            # Ensure datetime columns are properly formatted
+            rows = ensure_datetime(rows, ["etd_lp", "etd_flp", "eta_dp", "eta_fd"])
+
+            # Create a combined date field for sorting (latest ETD/ETA)
+            date_cols = []
+            for col in ["etd_lp", "etd_flp", "eta_dp", "eta_fd"]:
+                if col in rows.columns:
+                    date_cols.append(col)
+
+            if date_cols:
+                # Get the latest date from available date columns for each row
+                latest_dates = []
+                for idx, row_data in rows.iterrows():
+                    row_dates = [row_data[col] for col in date_cols if pd.notnull(row_data[col])]
+                    if row_dates:
+                        latest_dates.append((idx, max(row_dates)))
+                    else:
+                        latest_dates.append((idx, pd.Timestamp.min))
+
+                # Sort by latest date and get the most recent
+                if latest_dates:
+                    latest_dates.sort(key=lambda x: x[1], reverse=True)
+                    latest_idx = latest_dates[0][0]
+                    row = rows.loc[latest_idx]
+                else:
+                    row = rows.iloc[0]
+            else:
+                row = rows.iloc[0]
+        else:
+            row = rows.iloc[0]
+
+    # Build carrier information response
+    carrier_info = []
+
+    # Primary carrier information from final_carrier_name
+    if (
+        "final_carrier_name" in row.index
+        and pd.notnull(row["final_carrier_name"])
+        and str(row["final_carrier_name"]).strip()
+    ):
+        carrier_info.append(f"Final Carrier Name: {row['final_carrier_name']}")
+
+    # Additional carrier details
+    carrier_fields = [
+        ("final_carrier_code", "Final Carrier Code"),
+        ("final_carrier_scac_code", "Final Carrier SCAC Code"),
+        ("true_carrier_code", "True Carrier Code"),
+        ("true_carrier_scac_code", "True Carrier SCAC Code"),
+    ]
+
+    for field, label in carrier_fields:
+        if field in row.index and pd.notnull(row[field]) and str(row[field]).strip():
+            carrier_info.append(f"{label}: {row[field]}")
+
+    if not carrier_info:
+        return f"No carrier information available for {identifier}."
+
+    # For PO queries with multiple records, add information about the selection
+    response_lines = []
+    if po_no and len(rows) > 1:
+        response_lines.append(f"Carrier information for {identifier} (latest record from {len(rows)} found):")
+    else:
+        response_lines.append(f"Carrier information for {identifier}:")
+
+    response_lines.extend(carrier_info)
+
+    # Add additional context for PO queries
+    if po_no:
+        # Show the date used for selection if available
+        date_info = []
+        for col in ["etd_lp", "etd_flp", "eta_dp", "eta_fd"]:
+            if col in row.index and pd.notnull(row[col]):
+                date_val = row[col]
+                if hasattr(date_val, "strftime"):
+                    date_str = date_val.strftime("%Y-%m-%d")
+                else:
+                    date_str = str(date_val)
+                col_name = col.replace("_", " ").upper()
+                date_info.append(f"{col_name}: {date_str}")
+
+        if date_info and len(rows) > 1:
+            response_lines.append("")
+            response_lines.append("Selection based on latest date from:")
+            response_lines.extend(date_info)
+
+    return "\n".join(response_lines)
+
+
 
 
 def vector_search_tool(query: str) -> str:
@@ -870,6 +1024,11 @@ TOOLS = [
         description="Interprets user queries using robust synonym mapping and answers using the correct column(s)."
     ),
     Tool(
+        name="Get Container Carrier",
+        func=get_container_carrier,
+        description="Get the carrier information for a specific container or PO number."
+    ),
+    Tool(
         name="Vector Search",
         func=vector_search_tool,
         description="Search the vector database for relevant shipment information using semantic similarity."
@@ -880,6 +1039,7 @@ TOOLS = [
         description="Execute SQL queries against the shipment data stored in an in-memory SQLite database."
     ),
 ]
+
 
 
 
