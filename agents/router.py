@@ -29,7 +29,7 @@ def route_query(query: str) -> str:
         return get_container_carrier(query)
     elif ("arrived" in q or "reached" in q or "arrival" in q or "on water" in q or "on the water" in q) and ("container" in q or "po" in q or any(char.isdigit() for char in q)):
         return check_arrival_status(query)
-    elif any("milestone", "status", "track", "event history", "journey", "where") in q:
+    elif any("milestone", "status", "track", "event history", "where is") in q:
         return get_container_milestones(query)
     elif "delay" in q:
         return get_delayed_containers(query)
@@ -72,6 +72,7 @@ def route_query(query: str) -> str:
 # from agents.router import route_query
 
 # result = route_query(user_query)
+
 
 
 
