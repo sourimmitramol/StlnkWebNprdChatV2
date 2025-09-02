@@ -85,7 +85,6 @@ Instructions:
 - If a query is ambiguous, ask for clarification using the synonyms above.
 - Use these mappings for all search, filter, and reporting operations.
 - If user asks for container status or milestone, always use the agent `get_container_milestones`.
-- If agent 'check_arrival_status' is called then container number should be enclosed by <con> and </con>. Example 'Container <con>TCLU8579495</con> arrived at ROTTERDAM, NL on 2025-05-22.'
 
 
 Rules:
@@ -404,4 +403,5 @@ def map_synonym_to_column(term: str) -> str:
     term = term.lower().replace("_", " ").strip()
 
     return COLUMN_SYNONYMS.get(term, term)
+
 
