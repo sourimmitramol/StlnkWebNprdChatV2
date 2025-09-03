@@ -259,9 +259,12 @@ def ask(body: QueryWithConsigneeBody):
         else:
             message = re.sub(r'\n\s*\n', '\n\n', output).strip() or "No milestones found for the given container."
 
+        observation = result.get("intermediate_steps", [])
+        
         return {
             "response": message,
             "table": table_data,
+            "observation" : observation,
             "mode": "agent"
         }
 
@@ -402,6 +405,7 @@ def ask_with_consignee(body: QueryWithConsigneeBody):
             logger.error(f"Fallback processing failed: {inner_exc}", exc_info=True)
 
             return {"response": f"Error processing query: {str(exc)}", "mode": "agent"}
+
 
 
 
