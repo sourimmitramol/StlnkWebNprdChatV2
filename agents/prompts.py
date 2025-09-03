@@ -85,7 +85,7 @@ Instructions:
 - If a query is ambiguous, ask for clarification using the synonyms above.
 - Use these mappings for all search, filter, and reporting operations.
 - If user asks for container status or milestone, always use the agent `get_container_milestones`.
-- If user asks for po of a container, please don't go to agent `get_container_milestones`.
+- If user asks for po or po number or po# or purchase order of a container, always use the agent `lookup_keywords`.
 
 
 Rules:
@@ -404,6 +404,8 @@ def map_synonym_to_column(term: str) -> str:
     term = term.lower().replace("_", " ").strip()
 
     return COLUMN_SYNONYMS.get(term, term)
+
+
 
 
 
