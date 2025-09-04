@@ -1536,11 +1536,6 @@ def get_blob_sql_engine():
 # ------------------------------------------------------------------
 TOOLS = [
     Tool(
-        name="Get Container Status",
-        func=get_container_status,
-        description="Get comprehensive status and journey timeline for a specific container with all milestone events."
-    ),
-    Tool(
         name="Get Container Milestones",
         func=get_container_milestones,
         description="Retrieve all milestone dates for a specific container."
@@ -1661,11 +1656,6 @@ TOOLS = [
         description="Get container status changes for current or last week"
     ),
     Tool(
-        name="Get Current Location",
-        func=get_current_location,
-        description="Get the current location of a container"
-    ),
-    Tool(
         name="Get Hot Containers",
         func=get_hot_containers,
         description="Get list of hot containers for authorized consignees based on hot container flag"
@@ -1676,6 +1666,7 @@ TOOLS = [
         description="Get hot containers for specific consignee codes mentioned in the query"
     ),
 ]
+
 
 
 
