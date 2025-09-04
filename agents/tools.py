@@ -1138,7 +1138,7 @@ def get_upcoming_pos(query: str) -> str:
 
     result = filtered[cols].drop_duplicates().head(15).to_string(index=False)
     #return f"Upcoming POs (next {days} days):\n\n{result}"
-    return result.to_dict(orient="records")
+    return filtered[cols].drop_duplicates().head(15).to_dict(orient="records")
 
 
 # ------------------------------------------------------------------
@@ -1667,6 +1667,7 @@ TOOLS = [
         description="Get hot containers for specific consignee codes mentioned in the query"
     ),
 ]
+
 
 
 
