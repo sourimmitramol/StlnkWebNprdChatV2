@@ -1136,7 +1136,10 @@ def get_upcoming_pos(query: str) -> str:
     cols = [po_col] + etd_cols + ["discharge_port", "final_destination"]
     cols = [c for c in cols if c in filtered.columns]
 
-    return f"Upcoming POs (next {days} days):\n\n{result}"
+    #result = filtered[cols].drop_duplicates().head(15).to_string(index=False)
+    #return f"Upcoming POs (next {days} days):\n\n{result}"
+
+    return filtered[cols].drop_duplicates().head(15).to_dict(orient="records")
 
 
 # ------------------------------------------------------------------
@@ -1665,6 +1668,7 @@ TOOLS = [
         description="Get hot containers for specific consignee codes mentioned in the query"
     ),
 ]
+
 
 
 
