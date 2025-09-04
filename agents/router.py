@@ -2,7 +2,6 @@ from agents.prompts import map_synonym_to_column
 from agents.tools import (
     sql_query_tool,
     get_container_milestones,
-    get_container_status,
     get_container_carrier,
     check_arrival_status,
     get_delayed_containers,
@@ -25,8 +24,7 @@ from agents.tools import (
     get_containers_by_carrier,
     get_containers_by_supplier,
     check_po_month_arrival,
-    get_weekly_status_changes,
-    get_current_location,
+    get_weekly_status_changes
 )
 
 def route_query(query: str, consignee_codes: list = None) -> str:
@@ -81,11 +79,7 @@ def route_query(query: str, consignee_codes: list = None) -> str:
     # Question 27: Weekly status changes
     if "status" in q and ("week" in q or "change" in q):
         return get_weekly_status_changes(query)
-    
-    # Question 30: Current location
-    #if "where" in q and ("container" in q or "location" in q or "right now" in q):
-    #    return get_current_location(query)
-    
+   
     # Existing routing logic...
     # ... rest of your current routing logic
     # Add carrier routing - check for carrier keywords
@@ -141,6 +135,7 @@ def route_query(query: str, consignee_codes: list = None) -> str:
 # Usage example in your FastAPI endpoint:
 # from agents.router import route_query
 # result = route_query(user_query)
+
 
 
 
