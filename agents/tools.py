@@ -140,7 +140,7 @@ def get_hot_containers(query: str) -> str:
         response_lines.append(container_info)
 
     #return f'The following number of hot containers found: {len(response_lines)}\n' + "\n".join(response_lines)
-    return result_data
+    return result_data.to_dict(orient="records")
 
 def get_hot_containers_by_consignee(query: str) -> str:
     """
@@ -1669,6 +1669,7 @@ TOOLS = [
         description="Get hot containers for specific consignee codes mentioned in the query"
     ),
 ]
+
 
 
 
