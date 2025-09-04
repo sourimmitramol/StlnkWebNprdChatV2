@@ -83,8 +83,8 @@ def route_query(query: str, consignee_codes: list = None) -> str:
         return get_weekly_status_changes(query)
     
     # Question 30: Current location
-    if "where" in q and ("container" in q or "location" in q or "right now" in q):
-        return get_current_location(query)
+    #if "where" in q and ("container" in q or "location" in q or "right now" in q):
+    #    return get_current_location(query)
     
     # Existing routing logic...
     # ... rest of your current routing logic
@@ -93,11 +93,7 @@ def route_query(query: str, consignee_codes: list = None) -> str:
         return get_container_carrier(query)
     elif ("arrived" in q or "reached" in q or "arrival" in q or "on water" in q or "on the water" in q) and ("container" in q or "po" in q or any(char.isdigit() for char in q)):
         return check_arrival_status(query)
-    elif "status" in q and ("container" in q or any(char.isdigit() for char in q)):
-        return get_container_status(query)
-    elif "milestone or status" in q:
-        return get_container_milestones(query)
-    elif "milestone" in q and ("container" in q or any(char.isdigit() for char in q)):
+    elif any("milestone", "status", "track", "event history", "journey", "where") in q:
         return get_container_milestones(query)
     elif "delay" in q:
         return get_delayed_containers(query)
@@ -145,6 +141,7 @@ def route_query(query: str, consignee_codes: list = None) -> str:
 # Usage example in your FastAPI endpoint:
 # from agents.router import route_query
 # result = route_query(user_query)
+
 
 
 
