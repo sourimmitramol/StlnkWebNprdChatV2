@@ -530,53 +530,6 @@ def get_container_milestones(input_str: str) -> str:
     return res
 
 
-def get_container_status(input_str: str) -> str:
-    """
-    Get comprehensive status and journey timeline for a specific container with all milestone events.
-    Input: Provide a valid container number (partial or full).
-    Output: Complete journey status with all milestones and current position.
-    """
-    container_no = extract_container_number(input_str)
-    if not container_no:
-        return "Please specify a valid container number."
-
-    df = _df()
-    df["container_number"] = df["container_number"].astype(str)
-
-    # Exact match after normalizing
-    clean = clean_container_number(container_no)
-    rows = df[df["container_number"].str.replace(" ", "").str.upper() == clean]
-
-    # Fallback to contains match
-    if rows.empty:
-        rows = df[df["container_number"].str.contains(container_no, case=False, na=False)]
-
-    if rows.empty:
-        return f"No data found for container {container_no}."
-
-    row = rows.iloc[0]
-    
-    # Build comprehensive status
-    status_lines = [f"Container {container_no} Status Overview:"]
-    status_lines.append(f"Consignee: {row.get('consignee_code_multiple', 'Unknown')}")
-    status_lines.append(f"PO Number: {row.get('po_number_multiple', 'Unknown')}")
-    status_lines.append(f"Load Port: {row.get('load_port', 'Unknown')}")
-    status_lines.append(f"Discharge Port: {row.get('discharge_port', 'Unknown')}")
-    
-    # Current status based on latest milestone
-    if pd.notnull(row.get('empty_container_return_date')):
-        status_lines.append(f"Status: Container returned on {row['empty_container_return_date']}")
-    elif pd.notnull(row.get('delivery_date_to_consignee')):
-        status_lines.append(f"Status: Delivered on {row['delivery_date_to_consignee']}")
-    elif pd.notnull(row.get('ata_dp')):
-        status_lines.append(f"Status: Arrived at discharge port on {row['ata_dp']}")
-    elif pd.notnull(row.get('atd_lp')):
-        status_lines.append("Status: In transit")
-    else:
-        status_lines.append("Status: Preparing for shipment")
-    
-    return "\n".join(status_lines)
-
 def get_top_values_for_column(query: str) -> str:
     """
     Get the top 5 most frequent values for a specified column.
@@ -1867,11 +1820,6 @@ def sql_query_tool(natural_language_query: str) -> str:
 # ------------------------------------------------------------------
 TOOLS = [
     Tool(
-        name="Get Container Status",
-        func=get_container_status,
-        description="Get comprehensive status and journey timeline for a specific container with all milestone events."
-    ),
-    Tool(
         name="Get Container Milestones",
         func=get_container_milestones,
         description="Retrieve all milestone dates for a specific container."
@@ -2002,6 +1950,7 @@ TOOLS = [
         description="Get hot containers for specific consignee codes mentioned in the query"
     ),
 ]
+
 
 
 
