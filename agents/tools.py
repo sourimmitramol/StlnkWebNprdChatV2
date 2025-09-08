@@ -21,17 +21,71 @@ import sqlite3
 from sqlalchemy import create_engine
 import threading
 
+# In agents/tools.py - Add this helper function at the top:
 
+def safe_sort_dataframe(df, sort_column, ascending=True):
+    """Safe sorting compatible with all pandas versions"""
+    if sort_column not in df.columns:
+        return df
+    
+    try:
+        # Try modern pandas first
+        return df.sort_values(sort_column, ascending=ascending, na_position='last')
+    except TypeError:
+        # Fallback for older pandas
+        df_copy = df.copy()
+        df_copy['_temp_sort'] = pd.to_datetime(df_copy[sort_column], errors='coerce')
+        df_sorted = df_copy.sort_values('_temp_sort', ascending=ascending)
+        return df_sorted.drop('_temp_sort', axis=1)
+
+# Then replace all sort_values calls in your functions:
+# OLD: df.sort_values(column, na_last=True)
+# NEW: df = safe_sort_dataframe(df, column)
 # ------------------------------------------------------------------
 # Helper – give every tool a clean copy of the DataFrame
 # ------------------------------------------------------------------
 def _df() -> pd.DataFrame:
-    """Get DataFrame, automatically filtered by consignee if in context"""
-    consignee_codes = _get_current_consignee_codes()
-    return _df_filtered_by_consignee(consignee_codes) if consignee_codes else get_shipment_df()
+    """
+    Get filtered DataFrame based on thread-local consignee codes.
+    Returns the full dataset if no consignee codes are set.
+    """
+    from services.azure_blob import get_shipment_df
+    df = get_shipment_df()
+    
+    # Check if consignee codes are set in thread-local storage
+    import threading
+    if hasattr(threading.current_thread(), 'consignee_codes'):
+        consignee_codes = threading.current_thread().consignee_codes
+        
+        if consignee_codes and 'consignee_code_multiple' in df.columns:
+            import re
+            # Extract numeric codes from consignee codes
+            numeric_codes = []
+            for code in consignee_codes:
+                # Extract numeric part (e.g., "0045831" from "EDDIE BAUER LLC(0045831)")
+                match = re.search(r'\((\d+)\)', code)
+                if match:
+                    numeric_codes.append(match.group(1))
+                else:
+                    # If already just numeric, use as is
+                    numeric_codes.append(code.strip())
+            
+            # Filter by consignee codes
+            pattern = r"|".join([rf"\b{re.escape(code)}\b" for code in numeric_codes])
+            mask = df['consignee_code_multiple'].astype(str).apply(
+                lambda x: bool(re.search(pattern, x))
+            )
+            filtered_df = df[mask]
+            
+            logger.debug(f"Filtered DataFrame: {len(df)} -> {len(filtered_df)} rows for consignee codes: {numeric_codes}")
+            return filtered_df
+    
+    logger.debug(f"Returning unfiltered DataFrame with {len(df)} rows")
+    return df
 
 def _get_current_consignee_codes():
-    """Get consignee codes from current thread context"""
+    """Get current consignee codes from thread-local storage"""
+    import threading
     return getattr(threading.current_thread(), 'consignee_codes', None)
 
 def _df_filtered_by_consignee(consignee_codes=None):
@@ -88,8 +142,7 @@ def get_hot_containers(query: str) -> str:
         return "No hot containers found for your authorized consignees."
     
     # Select relevant columns for display
-    #display_cols = ['container_number', hot_flag_col]
-    display_cols = ['container_number', 'consignee_code_multiple','supplier_vendor_name']
+    display_cols = ['container_number', hot_flag_col]
 
     # Add additional useful columns if they exist
     #optional_cols = ['po_number_multiple', 'discharge_port', 'eta_dp', 'ata_dp', 'load_port', 'final_vessel_name']
@@ -376,7 +429,7 @@ def get_weekly_status_changes(query: str) -> str:
     
     # Format results
     result_lines = [f"Container status changes for {period}:"]
-    for change in status_changes[:20]:  # Limit to 20 results
+    for change in status_changes[:200]:  # Limit to 20 results
         result_lines.append(f"- {change['container_number']}: {change['milestone']} on {change['date']} at {change['location']}")
     
     return "\n".join(result_lines)
@@ -449,14 +502,14 @@ def get_container_milestones(input_str: str) -> str:
     # Build the milestone list (only keep non-null dates)
     # -------------------------------------------------
     row_milestone_map = [
-        ("Departed From", row.get("load_port"), row.get("atd_lp")),
-        ("Final Load Port Arrival", row.get("final_load_port"), row.get("ata_flp")),
-        ("Final Load Port Departure", row.get("final_load_port"), row.get("atd_flp")),
-        ("Reached at Discharge Port", row.get("discharge_port"), row.get("ata_dp")),
-        ("Reached at Last CY", row.get("last_cy_location"), row.get("equipment_arrived_at_last_cy")),
-        ("Out Gate at Last CY", row.get("out_gate_at_last_cy_lcn"), row.get("out_gate_at_last_cy")),
-        ("Delivered at", row.get("delivery_date_to_consignee_lcn"), row.get("delivery_date_to_consignee")),
-        ("Empty Container Returned to", row.get("empty_container_return_lcn"), row.get("empty_container_return_date")),
+        ("<strong>Departed From</strong>", row.get("load_port"), row.get("atd_lp")),
+        ("<strong>Final Load Port Arrival</strong>", row.get("final_load_port"), row.get("ata_flp")),
+        ("<strong>Final Load Port Departure</strong>", row.get("final_load_port"), row.get("atd_flp")),
+        ("<strong>Reached at Discharge Port</strong>", row.get("discharge_port"), row.get("ata_dp")),
+        ("<strong>Reached at Last CY</strong>", row.get("last_cy_location"), row.get("equipment_arrived_at_last_cy")),
+        ("<strong>Out Gate at Last CY</strong>", row.get("out_gate_at_last_cy_lcn"), row.get("out_gate_at_last_cy")),
+        ("<strong>Delivered at</strong>", row.get("delivery_date_to_consignee_lcn"), row.get("delivery_date_to_consignee")),
+        ("<strong>Empty Container Returned to</strong>", row.get("empty_container_return_lcn"), row.get("empty_container_return_date")),
     ]
 
     c_df = pd.DataFrame(row_milestone_map)
@@ -470,7 +523,7 @@ def get_container_milestones(input_str: str) -> str:
     # print(l_line)
 
     # print("Bot Answer:_____")
-    res = f"The Container <con>{container_no}</con> <strong>{l_line.get(0)} {l_line.get(1)}</strong> on {l_line.get(2)}\n\n <MILESTONE> {f_df.to_string(index=False, header=False)}."
+    res = f"The Container <con>{container_no}</con> {l_line.get(0)} {l_line.get(1)} on {l_line.get(2)}\n\n <MILESTONE> {f_df.to_string(index=False, header=False)}."
     # print(res)
 
     # return "\n".join(status_lines)
@@ -753,31 +806,180 @@ def ensure_datetime(df: pd.DataFrame, columns: list) -> pd.DataFrame:
 
     return df
 
+
+# def get_delayed_containers(query: str) -> str:
+#     """Find containers delayed by specified number of days - supports exact or range queries"""
+#     import re
+#     df = _df()  # This now automatically filters by consignee
+#     df = ensure_datetime(df, ["eta_dp", "ata_dp"])
+    
+#     if "delay_days" not in df.columns:
+#         df["delay_days"] = (df["ata_dp"] - df["eta_dp"]).dt.days
+#         df["delay_days"] = df["delay_days"].fillna(0).astype(int)
+
+#     # Enhanced regex to detect different query patterns
+#     exact_match = re.search(r"delayed by (?:exactly )?(\d+) days?", query, re.IGNORECASE)
+#     more_than_match = re.search(r"delayed by more than (\d+) days?", query, re.IGNORECASE)
+#     at_least_match = re.search(r"delayed by at least (\d+) days?", query, re.IGNORECASE)
+    
+#     if more_than_match or at_least_match:
+#         # Range query: more than X days
+#         days = int((more_than_match or at_least_match).group(1))
+#         delayed_df = df[(df["delay_days"] > days) & (df["delay_days"] > 0)]
+#         query_type = f"more than {days}"
+#     elif exact_match:
+#         # Exact query: exactly X days
+#         days = int(exact_match.group(1))
+#         delayed_df = df[(df["delay_days"] == days) & (df["delay_days"] > 0)]
+#         query_type = f"exactly {days}"
+#     else:
+#         # Default to exact match for simple "delayed by X days"
+#         days_match = re.search(r"(\d+) days?", query, re.IGNORECASE)
+#         days = int(days_match.group(1)) if days_match else 7
+#         delayed_df = df[(df["delay_days"] == days) & (df["delay_days"] > 0)]
+#         query_type = f"exactly {days}"
+    
+#     if delayed_df.empty:
+#         return f"No containers are delayed by {query_type} days for your authorized consignees."
+    
+#     cols = ["container_number", "eta_dp", "ata_dp", "delay_days"]
+#     if "consignee_code_multiple" in delayed_df.columns:
+#         cols.append("consignee_code_multiple")
+    
+#     cols = [c for c in cols if c in delayed_df.columns]
+#     delayed_df = delayed_df[cols].sort_values("delay_days", ascending=False)
+#     delayed_df = ensure_datetime(delayed_df, ["eta_dp", "ata_dp"])
+#     delayed_df["eta_dp"] = delayed_df["eta_dp"].dt.strftime("%Y-%m-%d")
+#     delayed_df["ata_dp"] = delayed_df["ata_dp"].dt.strftime("%Y-%m-%d")
+    
+#     # Return both message and data
+#     result_data = delayed_df.to_dict(orient="records")
+    
+#     message = f"Found {len(result_data)} containers delayed by {query_type} days for your consignee.\n\n"
+    
+#     # Add examples to the message
+#     example_count = min(5, len(result_data))
+#     for i, container in enumerate(result_data[:example_count]):
+#         delay_days = container['delay_days']
+#         message += f"• {container['container_number']}: Expected {container['eta_dp']}, Arrived {container['ata_dp']} ({delay_days} days late)\n"
+    
+#     if len(result_data) > example_count:
+#         message += f"... and {len(result_data) - example_count} more containers.\n"
+    
+#     # Embed the data for API extraction
+#     message += f"\n{result_data}"
+    
+#     return message
+
+## Get delayed containers
+
+
+
 def get_delayed_containers(query: str) -> str:
-    """Find containers delayed by a specified number of days - now with consignee filtering"""
+    """Find containers delayed by specified number of days - supports exact or range queries"""
     import re
     df = _df()  # This now automatically filters by consignee
     df = ensure_datetime(df, ["eta_dp", "ata_dp"])
     
-    if "delay_days" not in df.columns:
-        df["delay_days"] = (df["ata_dp"] - df["eta_dp"]).dt.days
-        df["delay_days"] = df["delay_days"].astype(int)
+    # Only consider containers that have actually arrived (ata_dp is not null)
+    # and arrived from today onwards (ata_dp >= today)
+    today = pd.Timestamp.today().normalize()
+    arrived_containers = df[
+        (df["ata_dp"].notna()) & 
+        (df["ata_dp"] == today)
+    ]
+    
+    if arrived_containers.empty:
+        return "No containers have arrived from today onwards for your authorized consignees."
+    
+    # Calculate delay days for arrived containers
+    arrived_containers = arrived_containers.copy()
+    arrived_containers["delay_days"] = (arrived_containers["ata_dp"] - arrived_containers["eta_dp"]).dt.days
+    arrived_containers["delay_days"] = arrived_containers["delay_days"].fillna(0).astype(int)
 
-    m = re.search(r"delayed by (\d+) days", query, re.IGNORECASE)
-    days = int(m.group(1)) if m else 7
-
-    delayed_df = df[(df["delay_days"] <= days) & (df["delay_days"] > 0)]
+    # Enhanced regex to detect different query patterns
+    exact_match = re.search(r"delayed by (?:exactly )?(\d+) days?", query, re.IGNORECASE)
+    more_than_match = re.search(r"delayed by more than (\d+) days?", query, re.IGNORECASE)
+    at_least_match = re.search(r"delayed by at least (\d+) days?", query, re.IGNORECASE)
+    greater_equal_match = re.search(r"delayed by >=?\s*(\d+) days?", query, re.IGNORECASE)
+    
+    if more_than_match:
+        # Range query: more than X days
+        days = int(more_than_match.group(1))
+        delayed_df = arrived_containers[arrived_containers["delay_days"] > days]
+        query_type = f"more than {days}"
+    elif at_least_match or greater_equal_match:
+        # Range query: at least X days or >= X days
+        days = int((at_least_match or greater_equal_match).group(1))
+        delayed_df = arrived_containers[arrived_containers["delay_days"] >= days]
+        query_type = f"at least {days}"
+    elif exact_match:
+        # Exact query: exactly X days
+        days = int(exact_match.group(1))
+        delayed_df = arrived_containers[arrived_containers["delay_days"] == days]
+        query_type = f"exactly {days}"
+    else:
+        # Default: extract any number and treat as "at least" for general delay queries
+        days_match = re.search(r"(\d+) days?", query, re.IGNORECASE)
+        if days_match:
+            days = int(days_match.group(1))
+            # Check if query suggests exact match or range
+            if "by " in query.lower() and "more" not in query.lower() and "at least" not in query.lower():
+                # Treat as exact match for "delayed by X days"
+                delayed_df = arrived_containers[arrived_containers["delay_days"] == days]
+                query_type = f"exactly {days}"
+            else:
+                # Treat as range for general queries
+                delayed_df = arrived_containers[arrived_containers["delay_days"] >= days]
+                query_type = f"at least {days}"
+        else:
+            # Default to 1+ days delay
+            days = 1
+            delayed_df = arrived_containers[arrived_containers["delay_days"] >= days]
+            query_type = f"at least {days}"
+    
+    # Only include containers that are actually delayed (positive delay days)
+    delayed_df = delayed_df[delayed_df["delay_days"] > 0]
+    
     if delayed_df.empty:
-        return f"No containers are delayed by {days}+ days for your authorized consignees."
-    print(delayed_df)
+        return f"No containers are delayed by {query_type} days for your authorized consignees (considering arrivals from today onwards)."
+    
     cols = ["container_number", "eta_dp", "ata_dp", "delay_days"]
+    if "consignee_code_multiple" in delayed_df.columns:
+        cols.append("consignee_code_multiple")
+    if "discharge_port" in delayed_df.columns:
+        cols.append("discharge_port")
+    
     cols = [c for c in cols if c in delayed_df.columns]
     delayed_df = delayed_df[cols].sort_values("delay_days", ascending=False)
-    delayed_df = ensure_datetime(delayed_df, ["eta_dp", "ata_dp"])
+    
+    # Format dates for display
+    delayed_df = delayed_df.copy()
     delayed_df["eta_dp"] = delayed_df["eta_dp"].dt.strftime("%Y-%m-%d")
     delayed_df["ata_dp"] = delayed_df["ata_dp"].dt.strftime("%Y-%m-%d")
     
-    return delayed_df.to_dict(orient="records")
+    # Return both message and data
+    result_data = delayed_df.to_dict(orient="records")
+    
+    message = f"Found {len(result_data)} containers delayed by {query_type} days for your consignee (arrivals from {today.strftime('%Y-%m-%d')} onwards).\n\n"
+    
+    # Add examples to the message
+    example_count = min(5, len(result_data))
+    for i, container in enumerate(result_data[:example_count]):
+        delay_days = container['delay_days']
+        port_info = f" at {container['discharge_port']}" if 'discharge_port' in container else ""
+        message += f"• {container['container_number']}: Expected {container['eta_dp']}, Arrived {container['ata_dp']} ({delay_days} days late){port_info}\n"
+    
+    if len(result_data) > example_count:
+        message += f"... and {len(result_data) - example_count} more containers.\n"
+    
+    # Embed the data for API extraction
+    message += f"\n{result_data}"
+    
+    #return message
+    return result_data
+
+
 
 
 # ------------------------------------------------------------------
@@ -788,8 +990,24 @@ def get_upcoming_arrivals(query: str) -> str:
     List containers scheduled to arrive within the next X days.
     Now filters by authorized consignee codes.
     """
-    m = re.search(r"(?:next|upcoming)\s+(\d+)\s+days", query, re.IGNORECASE)
-    days = int(m.group(1)) if m else 7
+    # Enhanced regex patterns to catch various formats
+    patterns = [
+        r"(?:next|upcoming|in)\s+(\d+)\s+days?",  # "next 2 days", "in 2 days"
+        r"(\d+)\s+days?",                         # "2 days"
+        r"arriving.*?(\d+)\s+days?",              # "arriving in 2 days"
+        r"will.*?arrive.*?(\d+)\s+days?",         # "will arrive in 2 days"
+    ]
+    
+    days = None
+    for pattern in patterns:
+        m = re.search(pattern, query, re.IGNORECASE)
+        if m:
+            days = int(m.group(1))
+            break
+    
+    # Default to 7 days if no number found
+    if days is None:
+        days = 7
 
     # Use filtered DataFrame
     df = _df()
@@ -811,7 +1029,11 @@ def get_upcoming_arrivals(query: str) -> str:
     if upcoming.empty:
         return f"No containers scheduled to arrive in the next {days} days for your authorized consignees."
 
-    cols = ["container_number", "discharge_port", eta_col, "consignee_code_multiple"]
+    # Include consignee column in the display
+    cols = ["container_number", "discharge_port", eta_col]
+    if "consignee_code_multiple" in upcoming.columns:
+        cols.append("consignee_code_multiple")
+    
     cols = [c for c in cols if c in upcoming.columns]
     
     upcoming = upcoming[cols].sort_values(eta_col)
@@ -824,8 +1046,8 @@ def get_upcoming_arrivals(query: str) -> str:
         consignee = row.get('consignee_code_multiple', 'Unknown')
         result_lines.append(f"- {row['container_number']} at {row['discharge_port']} on {row[eta_col]} (Consignee: {consignee})")
     
-    return upcoming.to_dict(orient="records")
     #return "\n".join(result_lines)
+    return upcoming.to_dict(orient="records")
 
 
 # ------------------------------------------------------------------
@@ -864,32 +1086,134 @@ def get_container_eta(query: str) -> str:
 def get_arrivals_by_port(query: str) -> str:
     """
     Find containers arriving at a specific port or country.
-    Input: Query should specify the port or country name (supports synonyms).
+    Input: Query should specify the port or country name (supports synonyms and port codes).
     Output: Table of containers arriving at the specified location.
     If not found, prompts for a valid port/country.
     """
-    m = re.search(r"in\s+([A-Za-z\s]+)", query, re.IGNORECASE)
-    if not m:
-        return "Please tell me the port or country you are interested in."
-    place = m.group(1).strip()
+    # Enhanced regex patterns to capture various port formats
+    patterns = [
+        r"from\s+([A-Za-z\s,()0-9]+?)(?:\s|$)",  # "from VUNG TAU(VNVUT)"
+        r"in\s+([A-Za-z\s,()0-9]+?)(?:\s|$)",    # "in VUNG TAU(VNVUT)"
+        r"at\s+([A-Za-z\s,()0-9]+?)(?:\s|$)",    # "at VUNG TAU(VNVUT)"
+        r"port\s+([A-Za-z\s,()0-9]+?)(?:\s|$)",  # "port VUNG TAU(VNVUT)"
+        r"([A-Z\s]+\([A-Z0-9]+\))",              # Direct port code format
+        r"([A-Z]{5,})",                          # Port codes like VNVUT
+    ]
+    
+    place = None
+    for pattern in patterns:
+        m = re.search(pattern, query, re.IGNORECASE)
+        if m:
+            place = m.group(1).strip()
+            break
+    
+    if not place:
+        return "Please specify a port or country name to search for containers."
 
-    # Use synonym mapping for port name
-    port_column = map_synonym_to_column("lp")  # Always map "lp" to "load_port"
     df = _df()
-    df = ensure_datetime(df, ["eta_dp"])
-    if port_column in df.columns:
-        filtered = df[df[port_column].astype(str).str.contains(place, case=False, na=False)]
-    else:
-        filtered = df[df.apply(lambda r: place.lower() in str(r).lower(), axis=1)]
-
+    
+    # Clean up the place string
+    place_clean = place.strip().upper()
+    
+    # Extract port code if present (e.g., VNVUT from "VUNG TAU(VNVUT)")
+    port_code_match = re.search(r'\(([A-Z0-9]+)\)', place_clean)
+    port_code = port_code_match.group(1) if port_code_match else None
+    
+    # Extract port name (remove port code part)
+    port_name = re.sub(r'\([A-Z0-9]+\)', '', place_clean).strip()
+    
+    # Define port-related columns to search in
+    port_columns = [
+        'load_port', 'final_load_port', 'discharge_port', 'final_destination',
+        'place_of_receipt', 'place_of_delivery', 'last_cy_location',
+        'load_port_code', 'discharge_port_code'  # If these exist
+    ]
+    
+    # Filter columns that actually exist in the dataframe
+    existing_port_cols = [col for col in port_columns if col in df.columns]
+    
+    if not existing_port_cols:
+        return "No port-related columns found in the data."
+    
+    # Create search mask
+    mask = pd.Series(False, index=df.index)
+    
+    for col in existing_port_cols:
+        col_series = df[col].astype(str).str.upper()
+        
+        # Search for port code if available
+        if port_code:
+            mask |= col_series.str.contains(port_code, case=False, na=False)
+        
+        # Search for port name
+        if port_name:
+            # Handle multi-word port names
+            port_words = port_name.split()
+            for word in port_words:
+                if len(word) >= 3:  # Only search for words with 3+ characters
+                    mask |= col_series.str.contains(word, case=False, na=False)
+    
+    filtered = df[mask]
+    
     if filtered.empty:
-        return f"No containers found arriving in {place}."
+        return f"No containers found from/at {place}. Please check the port name or try a different spelling."
 
-    cols = ["container_number", port_column, "eta_dp"]
-    cols = [c for c in cols if c in filtered.columns]
-    filtered = ensure_datetime(filtered, ["eta_dp"])
-    filtered["eta_dp"] = filtered["eta_dp"].dt.strftime("%Y-%m-%d")
-    return filtered[cols].head(10).to_string(index=False)
+    # Ensure datetime columns are properly formatted
+    filtered = ensure_datetime(filtered, ["eta_dp", "ata_dp", "atd_lp"])
+    
+    # Select relevant columns for display
+    display_cols = ["container_number"]
+    
+    # Add the port column that had the match (for context)
+    for col in existing_port_cols:
+        if col in filtered.columns:
+            col_series = filtered[col].astype(str).str.upper()
+            if port_code and col_series.str.contains(port_code, case=False, na=False).any():
+                display_cols.append(col)
+                break
+            elif port_name:
+                port_words = port_name.split()
+                found_match = False
+                for word in port_words:
+                    if len(word) >= 3 and col_series.str.contains(word, case=False, na=False).any():
+                        display_cols.append(col)
+                        found_match = True
+                        break
+                if found_match:
+                    break
+    
+    # Add other relevant columns
+    additional_cols = ["eta_dp", "ata_dp", "atd_lp"]
+    for col in additional_cols:
+        if col in filtered.columns and col not in display_cols:
+            display_cols.append(col)
+    
+    # Clean up the display
+    result_df = filtered[display_cols].copy()
+    
+    # Format date columns
+    date_cols = ["eta_dp", "ata_dp", "atd_lp"]
+    for col in date_cols:
+        if col in result_df.columns:
+            result_df[col] = pd.to_datetime(result_df[col], errors='coerce').dt.strftime('%Y-%m-%d')
+    
+    # Sort by relevant date
+    if "eta_dp" in result_df.columns:
+        result_df = result_df.sort_values("eta_dp", na_position='last')
+    elif "ata_dp" in result_df.columns:
+        result_df = result_df.sort_values("ata_dp", na_position='last')
+    
+    # Limit results and format
+    result_data = result_df.head(15)
+    
+    # Create response
+    response_lines = [f"Containers from/at {place} ({len(result_data)} found, showing first 15):"]
+    
+    # Add summary table
+    result_str = result_data.to_string(index=False, max_cols=6)
+    response_lines.append(result_str)
+    
+    return "\n".join(response_lines)
 
 
 # ------------------------------------------------------------------
@@ -1106,7 +1430,7 @@ def get_upcoming_pos(query: str) -> str:
     Defaults to 7 days if not specified.
     """
     m = re.search(r"(?:next|coming)\s+(\d+)\s+days", query, re.IGNORECASE)
-    days = int(m.group(1)) if m else 7
+    days = int(m.group(1)) if m else 10
 
     df = _df()
     etd_cols = [c for c in ["etd_lp", "etd_flp"] if c in df.columns]
@@ -1138,9 +1462,8 @@ def get_upcoming_pos(query: str) -> str:
     cols = [po_col] + etd_cols + ["discharge_port", "final_destination"]
     cols = [c for c in cols if c in filtered.columns]
 
-    #result = filtered[cols].drop_duplicates().head(15).to_string(index=False)
+    #result = filtered[cols].drop_duplicates().to_string(index=False)
     #return f"Upcoming POs (next {days} days):\n\n{result}"
-
     return filtered[cols].drop_duplicates().head(15).to_dict(orient="records")
 
 
@@ -1329,7 +1652,7 @@ def get_container_carrier(input_str: str) -> str:
     Get the carrier information for a specific container or PO.
     Input: Query should mention a container number or PO number (partial or full).
     Output: Carrier details including carrier name, code, and SCAC code if available.
-    For PO queries: Shows final carrier. If multiple records, shows latest w.r.t. ETD/ETA.
+    For PO queries: Shows final carrier. If multiple Show latest w.r.t. ETD/ETA.
     If no container/PO is found, prompts for a valid identifier.
     """
     # Try to extract container number first
@@ -1338,22 +1661,12 @@ def get_container_carrier(input_str: str) -> str:
     # Try to extract PO number if no container found
     po_no = None
     if not container_no:
-        # Extract PO number from input - look for patterns like PO followed by alphanumeric
-        po_pattern = r'(?:po\s+|po#|po:|purchase\s+order\s+)([a-zA-Z0-9\-_]+)'
-        po_match = re.search(po_pattern, input_str, re.IGNORECASE)
-        if po_match:
-            po_no = po_match.group(1).strip()
-        else:
-            # Try to find standalone alphanumeric that could be a PO
-            standalone_pattern = r'\b([A-Z0-9]{4,})\b'
-            standalone_match = re.search(standalone_pattern, input_str, re.IGNORECASE)
-            if standalone_match:
-                po_no = standalone_match.group(1).strip()
+        po_no = extract_po_number(input_str)
 
     if not container_no and not po_no:
         return "Please specify a valid container number or PO number to get carrier information."
 
-    df = _df()
+    df = _df()  # This automatically filters by consignee
 
     # Search by container number first
     if container_no:
@@ -1370,7 +1683,7 @@ def get_container_carrier(input_str: str) -> str:
         identifier = f"container {container_no}"
 
         if rows.empty:
-            return f"No data found for {identifier}."
+            return f"No data found for {identifier} or you are not authorized to access this container."
 
         # For containers, use the first match
         row = rows.iloc[0]
@@ -1386,7 +1699,7 @@ def get_container_carrier(input_str: str) -> str:
             return "PO number column not found in the data."
 
         if rows.empty:
-            return f"No data found for {identifier}."
+            return f"No data found for {identifier} or you are not authorized to access this PO."
 
         # For PO queries: If multiple records, show latest w.r.t. ETD/ETA
         if len(rows) > 1:
@@ -1394,16 +1707,14 @@ def get_container_carrier(input_str: str) -> str:
             rows = ensure_datetime(rows, ["etd_lp", "etd_flp", "eta_dp", "eta_fd"])
 
             # Create a combined date field for sorting (latest ETD/ETA)
-            date_cols = []
-            for col in ["etd_lp", "etd_flp", "eta_dp", "eta_fd"]:
-                if col in rows.columns:
-                    date_cols.append(col)
+            date_cols = ["etd_lp", "etd_flp", "eta_dp", "eta_fd"]
+            available_date_cols = [col for col in date_cols if col in rows.columns]
 
-            if date_cols:
+            if available_date_cols:
                 # Get the latest date from available date columns for each row
                 latest_dates = []
                 for idx, row_data in rows.iterrows():
-                    row_dates = [row_data[col] for col in date_cols if pd.notnull(row_data[col])]
+                    row_dates = [row_data[col] for col in available_date_cols if pd.notnull(row_data[col])]
                     if row_dates:
                         latest_dates.append((idx, max(row_dates)))
                     else:
@@ -1414,12 +1725,16 @@ def get_container_carrier(input_str: str) -> str:
                     latest_dates.sort(key=lambda x: x[1], reverse=True)
                     latest_idx = latest_dates[0][0]
                     row = rows.loc[latest_idx]
+                    selection_info = f" (latest from {len(rows)} records based on ETD/ETA)"
                 else:
                     row = rows.iloc[0]
+                    selection_info = f" (first from {len(rows)} records)"
             else:
                 row = rows.iloc[0]
+                selection_info = f" (first from {len(rows)} records)"
         else:
             row = rows.iloc[0]
+            selection_info = ""
 
     # Build carrier information response
     carrier_info = []
@@ -1447,17 +1762,17 @@ def get_container_carrier(input_str: str) -> str:
     if not carrier_info:
         return f"No carrier information available for {identifier}."
 
-    # For PO queries with multiple records, add information about the selection
+    # Build response
     response_lines = []
     if po_no and len(rows) > 1:
-        response_lines.append(f"Carrier information for {identifier} (latest record from {len(rows)} found):")
+        response_lines.append(f"Carrier information for {identifier}{selection_info}:")
     else:
         response_lines.append(f"Carrier information for {identifier}:")
 
     response_lines.extend(carrier_info)
 
-    # Add additional context for PO queries
-    if po_no:
+    # Add additional context for PO queries with selection details
+    if po_no and 'selection_info' in locals() and len(rows) > 1:
         # Show the date used for selection if available
         date_info = []
         for col in ["etd_lp", "etd_flp", "eta_dp", "eta_fd"]:
@@ -1470,10 +1785,10 @@ def get_container_carrier(input_str: str) -> str:
                 col_name = col.replace("_", " ").upper()
                 date_info.append(f"{col_name}: {date_str}")
 
-        if date_info and len(rows) > 1:
+        if date_info:
             response_lines.append("")
             response_lines.append("Selection based on latest date from:")
-            response_lines.extend(date_info)
+            response_lines.append(f"- {', '.join(date_info)}")
 
     return "\n".join(response_lines)
 
@@ -1502,43 +1817,60 @@ def vector_search_tool(query: str) -> str:
 
 
 
-def get_sql_agent():
-    # Initialize your LLM (Azure OpenAI)
-    llm = AzureChatOpenAI(
-        azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
-        api_key=settings.AZURE_OPENAI_API_KEY,
-        api_version=settings.AZURE_OPENAI_API_VERSION,
-        azure_deployment=settings.AZURE_OPENAI_DEPLOYMENT,
-    )
-    engine = get_blob_sql_engine()
-    return create_sql_agent(llm, db=engine, agent_type="openai-tools", verbose=False)
-
-def sql_query_tool(query: str) -> str:
-    agent = get_sql_agent()
-    try:
-        result = agent.run(query)
-        return f"Thought: Used SQL agent to answer the query.\nFinal Answer: {result}"
-    except Exception as exc:
-        return f"Error: SQL agent failed to answer the query: {exc}"
-
 def get_blob_sql_engine():
     """
-    Loads the shipment CSV from Azure Blob and creates an in-memory SQLite engine for SQL queries.
+    Loads the shipment CSV from Azure Blob and creates a persistent SQLite engine for SQL queries.
     """
-    # Load DataFrame from Azure Blob
-    df = get_shipment_df()
-    # Create in-memory SQLite database
-    conn = sqlite3.connect(":memory:")
-    df.to_sql("shipment", conn, index=False, if_exists="replace")
-    # Create SQLAlchemy engine from the SQLite connection
-    engine = create_engine("sqlite://", creator=lambda: conn)
-    return engine
+    from agents.azure_agent import get_persistent_sql_engine
+    return get_persistent_sql_engine()
 
+
+def get_sql_agent():
+    """Get the SQL agent instance with proper error handling."""
+    from agents.azure_agent import initialize_sql_agent
+    return initialize_sql_agent()
+
+
+def sql_query_tool(natural_language_query: str) -> str:
+    """
+    Execute natural language queries against the shipment database.
+    
+    Examples:
+    - "Show me containers delayed by more than 3 days"
+    - "How many containers are arriving this week?"
+    - "Which carrier handles the most shipments?"
+    - "List all containers from Singapore port"
+    
+    You don't need to write SQL - just ask in plain English!
+    """
+    try:
+        from agents.azure_agent import initialize_sql_agent
+        
+        logger.info(f"Processing natural language query: {natural_language_query}")
+        sql_agent = initialize_sql_agent()
+        
+        if not sql_agent:
+            return "Error: SQL agent is not available. Please check the database connection."
+        
+        # The agent will automatically convert natural language to SQL
+        result = sql_agent.run(natural_language_query)
+        logger.info("Natural language query processed successfully")
+        return str(result)
+        
+    except Exception as exc:
+        error_msg = f"Failed to process natural language query: {str(exc)}"
+        logger.error(error_msg, exc_info=True)
+        return f"Error: {error_msg}"
 
 # ------------------------------------------------------------------
 # TOOLS list – must be at module level, not inside any function!
 # ------------------------------------------------------------------
 TOOLS = [
+    Tool(
+        name="Get Container Status",
+        func=get_container_status,
+        description="Get comprehensive status and journey timeline for a specific container with all milestone events."
+    ),
     Tool(
         name="Get Container Milestones",
         func=get_container_milestones,
@@ -1547,7 +1879,7 @@ TOOLS = [
     Tool(
         name="Get Container Carrier",
         func=get_container_carrier,
-        description="Get the carrier information for a specific container or PO number."
+        description="Get carrier information for containers or POs. For POs with multiple records, returns the carrier from the latest shipment based on ETD/ETA dates. Handles queries like 'who is the carrier for PO X', 'what carrier handles container Y', etc."
     ),
     Tool(
         name="Check Arrival Status",
@@ -1630,9 +1962,9 @@ TOOLS = [
         description="Search the vector database for relevant shipment information using semantic similarity."
     ),
     Tool(
-        name="SQL Query Shipment Data",
+        name="SQL Query Tool",
         func=sql_query_tool,
-        description="Execute SQL queries against the shipment data stored in an in-memory SQLite database."
+        description="Execute natural language queries against the shipment database. Ask questions like 'Show me delayed containers', 'How many shipments from Singapore?', etc. No SQL knowledge required - just ask in plain English!"
     ),
     Tool(
         name="Check Transit Status",
@@ -1660,6 +1992,11 @@ TOOLS = [
         description="Get container status changes for current or last week"
     ),
     Tool(
+        name="Get Current Location",
+        func=get_current_location,
+        description="Get the current location of a container"
+    ),
+    Tool(
         name="Get Hot Containers",
         func=get_hot_containers,
         description="Get list of hot containers for authorized consignees based on hot container flag"
@@ -1670,15 +2007,6 @@ TOOLS = [
         description="Get hot containers for specific consignee codes mentioned in the query"
     ),
 ]
-
-
-
-
-
-
-
-
-
 
 
 
