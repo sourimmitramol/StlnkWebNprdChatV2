@@ -1182,7 +1182,7 @@ def get_arrivals_by_port(query: str) -> str:
         f"({len(result_df)} shown):"
     )
 
-    result_data = result_df.head(15)
+    result_data = result_df.where(pd.notnull(result_df), None)
     
     #return header + "\n" + result_df.to_string(index=False)
     return result_data.to_dict(orient="records")
@@ -1969,6 +1969,7 @@ TOOLS = [
         description="Get hot containers for specific consignee codes mentioned in the query"
     ),
 ]
+
 
 
 
