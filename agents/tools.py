@@ -1184,8 +1184,8 @@ def get_arrivals_by_port(query: str) -> str:
 
     result_data = result_df.where(pd.notnull(result_df), None)
     
-    #if "eta_for_filter" in result_data.columns:
-    #    result_data = result_data.drop(columns=["eta_for_filter"])
+    if "eta_for_filter" in result_data.columns:
+        result_data = result_data.drop(columns=["eta_for_filter"])
     
     #return header + "\n" + result_df.to_string(index=False)
     return result_data.to_dict(orient="records")
@@ -1972,6 +1972,7 @@ TOOLS = [
         description="Get hot containers for specific consignee codes mentioned in the query"
     ),
 ]
+
 
 
 
