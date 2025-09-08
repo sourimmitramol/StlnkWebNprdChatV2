@@ -1155,27 +1155,33 @@ def get_arrivals_by_port(query: str) -> str:
     # append one port column that contains the match (prefer discharge_port / final_load_port)
     for pc in ['discharge_port', 'final_load_port'] + existing_port_cols:
         if pc in arrivals.columns:
+            # if any row contains the requested code/name word, include that column
             sample = arrivals[pc].astype(str).str.upper()
-            if port_code_query and sample.str.contains(re.escape(port_code_query), na=False).any():
-                display_cols.append(pc); break
-            elif port_name_query:
-                first_word = port_name_query.split()[0] if port_name_query else ""
+            if port_code_query:
+                if sample.str.contains(re.escape(port_code_query), na=False).any():
+                    display_cols.append(pc); break
+            else:
+                # use first word of port_name_query as a simpler check
+                first_word = (port_name_query.split()[0] if port_name_query else "")
                 if first_word and sample.str.contains(re.escape(first_word), na=False).any():
                     display_cols.append(pc); break
+                # else if column has non-empty values include it as context
                 if sample.notna().any():
                     display_cols.append(pc); break
 
     display_cols.append('eta_for_filter')
     display_cols = [c for c in display_cols if c in arrivals.columns]
 
-    result_df = arrivals[display_cols].sort_values('eta_for_filter').head(15).copy()
+    result_df = arrivals[display_cols].sort_values('eta_for_filter').head(50).copy()
+    # format date
+    result_df['eta_for_filter'] = result_df['eta_for_filter'].dt.strftime('%Y-%m-%d')
 
-    # format date columns as strings
-    if 'eta_for_filter' in result_df.columns:
-        result_df['eta_for_filter'] = result_df['eta_for_filter'].dt.strftime('%Y-%m-%d')
-
-    # ---------- Return JSON ----------
-    return arrivals.to_dict(orient="records")
+    header = (
+        f"Containers arriving at '{port_code_query or port_name_query}' between "
+        f"{today.strftime('%Y-%m-%d')} and {end_date.strftime('%Y-%m-%d')} "
+        f"({len(result_df)} shown):"
+    )
+    return header + "\n" + result_df.to_string(index=False)
 
 
 # ------------------------------------------------------------------
@@ -1959,6 +1965,7 @@ TOOLS = [
         description="Get hot containers for specific consignee codes mentioned in the query"
     ),
 ]
+
 
 
 
