@@ -20,6 +20,7 @@ from langchain_openai import AzureChatOpenAI
 import sqlite3
 from sqlalchemy import create_engine
 import threading
+from difflib import get_close_matches
 
 # In agents/tools.py - Add this helper function at the top:
 
@@ -1036,137 +1037,150 @@ def get_container_eta(query: str) -> str:
 # ------------------------------------------------------------------
 # 5️⃣ Arrivals By Port / Country
 # ------------------------------------------------------------------
-def get_arrivals_by_port(query: str) -> str:
+def get_arrivals_by_port(query: str, df=None, default_days: int = 7) -> str:
     """
-    Find containers arriving at a specific port or country.
-    Input: Query should specify the port or country name (supports synonyms and port codes).
-    Output: Table of containers arriving at the specified location.
-    If not found, prompts for a valid port/country.
+    Find containers arriving at a specific port or country within the next N days.
+    - Query examples:
+        "What containers are arriving in VUNG TAU(VNVUT) in next 7 days?"
+        "Containers arriving in Singapore next 3 days"
+        "Which containers arrive at USLAX in 5 days?"
+    Returns: human-readable string + table (first 50 rows).
     """
-    # Enhanced regex patterns to capture various port formats
-    patterns = [
-        r"from\s+([A-Za-z\s,()0-9]+?)(?:\s|$)",  # "from VUNG TAU(VNVUT)"
-        r"in\s+([A-Za-z\s,()0-9]+?)(?:\s|$)",    # "in VUNG TAU(VNVUT)"
-        r"at\s+([A-Za-z\s,()0-9]+?)(?:\s|$)",    # "at VUNG TAU(VNVUT)"
-        r"port\s+([A-Za-z\s,()0-9]+?)(?:\s|$)",  # "port VUNG TAU(VNVUT)"
-        r"([A-Z\s]+\([A-Z0-9]+\))",              # Direct port code format
-        r"([A-Z]{5,})",                          # Port codes like VNVUT
-    ]
-    
-    place = None
-    for pattern in patterns:
-        m = re.search(pattern, query, re.IGNORECASE)
-        if m:
-            place = m.group(1).strip()
-            break
-    
-    if not place:
-        return "Please specify a port or country name to search for containers."
+    if df is None:
+        df = _df()
 
-    df = _df()
-    
-    # Clean up the place string
-    place_clean = place.strip().upper()
-    
-    # Extract port code if present (e.g., VNVUT from "VUNG TAU(VNVUT)")
-    port_code_match = re.search(r'\(([A-Z0-9]+)\)', place_clean)
-    port_code = port_code_match.group(1) if port_code_match else None
-    
-    # Extract port name (remove port code part)
-    port_name = re.sub(r'\([A-Z0-9]+\)', '', place_clean).strip()
-    
-    # Define port-related columns to search in
-    port_columns = [
-        'load_port', 'final_load_port', 'discharge_port', 'final_destination',
-        'place_of_receipt', 'place_of_delivery', 'last_cy_location',
-        'load_port_code', 'discharge_port_code'  # If these exist
+    # ---------- 1) Parse timeframe ----------
+    days_match = re.search(r'(?:next|within|in\s+next)?\s*(\d{1,3})\s*days?', query, re.IGNORECASE)
+    n_days = int(days_match.group(1)) if days_match else default_days
+    today = pd.Timestamp.now().normalize()
+    end_date = today + pd.Timedelta(days=n_days)
+
+    # ---------- 2) Extract port name or code ----------
+    # look for "NAME(CODE)" first (preferred)
+    port_name_query = None
+    port_code_query = None
+    m_paren = re.search(r'([A-Za-z0-9\-\s\.\']+?)\s*\(([A-Z0-9]{2,6})\)', query)
+    if m_paren:
+        port_name_query = m_paren.group(1).strip()
+        port_code_query = m_paren.group(2).strip().upper()
+    else:
+        # prefer phrases that follow "arriving in/at/in next/at port"
+        m = re.search(
+            r'(?:arriv(?:ing)?\s+(?:in|at|to)|in\s+|at\s+|port\s+)\s*([A-Za-z0-9\-\s\(\)\.]{2,60}?)\s*(?:,|for|in\s+next|within|next|\b\d+\s+days?\b|$)',
+            query, re.IGNORECASE
+        )
+        if m:
+            port_name_query = m.group(1).strip()
+        else:
+            # fallback: pick an ALL-CAPS token or last multi-char token
+            caps = re.findall(r'\b([A-Z]{3,6})\b', query)
+            if caps:
+                port_code_query = caps[-1].strip().upper()
+            else:
+                tokens = re.findall(r'[A-Za-z0-9\-\.\']{3,}', query)
+                port_name_query = tokens[-1] if tokens else ""
+
+    if port_name_query:
+        port_name_query = port_name_query.upper()
+
+    # ---------- 3) Which port columns to check (prioritise DP and FLP) ----------
+    preferred_cols = [
+        'discharge_port', 'final_load_port'
     ]
-    
-    # Filter columns that actually exist in the dataframe
-    existing_port_cols = [col for col in port_columns if col in df.columns]
-    
+    existing_port_cols = [c for c in preferred_cols if c in df.columns]
     if not existing_port_cols:
         return "No port-related columns found in the data."
-    
-    # Create search mask
-    mask = pd.Series(False, index=df.index)
-    
-    for col in existing_port_cols:
-        col_series = df[col].astype(str).str.upper()
-        
-        # Search for port code if available
-        if port_code:
-            mask |= col_series.str.contains(port_code, case=False, na=False)
-        
-        # Search for port name
-        if port_name:
-            # Handle multi-word port names
-            port_words = port_name.split()
-            for word in port_words:
-                if len(word) >= 3:  # Only search for words with 3+ characters
-                    mask |= col_series.str.contains(word, case=False, na=False)
-    
-    filtered = df[mask]
-    
-    if filtered.empty:
-        return f"No containers found from/at {place}. Please check the port name or try a different spelling."
 
-    # Ensure datetime columns are properly formatted
-    filtered = ensure_datetime(filtered, ["eta_dp", "ata_dp", "atd_lp"])
-    
-    # Select relevant columns for display
-    display_cols = ["container_number"]
-    
-    # Add the port column that had the match (for context)
-    for col in existing_port_cols:
-        if col in filtered.columns:
-            col_series = filtered[col].astype(str).str.upper()
-            if port_code and col_series.str.contains(port_code, case=False, na=False).any():
-                display_cols.append(col)
-                break
-            elif port_name:
-                port_words = port_name.split()
-                found_match = False
-                for word in port_words:
-                    if len(word) >= 3 and col_series.str.contains(word, case=False, na=False).any():
-                        display_cols.append(col)
-                        found_match = True
-                        break
-                if found_match:
-                    break
-    
-    # Add other relevant columns
-    additional_cols = ["eta_dp", "ata_dp", "atd_lp"]
-    for col in additional_cols:
-        if col in filtered.columns and col not in display_cols:
-            display_cols.append(col)
-    
-    # Clean up the display
-    result_df = filtered[display_cols].copy()
-    
-    # Format date columns
-    date_cols = ["eta_dp", "ata_dp", "atd_lp"]
-    for col in date_cols:
-        if col in result_df.columns:
-            result_df[col] = pd.to_datetime(result_df[col], errors='coerce').dt.strftime('%Y-%m-%d')
-    
-    # Sort by relevant date
-    if "eta_dp" in result_df.columns:
-        result_df = result_df.sort_values("eta_dp", na_position='last')
-    elif "ata_dp" in result_df.columns:
-        result_df = result_df.sort_values("ata_dp", na_position='last')
-    
-    # Limit results and format
-    result_data = result_df.head(15)
-    
-    # Create response
-    response_lines = [f"Containers from/at {place} ({len(result_data)} found, showing first 15):"]
-    
-    # Add summary table
-    result_str = result_data.to_string(index=False, max_cols=6)
-    response_lines.append(result_str)
-    
-    return "\n".join(response_lines)
+    # ---------- 4) Build match mask ----------
+    mask = pd.Series(False, index=df.index)
+
+    if port_code_query:
+        # search columns likely to hold codes first, then any other column
+        for col in existing_port_cols:
+            mask |= df[col].astype(str).str.upper().str.contains(re.escape(port_code_query), na=False)
+    else:
+        # Try exact match against unique values (best) then fuzzy then word-level contains
+        port_choices = set()
+        for col in existing_port_cols:
+            port_choices.update(df[col].dropna().astype(str).str.upper().unique())
+
+        if port_name_query in port_choices:
+            # exact match
+            for col in existing_port_cols:
+                mask |= (df[col].astype(str).str.upper() == port_name_query)
+        else:
+            # fuzzy match
+            close = get_close_matches(port_name_query, list(port_choices), n=6, cutoff=0.6) if port_choices else []
+            if close:
+                for candidate in close:
+                    for col in existing_port_cols:
+                        mask |= df[col].astype(str).str.upper().str.contains(re.escape(candidate), na=False)
+            else:
+                # fallback to word-level contains (words >=3 chars)
+                words = [w for w in re.split(r'\W+', port_name_query or "") if len(w) >= 3]
+                for w in words:
+                    for col in existing_port_cols:
+                        mask |= df[col].astype(str).str.upper().str.contains(re.escape(w), na=False)
+
+    filtered = df[mask].copy()
+    if filtered.empty:
+        descriptor = port_code_query or port_name_query or "<unspecified>"
+        return f"No containers found matching '{descriptor}' in the chosen port columns."
+
+    # ---------- 5) Build an ETA column to filter by (prefer eta_dp) ----------
+    date_priority = [c for c in ['revised_eta','eta_dp'] if c in filtered.columns]
+    if not date_priority:
+        return "No ETA/arrival date columns found (expected columns like 'eta_dp')."
+
+    # create 'eta_for_filter' as first non-null date from priority list
+    filtered['eta_for_filter'] = pd.NaT
+    for c in date_priority:
+        filtered['eta_for_filter'] = filtered['eta_for_filter'].fillna(pd.to_datetime(filtered[c], errors='coerce'))
+
+    # filter by between today and end_date (inclusive)
+    date_mask = (filtered['eta_for_filter'] >= today) & (filtered['eta_for_filter'] <= end_date)
+    arrivals = filtered[date_mask].copy()
+
+    if arrivals.empty:
+        # helpful message: show the date range we tried
+        return (
+            f"No containers with ETA between {today.strftime('%Y-%m-%d')} and {end_date.strftime('%Y-%m-%d')} "
+            f"for the requested port ('{port_code_query or port_name_query}')."
+        )
+
+    # ---------- 6) Build display and return ----------
+    display_cols = ['container_number','discharge_port', 'final_load_port','revised_eta','eta_dp']
+    # append one port column that contains the match (prefer discharge_port / final_load_port)
+    for pc in ['discharge_port', 'final_load_port'] + existing_port_cols:
+        if pc in arrivals.columns:
+            # if any row contains the requested code/name word, include that column
+            sample = arrivals[pc].astype(str).str.upper()
+            if port_code_query:
+                if sample.str.contains(re.escape(port_code_query), na=False).any():
+                    display_cols.append(pc); break
+            else:
+                # use first word of port_name_query as a simpler check
+                first_word = (port_name_query.split()[0] if port_name_query else "")
+                if first_word and sample.str.contains(re.escape(first_word), na=False).any():
+                    display_cols.append(pc); break
+                # else if column has non-empty values include it as context
+                if sample.notna().any():
+                    display_cols.append(pc); break
+
+    display_cols.append('eta_for_filter')
+    display_cols = [c for c in display_cols if c in arrivals.columns]
+
+    result_df = arrivals[display_cols].sort_values('eta_for_filter').head(50).copy()
+    # format date
+    result_df['eta_for_filter'] = result_df['eta_for_filter'].dt.strftime('%Y-%m-%d')
+
+    header = (
+        f"Containers arriving at '{port_code_query or port_name_query}' between "
+        f"{today.strftime('%Y-%m-%d')} and {end_date.strftime('%Y-%m-%d')} "
+        f"({len(result_df)} shown):"
+    )
+    #return header + "\n" + result_df.to_string(index=False)
+    return result_df.to_dict(orient="records")
 
 
 # ------------------------------------------------------------------
@@ -1950,6 +1964,7 @@ TOOLS = [
         description="Get hot containers for specific consignee codes mentioned in the query"
     ),
 ]
+
 
 
 
