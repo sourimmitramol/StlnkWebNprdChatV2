@@ -31,8 +31,10 @@ from agents.tools import (
     answer_with_column_mapping,
     vector_search_tool,
     get_blob_sql_engine,
+    get_weekly_status_changes
     get_hot_containers,  # Add this
     get_hot_containers_by_consignee,  # Add this
+    _df
 )
 from agents.router import route_query
 
@@ -316,6 +318,7 @@ def ask(body: QueryWithConsigneeBody):
         except Exception as fallback_exc:
             logger.error(f"Router fallback also failed: {fallback_exc}")
             raise HTTPException(status_code=500, detail=f"Agent failed: {exc}")
+
 
 
 
