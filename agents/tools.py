@@ -1181,8 +1181,8 @@ def get_arrivals_by_port(query: str) -> str:
         f"{today.strftime('%Y-%m-%d')} and {end_date.strftime('%Y-%m-%d')} "
         f"({len(result_df)} shown):"
     )
-    return header + "\n" + result_df.to_string(index=False)
-    #return result_df.to_dict(orient="records")
+    #return header + "\n" + result_df.to_string(index=False)
+    return result_df.to_dict(orient="records")
 
 
 # ------------------------------------------------------------------
@@ -1966,6 +1966,7 @@ TOOLS = [
         description="Get hot containers for specific consignee codes mentioned in the query"
     ),
 ]
+
 
 
 
