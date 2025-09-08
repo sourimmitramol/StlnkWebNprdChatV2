@@ -1046,8 +1046,9 @@ def get_arrivals_by_port(query: str) -> str:
         "Which containers arrive at USLAX in 5 days?"
     Returns: human-readable string + table (first 50 rows).
     """
-    if df is None:
-        df = _df()
+
+    df = _df()
+
 
     # ---------- 1) Parse timeframe ----------
     default_days = 7
@@ -1965,6 +1966,7 @@ TOOLS = [
         description="Get hot containers for specific consignee codes mentioned in the query"
     ),
 ]
+
 
 
 
