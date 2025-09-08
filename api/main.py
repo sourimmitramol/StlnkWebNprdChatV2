@@ -13,7 +13,6 @@ from agents.azure_agent import initialize_azure_agent
 from agents.tools import (
     sql_query_tool,
     get_container_milestones,
-    get_container_status,
     get_container_carrier,
     check_arrival_status,
     get_delayed_containers,
@@ -318,6 +317,7 @@ def ask(body: QueryWithConsigneeBody):
         except Exception as fallback_exc:
             logger.error(f"Router fallback also failed: {fallback_exc}")
             raise HTTPException(status_code=500, detail=f"Agent failed: {exc}")
+
 
 
 
