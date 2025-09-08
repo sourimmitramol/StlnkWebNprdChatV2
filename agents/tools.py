@@ -1168,7 +1168,7 @@ def get_arrivals_by_port(query: str) -> str:
     display_cols.append('eta_for_filter')
     display_cols = [c for c in display_cols if c in arrivals.columns]
 
-    result_df = arrivals[display_cols].sort_values('eta_for_filter').head(50).copy()
+    result_df = arrivals[display_cols].sort_values('eta_for_filter').head(16).copy()
 
     # format date columns as strings
     if 'eta_for_filter' in result_df.columns:
@@ -1959,6 +1959,7 @@ TOOLS = [
         description="Get hot containers for specific consignee codes mentioned in the query"
     ),
 ]
+
 
 
 
