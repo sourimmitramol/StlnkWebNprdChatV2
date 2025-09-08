@@ -1037,7 +1037,7 @@ def get_container_eta(query: str) -> str:
 # ------------------------------------------------------------------
 # 5️⃣ Arrivals By Port / Country
 # ------------------------------------------------------------------
-def get_arrivals_by_port(query: str, df=None, default_days: int = 7) -> str:
+def get_arrivals_by_port(query: str) -> str:
     """
     Find containers arriving at a specific port or country within the next N days.
     - Query examples:
@@ -1050,6 +1050,7 @@ def get_arrivals_by_port(query: str, df=None, default_days: int = 7) -> str:
         df = _df()
 
     # ---------- 1) Parse timeframe ----------
+    default_days = 7
     days_match = re.search(r'(?:next|within|in\s+next)?\s*(\d{1,3})\s*days?', query, re.IGNORECASE)
     n_days = int(days_match.group(1)) if days_match else default_days
     today = pd.Timestamp.now().normalize()
@@ -1964,6 +1965,7 @@ TOOLS = [
         description="Get hot containers for specific consignee codes mentioned in the query"
     ),
 ]
+
 
 
 
