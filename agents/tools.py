@@ -1992,11 +1992,6 @@ TOOLS = [
         description="Get container status changes for current or last week"
     ),
     Tool(
-        name="Get Current Location",
-        func=get_current_location,
-        description="Get the current location of a container"
-    ),
-    Tool(
         name="Get Hot Containers",
         func=get_hot_containers,
         description="Get list of hot containers for authorized consignees based on hot container flag"
@@ -2007,6 +2002,7 @@ TOOLS = [
         description="Get hot containers for specific consignee codes mentioned in the query"
     ),
 ]
+
 
 
 
