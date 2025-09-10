@@ -1130,48 +1130,17 @@ def get_arrivals_by_port(query: str) -> str:
         return f"No containers found matching '{descriptor}' in the chosen port columns."
  
  
-    # ---------- 5) Build an ETA column to filter by with advanced date logic ----------
-    # Check presence of today's date in 'revised_eta' and 'eta_dp' columns with priority logic
-    cols_to_check = ['revised_eta', 'eta_dp']
-    available_date_cols = [c for c in cols_to_check if c in filtered.columns]
-    if not available_date_cols:
-        return "No ETA/arrival date columns found (expected columns like 'revised_eta' or 'eta_dp')."
- 
- 
+        # ---------- 5) Build an ETA column with fallback ----------
     # Ensure date columns parsed as datetime
-    filtered = ensure_datetime(filtered, available_date_cols + (['ata_dp'] if 'ata_dp' in filtered.columns else []))
- 
- 
-    # Helper to check if today's date is present in a given column (ignoring time)
-    def has_today_date(col):
-        if col not in filtered.columns:
-            return False
-        return filtered[col].dropna().apply(lambda x: x.date() if hasattr(x, 'date') else x).eq(today.date()).any()
- 
- 
-    revised_today = has_today_date('revised_eta')
-    eta_dp_today = has_today_date('eta_dp')
- 
- 
-    # Determine date priority based on today's date presence
-    if revised_today:
-        # revised_eta contains today's date, only use this column
-        date_priority = ['revised_eta']
-    elif eta_dp_today:
-        # if revised_eta doesn't have today's date, check eta_dp
-        date_priority = ['eta_dp']
-    else:
-        # fallback to both if no today's date found in either, but prioritize revised_eta
-        date_priority = available_date_cols
- 
- 
-    # Create 'eta_for_filter' selecting first non-null date from priority columns
-    filtered['eta_for_filter'] = pd.NaT
-    for c in date_priority:
-        filtered['eta_for_filter'] = filtered['eta_for_filter'].fillna(filtered[c])
- 
- 
-    # Exclude records that already have ATA recorded (already arrived)
+    date_cols = [c for c in ['revised_eta', 'eta_dp', 'ata_dp'] if c in filtered.columns]
+    filtered = ensure_datetime(filtered, date_cols)
+
+    # Build eta_for_filter: prefer revised_eta, else eta_dp
+    filtered['eta_for_filter'] = filtered['revised_eta']
+    if 'eta_dp' in filtered.columns:
+        filtered.loc[filtered['eta_for_filter'].isna(), 'eta_for_filter'] = filtered['eta_dp']
+
+    # Exclude records that already have ATA (already arrived)
     if 'ata_dp' in filtered.columns:
         date_mask = (
             (filtered['eta_for_filter'] >= today)
@@ -1180,9 +1149,9 @@ def get_arrivals_by_port(query: str) -> str:
         )
     else:
         date_mask = (filtered['eta_for_filter'] >= today) & (filtered['eta_for_filter'] <= end_date)
- 
- 
+
     arrivals = filtered[date_mask].copy()
+
  
  
     if arrivals.empty:
@@ -2017,6 +1986,7 @@ TOOLS = [
         description="Get hot containers for specific consignee codes mentioned in the query"
     ),
 ]
+
 
 
 
