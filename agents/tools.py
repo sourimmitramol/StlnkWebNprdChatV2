@@ -492,7 +492,11 @@ def get_container_milestones(input_str: str) -> str:
 
     # Fallback to contains-match
     if rows.empty:
-        rows = df[df["container_number"].str.contains(container_no, case=False, na=False)]
+        #rows = df[df["container_number"].str.contains(container_no, case=False, na=False)]
+        rows = df[
+            df["po_number_multiple"].str.contains(container_no, case=False, na=False) |
+            df["ocean_bl_no_multiple"].str.contains(container_no, case=False, na=False)
+            ]
 
     if rows.empty:
         return f"No data found for container {container_no}."
@@ -1986,6 +1990,7 @@ TOOLS = [
         description="Get hot containers for specific consignee codes mentioned in the query"
     ),
 ]
+
 
 
 
