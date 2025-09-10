@@ -1050,7 +1050,24 @@ def get_arrivals_by_port(query: str) -> str:
         "Which containers arrive at USLAX in 5 days?"
     Returns: human-readable string + table (first 50 rows).
     """
- 
+
+    q = query.strip()
+
+    # Case 1: "PORT in 10 days" or "PORT in next 10 days"
+    q = re.sub(r'(\b[A-Z]{3,6})\s+in\s+(?:next\s+)?(\d{1,3})\s*days?', 
+               r'\1 , \2 days', q, flags=re.IGNORECASE)
+
+    # Case 2: "PORT 10 days"
+    q = re.sub(r'(\b[A-Z]{3,6})\s+(\d{1,3})\s*days?', 
+               r'\1 , \2 days', q, flags=re.IGNORECASE)
+
+    # Case 3: "10 days PORT"
+    q = re.sub(r'(\d{1,3})\s*days?\s+(\b[A-Z]{3,6})', 
+               r'\2 , \1 days', q, flags=re.IGNORECASE)
+
+    query = q
+
+    
  
     df = _df()
  
@@ -2007,6 +2024,7 @@ TOOLS = [
         description="Get hot containers for specific consignee codes mentioned in the query"
     ),
 ]
+
 
 
 
