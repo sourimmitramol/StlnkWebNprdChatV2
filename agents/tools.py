@@ -1064,8 +1064,18 @@ def get_arrivals_by_port(query: str) -> str:
     ]
     
     default_days = 1
-    days_match = re.search(patterns, query, re.IGNORECASE)
-    n_days = int(days_match.group(1)) if days_match else default_days
+    n_days = None
+    for pattern in patterns:
+        m = re.search(pattern, query, re.IGNORECASE)
+        if m:
+            n_days = int(m.group(1))
+            break
+
+    if n_days is None:
+        n_days = default_days
+
+    #days_match = re.search(patterns, query, re.IGNORECASE)
+    #n_days = int(days_match.group(1)) if days_match else default_days
     today = pd.Timestamp.now().normalize()
     end_date = today + pd.Timedelta(days=n_days)
  
@@ -1997,6 +2007,7 @@ TOOLS = [
         description="Get hot containers for specific consignee codes mentioned in the query"
     ),
 ]
+
 
 
 
