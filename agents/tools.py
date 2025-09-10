@@ -1056,8 +1056,15 @@ def get_arrivals_by_port(query: str) -> str:
  
  
     # ---------- 1) Parse timeframe ----------
+    patterns = [
+        r"(?:next|upcoming|in)\s+(\d+)\s+days?",  # "next 2 days", "in 2 days"
+        r"(\d+)\s+days?",                         # "2 days"
+        r"arriving.*?(\d+)\s+days?",              # "arriving in 2 days"
+        r"will.*?arrive.*?(\d+)\s+days?",         # "will arrive in 2 days"
+    ]
+    
     default_days = 1
-    days_match = re.search(r'(?:in\s+next\s+|within\s+|next\s+|in\s+)?(\d{1,3})\s*days?', query, re.IGNORECASE)
+    days_match = re.search(patterns, query, re.IGNORECASE)
     n_days = int(days_match.group(1)) if days_match else default_days
     today = pd.Timestamp.now().normalize()
     end_date = today + pd.Timedelta(days=n_days)
@@ -1990,6 +1997,7 @@ TOOLS = [
         description="Get hot containers for specific consignee codes mentioned in the query"
     ),
 ]
+
 
 
 
