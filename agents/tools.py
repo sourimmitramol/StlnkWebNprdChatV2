@@ -1063,7 +1063,7 @@ def get_arrivals_by_port(query: str) -> str:
         r"will.*?arrive.*?(\d+)\s+days?",         # "will arrive in 2 days"
     ]
     
-    default_days = 1
+    default_days = 7
     n_days = None
     for pattern in patterns:
         m = re.search(pattern, query, re.IGNORECASE)
@@ -2007,6 +2007,7 @@ TOOLS = [
         description="Get hot containers for specific consignee codes mentioned in the query"
     ),
 ]
+
 
 
 
