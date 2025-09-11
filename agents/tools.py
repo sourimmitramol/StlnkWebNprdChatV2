@@ -123,77 +123,79 @@ def get_hot_containers(query: str) -> str:
     Output: List of hot containers with relevant details.
     """
     df = _df()  # This automatically filters by consignee if in context
-    
+   
     # Check if hot container flag column exists
     hot_flag_cols = [col for col in df.columns if 'hot_container_flag' in col.lower()]
     if not hot_flag_cols:
         # Try alternative column names
         hot_flag_cols = [col for col in df.columns if 'hot_container' in col.lower()]
-    
+   
     if not hot_flag_cols:
         return "Hot container flag column not found in the data."
-    
+   
     hot_flag_col = hot_flag_cols[0]  # Use the first matching column
-    
+   
     # Filter for hot containers (assuming flag is 'Y', 'Yes', True, or 1)
     hot_mask = df[hot_flag_col].astype(str).str.upper().isin(['Y', 'YES', 'TRUE', '1'])
     hot_containers = df[hot_mask]
-    
+   
     if hot_containers.empty:
         return "No hot containers found for your authorized consignees."
-    
+   
     # Select relevant columns for display
-    display_cols = ['container_number', 'consignee_code_multiple','supplier_vendor_name']
-
+    display_cols = ['container_number','po_number_multiple','consignee_code_multiple','supplier_vendor_name']
+ 
     # Add additional useful columns if they exist
     #optional_cols = ['po_number_multiple', 'discharge_port', 'eta_dp', 'ata_dp', 'load_port', 'final_vessel_name']
     #for col in optional_cols:
         #if col in hot_containers.columns:
             #display_cols.append(col)
-    
+   
     # Ensure we only use columns that exist
     display_cols = [col for col in display_cols if col in hot_containers.columns]
-    
+   
     # Sort by ETA if available, otherwise by container number
     if 'eta_dp' in hot_containers.columns:
         hot_containers = hot_containers.sort_values('eta_dp')
     else:
         hot_containers = hot_containers.sort_values('container_number')
-    
+   
     # Format the response
     result_data = hot_containers[display_cols]  # Limit to 20 results
-
+ 
     # Clean datetime columns for display
     for col in result_data.columns:
         if pd.api.types.is_datetime64_dtype(result_data[col]):
             result_data = result_data.copy()
             result_data[col] = result_data[col].dt.strftime('%Y-%m-%d')
-    
+   
     if len(result_data) == 0:
         return "No hot containers found for your authorized consignees."
-    
+   
     # Create formatted response
     response_lines = [f"Hot containers found ({len(result_data)} total):"]
-    
+   
     for _, row in result_data.iterrows():
         container_info = f"- Container : <con>{row['container_number']}</con>"
-        
+       
         if 'consignee_code_multiple' in row:
             container_info += f" | Consignee: {row['consignee_code_multiple']}"
-        
+       
         if 'po_number_multiple' in row and pd.notnull(row['po_number_multiple']):
-            container_info += f" | PO: {row['po_number_multiple']}"
-        
+            container_info += f" | PO:<po> {row['po_number_multiple']}</po>"
+        if 'ocean_bl_no_multiple' in row and pd.notnull(row['ocean_bl_no_multiple']):
+            container_info += f" | PO:<obl> {row['ocean_bl_no_multiple']}</obl>"
+       
         if 'discharge_port' in row and pd.notnull(row['discharge_port']):
             container_info += f" | Port: {row['discharge_port']}"
-        
+       
         if 'eta_dp' in row and pd.notnull(row['eta_dp']):
             container_info += f" | ETA: {row['eta_dp']}"
         elif 'ata_dp' in row and pd.notnull(row['ata_dp']):
             container_info += f" | Arrived: {row['ata_dp']}"
-        
+       
         response_lines.append(container_info)
-
+ 
     #return f'The following number of hot containers found: {len(response_lines)}\n' + "\n".join(response_lines)
     return result_data.to_dict(orient="records")
 
@@ -1999,6 +2001,7 @@ TOOLS = [
         description="Get hot containers for specific consignee codes mentioned in the query"
     ),
 ]
+
 
 
 
