@@ -143,7 +143,7 @@ def get_hot_containers(query: str) -> str:
         return "No hot containers found for your authorized consignees."
    
     # Select relevant columns for display
-    display_cols = ['container_number','po_number_multiple', 'ocean_bl_no_multiple','consignee_code_multiple',,'supplier_vendor_name']
+    display_cols = ['container_number','po_number_multiple','consignee_code_multiple','supplier_vendor_name']
  
     # Add additional useful columns if they exist
     #optional_cols = ['po_number_multiple', 'discharge_port', 'eta_dp', 'ata_dp', 'load_port', 'final_vessel_name']
@@ -2001,6 +2001,7 @@ TOOLS = [
         description="Get hot containers for specific consignee codes mentioned in the query"
     ),
 ]
+
 
 
 
