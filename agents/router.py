@@ -109,7 +109,7 @@ def route_query(query: str, consignee_codes: list = None) -> str:
             return get_container_carrier(query)
         
         # ========== PRIORITY 4: Hot containers routing ==========
-        if "hot container" in q or "hot containers" in q:
+        if "hot container" in q or "hot containers" in q or "hot po" in q:
             return get_hot_containers_by_consignee(query)
         
         # ========== PRIORITY 5: Container status queries ==========
@@ -166,6 +166,7 @@ def route_query(query: str, consignee_codes: list = None) -> str:
         if consignee_codes and hasattr(threading.current_thread(), 'consignee_codes'):
             delattr(threading.current_thread(), 'consignee_codes')
             logger.debug("Cleaned up consignee codes from thread context")
+
 
 
 
