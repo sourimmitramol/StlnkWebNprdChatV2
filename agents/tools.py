@@ -1798,6 +1798,125 @@ def get_container_carrier(input_str: str) -> str:
 
 
 
+def _normalize_po_token(s: str) -> str:
+    """Normalize a PO token for comparison: strip, upper, keep alphanumerics."""
+    if s is None:
+        return ""
+    s = str(s).strip().upper()
+    # Keep alphanumeric only (common PO formats), remove surrounding/inline junk
+    s = re.sub(r'[^A-Z0-9]', '', s)
+    return s
+ 
+def _po_in_cell(cell: str, po_norm: str) -> bool:
+    """Return True if normalized PO exists in a comma/sep-separated cell."""
+    if pd.isna(cell) or po_norm == "":
+        return False
+    # split on common separators
+    parts = re.split(r'[,;/\|\s]+', str(cell))
+    for p in parts:
+        if _normalize_po_token(p) == po_norm:
+            return True
+    return False
+
+
+def get_carrier_for_po(query: str) -> str:
+    """
+    Find final_carrier_name for a PO.
+    Accepts queries like "who is carrier for PO 5500009022" or "5500009022" or alphanumeric POs (e.g. 7196461A).
+    Looks up PO in po_number_multiple (comma-separated) or po_number and returns final_carrier_name and container.
+    """
+    # try helper extractor first, fallback to generic alnum token (6-12 chars)
+    po = extract_po_number(query)
+    if not po:
+        m = re.search(r'\b([A-Z0-9]{6,12})\b', query.upper())
+        po = m.group(1) if m else None
+    if not po:
+        return "Please specify a PO number (e.g. 'PO 5500009022' or '5500009022')."
+ 
+    po_norm = _normalize_po_token(po)
+    df = _df()
+    po_col = "po_number_multiple" if "po_number_multiple" in df.columns else ("po_number" if "po_number" in df.columns else None)
+    if not po_col:
+        return "PO column not found in the dataset."
+ 
+    # locate rows where any token in the PO column matches exactly (after normalization)
+    mask = df[po_col].apply(lambda cell: _po_in_cell(cell, po_norm))
+    matches = df[mask].copy()
+    if matches.empty:
+        return f"No data found for PO {po}."
+ 
+    # if many matches, pick the most-relevant by latest date among common date columns
+    date_priority = ["revised_eta", "eta_dp", "eta_fd", "predictive_eta", "etd_lp", "etd_flp"]
+    available_date_cols = [c for c in date_priority if c in matches.columns]
+    if available_date_cols:
+        matches = ensure_datetime(matches, available_date_cols)
+        # compute max date per row (NaT -> ignored)
+        matches["_row_max_date"] = matches[available_date_cols].max(axis=1)
+        # choose row with latest date (rows with all NaT get Timestamp.min)
+        matches["_row_max_date"] = matches["_row_max_date"].fillna(pd.Timestamp.min)
+        chosen = matches.sort_values("_row_max_date", ascending=False).iloc[0]
+        matches = matches.drop(columns=["_row_max_date"], errors="ignore")
+    else:
+        chosen = matches.iloc[0]
+ 
+    container = chosen.get("container_number", "<unknown>")
+    carrier = None
+    if "final_carrier_name" in chosen.index and pd.notnull(chosen["final_carrier_name"]):
+        carrier = str(chosen["final_carrier_name"]).strip()
+ 
+    if carrier:
+        return f"The carrier for PO {po} (container {container}) is {carrier}."
+    else:
+        return f"Carrier (final_carrier_name) not found for PO {po} (container {container})."
+
+
+def is_po_hot(query: str) -> str:
+    """
+    Check whether a PO is marked hot via the container's hot flag.
+    Returns a short sentence listing related containers and which are hot.
+    """
+    po = extract_po_number(query)
+    if not po:
+        m = re.search(r'\b([A-Z0-9]{6,12})\b', query.upper())
+        po = m.group(1) if m else None
+    if not po:
+        return "Please specify a PO number (e.g. 'PO 5500009022' or '5500009022')."
+ 
+    po_norm = _normalize_po_token(po)
+    df = _df()
+    po_col = "po_number_multiple" if "po_number_multiple" in df.columns else ("po_number" if "po_number" in df.columns else None)
+    if not po_col:
+        return "PO column not found in the dataset."
+ 
+    mask = df[po_col].apply(lambda cell: _po_in_cell(cell, po_norm))
+    matches = df[mask].copy()
+    if matches.empty:
+        return f"No data found for PO {po}."
+ 
+    # Identify hot-flag column
+    hot_flag_cols = [c for c in df.columns if 'hot_container_flag' in c.lower()]
+    if not hot_flag_cols:
+        hot_flag_cols = [c for c in df.columns if 'hot_container' in c.lower()]
+ 
+    if not hot_flag_cols:
+        return "No hot-container flag column found in the dataset."
+ 
+    hot_col = hot_flag_cols[0]
+ 
+    def _is_hot(v):
+        if pd.isna(v):
+            return False
+        return str(v).strip().upper() in {"Y", "YES", "TRUE", "1", "HOT"}
+ 
+    matches = matches.assign(_is_hot = matches[hot_col].apply(_is_hot))
+    all_containers = sorted(matches["container_number"].dropna().astype(str).unique().tolist())
+    hot_containers = sorted(matches.loc[matches["_is_hot"], "container_number"].dropna().astype(str).unique().tolist())
+ 
+    if hot_containers:
+        return f"PO {po} is HOT on container(s): {', '.join(hot_containers)}. Related containers: {', '.join(all_containers)}."
+    else:
+        return f"PO {po} is not marked hot. Related containers: {', '.join(all_containers)}."
+
 
 def vector_search_tool(query: str) -> str:
     """
@@ -2000,7 +2119,18 @@ TOOLS = [
         func=get_hot_containers_by_consignee,
         description="Get hot containers for specific consignee codes mentioned in the query"
     ),
+    Tool(
+        name="Get Carrier For PO",
+        func=get_carrier_for_po,
+        description="Find the final_carrier_name for a PO (matches po_number_multiple / po_number). Use queries like 'who is carrier for PO 5500009022' or '5500009022'."
+    ),
+    Tool(
+        name="Is PO Hot",
+        func=is_po_hot,
+        description="Check whether a PO is marked hot via the container's hot flag (searches po_number_multiple / po_number)."
+    )
 ]
+
 
 
 
