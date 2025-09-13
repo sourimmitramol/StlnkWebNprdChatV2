@@ -84,6 +84,64 @@ def _df() -> pd.DataFrame:
     logger.debug(f"Returning unfiltered DataFrame with {len(df)} rows")
     return df
 
+
+def handle_non_shipping_queries(user_input: str):
+    text = user_input.strip().lower()
+
+    # --- Greetings ---
+    greetings = ["hi", "hello", "hey", "good morning", "good afternoon", "good evening"]
+    if any(greet in text for greet in greetings):
+        return {
+            "response": "Hello! I'm Anna, your shipping assistant. How can I help you today?",
+            "observation": [],
+            "table": [],
+            "mode": "chat"
+        }
+
+    # --- Well-being / small talk ---
+    wellbeing = ["how are you", "how r u", "how are you doing", "what's up", "how is it going"]
+    if any(phrase in text for phrase in wellbeing):
+        return {
+            "response": "I'm doing great, thank you for asking! I'm Anna, your shipping assistant. How are you doing today?",
+            "observation": [],
+            "table": [],
+            "mode": "chat"
+        }
+
+    # --- Thanks ---
+    thanks = ["thank you", "thanks", "thx", "ty"]
+    if any(word in text for word in thanks):
+        return {
+            "response": "You're most welcome! I'm glad I could help. 😊",
+            "observation": [],
+            "table": [],
+            "mode": "chat"
+        }
+
+    # --- Bot identity ---
+    identity = ["who are you", "what is your name", "your name", "who created you"]
+    if any(phrase in text for phrase in identity):
+        return {
+            "response": "I'm Anna, your AI assistant here to help you with shipment-related queries. 🚢",
+            "observation": [],
+            "table": [],
+            "mode": "chat"
+        }
+
+    # --- Default fallback for unrelated queries ---
+    unrelated = ["weather", "joke", "news", "story", "song"]
+    if any(word in text for word in unrelated):
+        return {
+            "response": "I’m Anna, and my main focus is helping you with shipments. 🌍 But I’m happy to chat too! What would you like to know about your shipments?",
+            "observation": [],
+            "table": [],
+            "mode": "chat"
+        }
+
+    return None
+
+
+
 def _get_current_consignee_codes():
     """Get current consignee codes from thread-local storage"""
     import threading
@@ -2128,8 +2186,15 @@ TOOLS = [
         name="Is PO Hot",
         func=is_po_hot,
         description="Check whether a PO is marked hot via the container's hot flag (searches po_number_multiple / po_number)."
+    ),
+    Tool(
+        name="Handle Non-shipping queries",
+        func=handle_non_shipping_queries,
+        description="This is for non-shipping generic queries. Like 'how are you' or 'hello' or 'hey' or 'who are you' etc."
     )
+    
 ]
+
 
 
 
