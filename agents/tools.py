@@ -85,60 +85,40 @@ def _df() -> pd.DataFrame:
     return df
 
 
-def handle_non_shipping_queries(user_input: str):
-    text = user_input.strip().lower()
+def handle_non_shipping_queries(query: str) -> dict:
+    """
+    Handle greetings, thanks, small talk, and other non-shipping queries.
+    Always returns a friendly Anna response.
+    """
 
-    # --- Greetings ---
-    greetings = ["hi", "hello", "hey", "good morning", "good afternoon", "good evening"]
-    if any(greet in text for greet in greetings):
-        return {
-            "response": "Hello! I'm Anna, your shipping assistant. How can I help you today?",
-            "observation": [],
-            "table": [],
-            "mode": "chat"
-        }
+    q = query.lower().strip()
 
-    # --- Well-being / small talk ---
-    wellbeing = ["how are you", "how r u", "how are you doing", "what's up", "how is it going"]
-    if any(phrase in text for phrase in wellbeing):
-        return {
-            "response": "I'm doing great, thank you for asking! I'm Anna, your shipping assistant. How are you doing today?",
-            "observation": [],
-            "table": [],
-            "mode": "chat"
-        }
+    # Greetings
+    greetings = ["hi", "hello", "hey", "gm", "good morning", "good afternoon", "good evening", "hola"]
+    if any(word in q for word in greetings):
+        return "Hello! I’m Anna, your shipping assistant. How can I help you today?"
 
-    # --- Thanks ---
-    thanks = ["thank you", "thanks", "thx", "ty"]
-    if any(word in text for word in thanks):
-        return {
-            "response": "You're most welcome! I'm glad I could help. 😊",
-            "observation": [],
-            "table": [],
-            "mode": "chat"
-        }
+    # Thanks
+    thanks = ["thank", "thx", "thanks", "thank you", "ty", "much appreciated"]
+    if any(word in q for word in thanks):
+        return "You’re very welcome! Always happy to help. – Anna"
 
-    # --- Bot identity ---
-    identity = ["who are you", "what is your name", "your name", "who created you"]
-    if any(phrase in text for phrase in identity):
-        return {
-            "response": "I'm Anna, your AI assistant here to help you with shipment-related queries. 🚢",
-            "observation": [],
-            "table": [],
-            "mode": "chat"
-        }
+    # How are you / small talk
+    if "how are you" in q or "how r u" in q:
+        return "I’m doing great, thanks for asking! How about you? – Anna"
 
-    # --- Default fallback for unrelated queries ---
-    unrelated = ["weather", "joke", "news", "story", "song"]
-    if any(word in text for word in unrelated):
-        return {
-            "response": "I’m Anna, and my main focus is helping you with shipments. 🌍 But I’m happy to chat too! What would you like to know about your shipments?",
-            "observation": [],
-            "table": [],
-            "mode": "chat"
-        }
+    # Who are you / introduction
+    if "who are you" in q or "your name" in q or "what is your name" in q:
+        return "I’m Anna, your AI-powered shipping assistant. I can help you track containers, POs, and more."
 
-    return None
+    # Goodbye
+    farewells = ["bye", "goodbye", "see you", "take care", "cya", "see ya"]
+    if any(word in q for word in farewells):
+        return "Goodbye! Have a wonderful day ahead. – Anna"
+
+    # Fallback for anything non-shipping
+    return "That doesn’t look like a shipping-related question, but I’m Anna and I’m here to help! 😊 What would you like to know?"
+
 
 
 
@@ -2194,6 +2174,7 @@ TOOLS = [
     )
     
 ]
+
 
 
 
