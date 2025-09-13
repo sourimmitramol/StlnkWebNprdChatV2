@@ -136,6 +136,12 @@ def validate_consignee_filtering(consignee_codes: list) -> bool:
 def route_query(query: str, consignee_codes: list = None) -> str:
     """Route query with consignee authorization support"""
     try:
+
+        # ========== NON SHIPPING QUESTION ==========
+        non_shipping_response = handle_non_shipping_queries(query.lower())
+        if non_shipping_response:
+           return non_shipping_response
+        
         # Set thread-local consignee codes for tools
         if consignee_codes:
             threading.current_thread().consignee_codes = consignee_codes
@@ -147,12 +153,6 @@ def route_query(query: str, consignee_codes: list = None) -> str:
         
         q = query.lower()
 
-        # ========== NON SHIPPING QUESTION ==========
-        non_shipping_response = handle_non_shipping_queries(q)
-
-        if non_shipping_response:
-           return non_shipping_response
-        
         # Enhanced container/PO/OBL/Booking detection (do this early)
         from utils.container import extract_container_number, extract_po_number
         container_no = extract_container_number(query)
@@ -229,6 +229,7 @@ def route_query(query: str, consignee_codes: list = None) -> str:
         if consignee_codes and hasattr(threading.current_thread(), 'consignee_codes'):
             delattr(threading.current_thread(), 'consignee_codes')
             logger.debug("Cleaned up consignee codes from thread context")
+
 
 
 
