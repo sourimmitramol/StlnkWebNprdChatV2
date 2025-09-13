@@ -38,52 +38,27 @@ def handle_non_shipping_queries(user_input: str):
     # --- Greetings ---
     greetings = ["hi", "hello", "hey", "good morning", "good afternoon", "good evening"]
     if any(greet in text for greet in greetings):
-        return {
-            "response": "Hello! I'm Anna, your shipping assistant. How can I help you today?",
-            "observation": [],
-            "table": [],
-            "mode": "chat"
-        }
+        return "Hello! I'm Anna, your shipping assistant. How can I help you today?"
 
     # --- Well-being / small talk ---
     wellbeing = ["how are you", "how r u", "how are you doing", "what's up", "how is it going"]
     if any(phrase in text for phrase in wellbeing):
-        return {
-            "response": "I'm doing great, thank you for asking! I'm Anna, your shipping assistant. How are you doing today?",
-            "observation": [],
-            "table": [],
-            "mode": "chat"
-        }
+        return "I'm doing great, thank you for asking! I'm Anna, your shipping assistant. How are you doing today?"
 
     # --- Thanks ---
     thanks = ["thank you", "thanks", "thx", "ty"]
     if any(word in text for word in thanks):
-        return {
-            "response": "You're most welcome! I'm glad I could help. 😊",
-            "observation": [],
-            "table": [],
-            "mode": "chat"
-        }
+        return "You're most welcome! I'm glad I could help. 😊"
 
     # --- Bot identity ---
     identity = ["who are you", "what is your name", "your name", "who created you"]
     if any(phrase in text for phrase in identity):
-        return {
-            "response": "I'm Anna, your AI assistant here to help you with shipment-related queries. 🚢",
-            "observation": [],
-            "table": [],
-            "mode": "chat"
-        }
+        return "I'm Anna, your AI assistant here to help you with shipment-related queries. 🚢"
 
     # --- Default fallback for unrelated queries ---
     unrelated = ["weather", "joke", "news", "story", "song"]
     if any(word in text for word in unrelated):
-        return {
-            "response": "I’m Anna, and my main focus is helping you with shipments. 🌍 But I’m happy to chat too! What would you like to know about your shipments?",
-            "observation": [],
-            "table": [],
-            "mode": "chat"
-        }
+        return "I’m Anna, and my main focus is helping you with shipments. 🌍 But I’m happy to chat too! What would you like to know about your shipments?"
 
     return None
 
@@ -229,6 +204,7 @@ def route_query(query: str, consignee_codes: list = None) -> str:
         if consignee_codes and hasattr(threading.current_thread(), 'consignee_codes'):
             delattr(threading.current_thread(), 'consignee_codes')
             logger.debug("Cleaned up consignee codes from thread context")
+
 
 
 
