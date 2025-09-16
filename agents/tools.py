@@ -511,21 +511,21 @@ def get_container_milestones(input_str: str) -> str:
 
     if not pd.isna(row.get("ata_dp")):
         row_milestone_map = [
-            ("<strong>Departed From</strong>", row.get("load_port"), row.get("atd_lp").split()[0]),
-            ("<strong>Final Load Port Arrival</strong>", row.get("final_load_port"), row.get("ata_flp").split()[0]),
-            ("<strong>Final Load Port Departure</strong>", row.get("final_load_port"), row.get("atd_flp").split()[0]),
-            ("<strong>Reached at Discharge Port</strong>", row.get("discharge_port"), row.get("ata_dp").split()[0]),
-            ("<strong>Reached at Last CY</strong>", row.get("last_cy_location"), row.get("equipment_arrived_at_last_cy").split()[0]),
-            ("<strong>Out Gate at Last CY</strong>", row.get("out_gate_at_last_cy_lcn"), row.get("out_gate_at_last_cy").split()[0]),
-            ("<strong>Delivered at</strong>", row.get("delivery_date_to_consignee_lcn"), row.get("delivery_date_to_consignee").split()[0]),
-            ("<strong>Empty Container Returned to</strong>", row.get("empty_container_return_lcn"), row.get("empty_container_return_date").split()[0]),
+            ("<strong>Departed From</strong>", row.get("load_port"), row.get("atd_lp") and row.get("atd_lp").split()[0]),
+            ("<strong>Final Load Port Arrival</strong>", row.get("final_load_port"), row.get("ata_flp") and row.get("ata_flp").split()[0]),
+            ("<strong>Final Load Port Departure</strong>", row.get("final_load_port"), row.get("atd_flp") and row.get("atd_flp").split()[0]),
+            ("<strong>Reached at Discharge Port</strong>", row.get("discharge_port"), row.get("ata_dp") and row.get("ata_dp").split()[0]),
+            ("<strong>Reached at Last CY</strong>", row.get("last_cy_location"), row.get("equipment_arrived_at_last_cy") and row.get("equipment_arrived_at_last_cy").split()[0]),
+            ("<strong>Out Gate at Last CY</strong>", row.get("out_gate_at_last_cy_lcn"), row.get("out_gate_at_last_cy") and row.get("out_gate_at_last_cy").split()[0]),
+            ("<strong>Delivered at</strong>", row.get("delivery_date_to_consignee_lcn"), row.get("delivery_date_to_consignee") and row.get("delivery_date_to_consignee").split()[0]),
+            ("<strong>Empty Container Returned to</strong>", row.get("empty_container_return_lcn"), row.get("empty_container_return_date") and row.get("empty_container_return_date").split()[0]),
         ]
     else:
         row_milestone_map = [
-            ("<strong>Departed From</strong>", row.get("load_port"), row.get("atd_lp").split()[0]),
-            ("<strong>Final Load Port Arrival</strong>", row.get("final_load_port"), row.get("ata_flp").split()[0]),
-            ("<strong>Final Load Port Departure</strong>", row.get("final_load_port"), row.get("atd_flp").split()[0]),
-            ("<strong>Will at Discharge Port</strong>", row.get("discharge_port"), row.get("eta_dp").split()[0]),
+            ("<strong>Departed From</strong>", row.get("load_port"), row.get("atd_lp") and row.get("atd_lp").split()[0]),
+            ("<strong>Final Load Port Arrival</strong>", row.get("final_load_port"), row.get("ata_flp") and row.get("ata_flp").split()[0]),
+            ("<strong>Final Load Port Departure</strong>", row.get("final_load_port"), row.get("atd_flp") and row.get("atd_flp").split()[0]),
+            ("<strong>Will at Discharge Port</strong>", row.get("discharge_port"), row.get("eta_dp") and row.get("eta_dp").split()[0]),
         ]
 
 
@@ -2178,6 +2178,7 @@ TOOLS = [
         description="Check whether a PO is marked hot via the container's hot flag (searches po_number_multiple / po_number)."
     )
 ]
+
 
 
 
