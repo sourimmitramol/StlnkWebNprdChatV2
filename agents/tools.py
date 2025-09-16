@@ -1015,29 +1015,67 @@ def get_upcoming_arrivals(query: str) -> str:
 # ------------------------------------------------------------------
 def get_container_eta(query: str) -> str:
     """
-    Return ETA and ATA details for a specific container.
-    Input: Query must mention a container number (partial or full).
-    Output: ETA/ATA and port details for the container.
-    If not found, prompts for a valid container number.
+    Return ETA and ATA details for specific containers.
+    Input: Query mentioning one or more container numbers (comma-separated or space-separated).
+    Output: ETA/ATA and port details for the containers.
     """
-    cont = extract_container_number(query)
-    if not cont:
-        return "Please mention a container number."
-
+    # Extract all container numbers using regex pattern
+    container_pattern = re.findall(r'([A-Z]{4}\d{7})', query)
+   
+    if not container_pattern:
+        return "Please mention one or more container numbers."
+   
     df = _df()
-    df = ensure_datetime(df, ["eta_dp", "ata_dp"])
-    row = df[df["container_number"].astype(str).str.contains(cont, case=False, na=False)]
-    if row.empty:
-        return f"No data for container {cont}."
-
-    row = row.iloc[0]
-    cols = ["container_number", "discharge_port", "eta_dp", "ata_dp"]
-    cols = [c for c in cols if c in row.index]
-    out = row[cols].to_frame().T
-    out = ensure_datetime(out, ["eta_dp", "ata_dp"])
-    out["eta_dp"] = out["eta_dp"].dt.strftime("%Y-%m-%d")
-    out["ata_dp"] = out["ata_dp"].dt.strftime("%Y-%m-%d")
-    return out.to_string(index=False)
+   
+    # Add "MM/dd/yyyy hh:mm:ss tt" format to ensure_datetime function
+    # or directly parse dates here
+    date_cols = ["eta_dp", "ata_dp"]
+    for col in date_cols:
+        if col in df.columns:
+            try:
+                df[col] = pd.to_datetime(df[col], errors='coerce')
+            except:
+                pass
+   
+    # Create results table with all requested containers
+    results = []
+    for cont in container_pattern:
+        # First try exact match after normalizing
+        norm_cont = cont.upper().strip()
+        mask = df["container_number"].astype(str).str.upper().str.strip() == norm_cont
+        row = df[mask]
+       
+        # If no exact match, try contains
+        if row.empty:
+            row = df[df["container_number"].astype(str).str.contains(cont, case=False, na=False)]
+       
+        if not row.empty:
+            row = row.iloc[0]
+            cols = ["container_number", "discharge_port", "eta_dp", "ata_dp"]
+            cols = [c for c in cols if c in row.index]
+            single_result = row[cols].to_frame().T
+            results.append(single_result)
+        else:
+            # Create a row with "Not Available" for missing containers
+            missing_row = pd.DataFrame({
+                "container_number": [cont],
+                "discharge_port": ["Not Available"],
+                "eta_dp": ["Not Available"],
+                "ata_dp": ["Not Available"]
+            })
+            results.append(missing_row[["container_number", "discharge_port", "eta_dp", "ata_dp"]])
+   
+    # Combine all results
+    combined_results = pd.concat(results, ignore_index=True)
+   
+    # Format date columns (only for actual datetime values)
+    for date_col in ["eta_dp", "ata_dp"]:
+        if date_col in combined_results.columns:
+            combined_results[date_col] = combined_results[date_col].apply(
+                lambda x: x.strftime("%Y-%m-%d") if isinstance(x, pd.Timestamp) else x
+            )
+   
+    return combined_results.to_string(index=False)
 
 
 # ------------------------------------------------------------------
@@ -2130,6 +2168,7 @@ TOOLS = [
         description="Check whether a PO is marked hot via the container's hot flag (searches po_number_multiple / po_number)."
     )
 ]
+
 
 
 
