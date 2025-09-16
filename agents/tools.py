@@ -1905,6 +1905,115 @@ def _po_in_cell(cell: str, po_norm: str) -> bool:
     return False
 
 
+def extract_transport_modes(query: str) -> set:
+    """
+    Parse transport mode tokens from a user query and return normalized set
+    e.g. "sea", "air", "road", "rail", "courier", "sea-air".
+    """
+    if not query:
+        return set()
+    q = query.lower()
+    mapping = {
+        "sea-air": "sea-air",
+        "sea air": "sea-air",
+        "sea": "sea",
+        "ocean": "sea",
+        "air": "air",
+        "airfreight": "air",
+        "air freight": "air",
+        "courier": "courier",
+        "rail": "rail",
+        "road": "road",
+        "truck": "road",
+        "trucking": "road",
+        "multimodal": "sea-air",
+        "intermodal": "sea-air"
+    }
+    found = set()
+    for key, norm in mapping.items():
+        if key in q:
+            found.add(norm)
+    return found
+
+
+
+def get_containers_by_transport_mode(query: str) -> str:
+    """
+    Handle queries about transport_mode (e.g. "containers arrived by sea",
+    "which container will arrive by air in next 3 days").
+    Behaviour:
+    - Detect transport mode(s) from query using extract_transport_modes().
+    - If query contains a next/N-days window -> return upcoming arrivals filtered by transport_mode.
+    - Otherwise treat as 'arrived' request and return rows with ata_dp not null filtered by transport_mode.
+    - Uses _df() (consignee filtering), ensure_datetime, and per-row ETA logic where needed.
+    """
+    modes = extract_transport_modes(query)
+    if not modes:
+        return "No transport mode detected in the query."
+ 
+    df = _df()
+    if 'transport_mode' not in df.columns:
+        return "No 'transport_mode' column in data."
+ 
+    # filter by transport mode (case-insensitive substring match)
+    df_mode = df[df['transport_mode'].astype(str).str.lower().apply(lambda s: any(m in s for m in modes))].copy()
+    if df_mode.empty:
+        return f"No containers found for transport mode(s): {', '.join(sorted(modes))} for your authorized consignees."
+ 
+    # If user asked for upcoming window -> delegate to arriving-soon logic here (but operate on df_mode)
+    m_days = re.search(r'(?:next|in|upcoming|within)\s+(\d{1,3})\s+days?', query, re.IGNORECASE)
+    if m_days:
+        days = int(m_days.group(1))
+        # use per-row ETA preference
+        date_priority = [c for c in ['revised_eta', 'eta_dp'] if c in df_mode.columns]
+        if not date_priority:
+            return "No ETA columns (revised_eta / eta_dp) found to compute upcoming arrivals."
+        parse_cols = date_priority.copy()
+        if 'ata_dp' in df_mode.columns:
+            parse_cols.append('ata_dp')
+        df_mode = ensure_datetime(df_mode, parse_cols)
+ 
+        if 'revised_eta' in df_mode.columns and 'eta_dp' in df_mode.columns:
+            df_mode['eta_for_filter'] = df_mode['revised_eta'].where(df_mode['revised_eta'].notna(), df_mode['eta_dp'])
+        elif 'revised_eta' in df_mode.columns:
+            df_mode['eta_for_filter'] = df_mode['revised_eta']
+        else:
+            df_mode['eta_for_filter'] = df_mode['eta_dp']
+ 
+        today = pd.Timestamp.today().normalize()
+        future = today + pd.Timedelta(days=days)
+        mask = df_mode['eta_for_filter'].notna() & (df_mode['eta_for_filter'] >= today) & (df_mode['eta_for_filter'] <= future)
+        if 'ata_dp' in df_mode.columns:
+            mask &= df_mode['ata_dp'].isna()
+        out = df_mode[mask].copy()
+        if out.empty:
+            return f"No containers by {', '.join(sorted(modes))} arriving between {today.strftime('%Y-%m-%d')} and {future.strftime('%Y-%m-%d')}."
+        cols = [c for c in ['container_number', 'po_number_multiple', 'discharge_port', 'revised_eta', 'eta_dp', 'eta_for_filter'] if c in out.columns]
+        out = out[cols].sort_values('eta_for_filter').head(50).copy()
+        for d in ['revised_eta', 'eta_dp', 'eta_for_filter']:
+            if d in out.columns and pd.api.types.is_datetime64_any_dtype(out[d]):
+                out[d] = out[d].dt.strftime('%Y-%m-%d')
+        if 'eta_for_filter' in out.columns:
+            out = out.drop(columns=['eta_for_filter'])
+        return out.where(pd.notnull(out), None).to_dict(orient='records')
+ 
+    # Otherwise treat as "arrived by <mode>" -> return rows with ata_dp not null
+    if 'ata_dp' not in df_mode.columns:
+        return "No ATA column (ata_dp) present to determine arrived containers."
+    df_mode = ensure_datetime(df_mode, ['ata_dp', 'revised_eta', 'eta_dp'])
+    arrived = df_mode[df_mode['ata_dp'].notna()].copy()
+    if arrived.empty:
+        return f"No containers have arrived by {', '.join(sorted(modes))} for your authorized consignees."
+    cols = [c for c in ['container_number', 'po_number_multiple', 'discharge_port', 'ata_dp', 'final_carrier_name'] if c in arrived.columns]
+    arrived = arrived[cols].sort_values('ata_dp', ascending=False).head(100).copy()
+    if 'ata_dp' in arrived.columns and pd.api.types.is_datetime64_any_dtype(arrived['ata_dp']):
+        arrived['ata_dp'] = arrived['ata_dp'].dt.strftime('%Y-%m-%d')
+    return arrived.where(pd.notnull(arrived), None).to_dict(orient='records')
+
+
+
+
+
 def get_carrier_for_po(query: str) -> str:
     """
     Find final_carrier_name for a PO.
@@ -2216,12 +2325,21 @@ TOOLS = [
         description="Check whether a PO is marked hot via the container's hot flag (searches po_number_multiple / po_number)."
     ),
     Tool(
+        name="Get Containers By Transport Mode",
+        func=get_containers_by_transport_mode,
+        description="Find containers filtered by transport_mode (e.g. 'arrived by sea', 'arrive by air in next 3 days')."
+    ),
+    Tool(
         name="Handle Non-shipping queries",
         func=handle_non_shipping_queries,
         description="This is for non-shipping generic queries. Like 'how are you' or 'hello' or 'hey' or 'who are you' etc."
     )
     
 ]
+
+
+
+
 
 
 
