@@ -2325,11 +2325,6 @@ TOOLS = [
         description="Check whether a PO is marked hot via the container's hot flag (searches po_number_multiple / po_number)."
     ),
     Tool(
-        name="Extract Transport Modes",
-        func=extract_transport_modes,
-        description="Parse transport mode tokens from a user query and return normalized set e.g. 'sea', 'air', 'road', 'rail', 'courier', 'sea-air'."
-    ),
-    Tool(
         name="Get Containers By Transport Mode",
         func=get_containers_by_transport_mode,
         description="Find containers filtered by transport_mode (e.g. 'arrived by sea', 'arrive by air in next 3 days')."
@@ -2341,6 +2336,7 @@ TOOLS = [
     )
     
 ]
+
 
 
 
