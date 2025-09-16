@@ -84,6 +84,44 @@ def _df() -> pd.DataFrame:
     logger.debug(f"Returning unfiltered DataFrame with {len(df)} rows")
     return df
 
+
+def handle_non_shipping_queries(query: str) -> dict:
+    """
+    Handle greetings, thanks, small talk, and other non-shipping queries.
+    Always returns a friendly Anna response.
+    """
+
+    q = query.lower().strip()
+
+    # Greetings
+    greetings = ["hi", "hello", "hey", "gm", "good morning", "good afternoon", "good evening", "hola"]
+    if any(word in q for word in greetings):
+        return "Hello! I’m Anna, your shipping assistant. How can I help you today?"
+
+    # Thanks
+    thanks = ["thank", "thx", "thanks", "thank you", "ty", "much appreciated"]
+    if any(word in q for word in thanks):
+        return "You’re very welcome! Always happy to help. – Anna"
+
+    # How are you / small talk
+    if "how are you" in q or "how r u" in q:
+        return "I’m doing great, thanks for asking! How about you? – Anna"
+
+    # Who are you / introduction
+    if "who are you" in q or "your name" in q or "what is your name" in q:
+        return "I’m Anna, your AI-powered shipping assistant. I can help you track containers, POs, and more."
+
+    # Goodbye
+    farewells = ["bye", "goodbye", "see you", "take care", "cya", "see ya"]
+    if any(word in q for word in farewells):
+        return "Goodbye! Have a wonderful day ahead. – Anna"
+
+    # Fallback for anything non-shipping
+    return "That doesn’t look like a shipping-related question, but I’m Anna and I’m here to help! 😊 What would you like to know?"
+
+
+
+
 def _get_current_consignee_codes():
     """Get current consignee codes from thread-local storage"""
     import threading
@@ -508,26 +546,26 @@ def get_container_milestones(input_str: str) -> str:
     # -------------------------------------------------
     # Build the milestone list (only keep non-null dates)
     # -------------------------------------------------
-
+    
     if not pd.isna(row.get("ata_dp")):
         row_milestone_map = [
-            ("<strong>Departed From</strong>", row.get("load_port"), row.get("atd_lp") and row.get("atd_lp").split()[0]),
-            ("<strong>Final Load Port Arrival</strong>", row.get("final_load_port"), row.get("ata_flp") and row.get("ata_flp").split()[0]),
-            ("<strong>Final Load Port Departure</strong>", row.get("final_load_port"), row.get("atd_flp") and row.get("atd_flp").split()[0]),
-            ("<strong>Reached at Discharge Port</strong>", row.get("discharge_port"), row.get("ata_dp") and row.get("ata_dp").split()[0]),
-            ("<strong>Reached at Last CY</strong>", row.get("last_cy_location"), row.get("equipment_arrived_at_last_cy") and row.get("equipment_arrived_at_last_cy").split()[0]),
-            ("<strong>Out Gate at Last CY</strong>", row.get("out_gate_at_last_cy_lcn"), row.get("out_gate_at_last_cy") and row.get("out_gate_at_last_cy").split()[0]),
-            ("<strong>Delivered at</strong>", row.get("delivery_date_to_consignee_lcn"), row.get("delivery_date_to_consignee") and row.get("delivery_date_to_consignee").split()[0]),
-            ("<strong>Empty Container Returned to</strong>", row.get("empty_container_return_lcn"), row.get("empty_container_return_date") and row.get("empty_container_return_date").split()[0]),
+            ("<strong>Departed From</strong>", row.get("load_port"), row.get("atd_lp")),
+            ("<strong>Final Load Port Arrival</strong>", row.get("final_load_port"), row.get("ata_flp")),
+            ("<strong>Final Load Port Departure</strong>", row.get("final_load_port"), row.get("atd_flp")),
+            ("<strong>Reached at Discharge Port</strong>", row.get("discharge_port"), row.get("ata_dp")),
+            ("<strong>Reached at Last CY</strong>", row.get("last_cy_location"), row.get("equipment_arrived_at_last_cy")),
+            ("<strong>Out Gate at Last CY</strong>", row.get("out_gate_at_last_cy_lcn"), row.get("out_gate_at_last_cy")),
+            ("<strong>Delivered at</strong>", row.get("delivery_date_to_consignee_lcn"), row.get("delivery_date_to_consignee")),
+            ("<strong>Empty Container Returned to</strong>", row.get("empty_container_return_lcn"), row.get("empty_container_return_date")),
         ]
     else:
         row_milestone_map = [
-            ("<strong>Departed From</strong>", row.get("load_port"), row.get("atd_lp") and row.get("atd_lp").split()[0]),
-            ("<strong>Final Load Port Arrival</strong>", row.get("final_load_port"), row.get("ata_flp") and row.get("ata_flp").split()[0]),
-            ("<strong>Final Load Port Departure</strong>", row.get("final_load_port"), row.get("atd_flp") and row.get("atd_flp").split()[0]),
-            ("<strong>Will at Discharge Port</strong>", row.get("discharge_port"), row.get("eta_dp") and row.get("eta_dp").split()[0]),
+            ("<strong>Departed From</strong>", row.get("load_port"), row.get("atd_lp")),
+            ("<strong>Final Load Port Arrival</strong>", row.get("final_load_port"), row.get("ata_flp")),
+            ("<strong>Final Load Port Departure</strong>", row.get("final_load_port"), row.get("atd_flp")),
+            ("<strong>Will at Discharge Port</strong>", row.get("discharge_port"), row.get("eta_dp")),
         ]
-
+    
 
     c_df = pd.DataFrame(row_milestone_map)
     # print(c_df)
@@ -2176,8 +2214,17 @@ TOOLS = [
         name="Is PO Hot",
         func=is_po_hot,
         description="Check whether a PO is marked hot via the container's hot flag (searches po_number_multiple / po_number)."
+    ),
+    Tool(
+        name="Handle Non-shipping queries",
+        func=handle_non_shipping_queries,
+        description="This is for non-shipping generic queries. Like 'how are you' or 'hello' or 'hey' or 'who are you' etc."
     )
+    
 ]
+
+
+
 
 
 
