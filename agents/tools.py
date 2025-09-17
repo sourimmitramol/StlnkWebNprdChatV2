@@ -564,10 +564,10 @@ def get_container_milestones(input_str: str) -> str:
         ]
     else:
         row_milestone_map = [
-            ("<strong>Departed From</strong>", row.get("load_port"), row.get("atd_lp")),
-            ("<strong>Final Load Port Arrival</strong>", row.get("final_load_port"), row.get("ata_flp")),
-            ("<strong>Final Load Port Departure</strong>", row.get("final_load_port"), row.get("atd_flp")),
-            ("<strong>Will at Discharge Port</strong>", row.get("discharge_port"), row.get("eta_dp")),
+            ("<strong>Departed From</strong>", safe_val(row.get("load_port")), row.get("atd_lp")),
+            ("<strong>Final Load Port Arrival</strong>", safe_val(row.get("final_load_port")), row.get("ata_flp")),
+            ("<strong>Final Load Port Departure</strong>", safe_val(row.get("final_load_port")), row.get("atd_flp")),
+            ("<strong>Will at Discharge Port</strong>", safe_val(row.get("discharge_port")), row.get("eta_dp")),
         ]
     
 
@@ -2392,6 +2392,7 @@ TOOLS = [
     )
     
 ]
+
 
 
 
