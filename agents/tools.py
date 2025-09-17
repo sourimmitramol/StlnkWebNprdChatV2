@@ -757,12 +757,82 @@ def answer_with_column_mapping(query: str) -> str:
         
         return "\n".join(result_lines) if result_lines else "No data available for the specified fields."
 
+
+def get_supplier_in_transit(query: str) -> str:
+    """
+    Containers/POs from a supplier that are still in transit.
+    Logic:
+      - supplier_vendor_name contains supplier NAME (ignore code in parentheses)
+      - ata_dp is null
+      - empty_container_return_date is null (and if present, empty_container_return_lcn is null)
+      - delivery_date_to_consignee is null
+    Returns list[dict] with ETA preference revised_eta > eta_dp.
+    """
+    supplier = _parse_supplier_name(query)
+    if not supplier:
+        return "Please specify a supplier name."
+ 
+    df = _df()
+    if 'supplier_vendor_name' not in df.columns:
+        return "Supplier vendor name column not found in the dataset."
+ 
+    # supplier match (case-insensitive, ignore codes after '(')
+    sup_mask = df['supplier_vendor_name'].astype(str).str.upper().str.contains(re.escape(supplier.upper()), na=False)
+ 
+    # ensure dates we use
+    parse_cols = [c for c in ['revised_eta', 'eta_dp', 'ata_dp',
+                              'delivery_date_to_consignee', 'empty_container_return_date'] if c in df.columns]
+    df = ensure_datetime(df, parse_cols)
+ 
+    # helper: treat "", "nan", "nat", "none", "null" as null
+    def _nullish(col: str) -> pd.Series:
+        if col not in df.columns:
+            return pd.Series(True, index=df.index)
+        s = df[col]
+        if pd.api.types.is_datetime64_any_dtype(s):
+            return s.isna()
+        s_str = s.astype(str).str.strip().str.upper()
+        return s.isna() | s_str.isin({"", "NAN", "NAT", "NONE", "NULL"})
+ 
+    # transit conditions
+    not_arrived_dp = _nullish('ata_dp')          # must NOT have arrived at DP
+    not_delivered = _nullish('delivery_date_to_consignee')
+    not_returned_date = _nullish('empty_container_return_date')
+    not_returned_loc = _nullish('empty_container_return_lcn')
+    not_returned = not_returned_date & not_returned_loc
+ 
+    subset = df[sup_mask & not_arrived_dp & not_delivered & not_returned].copy()
+    if subset.empty:
+        return f"No containers/POs from supplier '{supplier}' are still in transit for your authorized consignees."
+ 
+    # ETA preference
+    if 'revised_eta' in subset.columns and 'eta_dp' in subset.columns:
+        subset['eta_for_filter'] = subset['revised_eta'].where(subset['revised_eta'].notna(), subset['eta_dp'])
+    elif 'revised_eta' in subset.columns:
+        subset['eta_for_filter'] = subset['revised_eta']
+    else:
+        subset['eta_for_filter'] = subset['eta_dp'] if 'eta_dp' in subset.columns else pd.NaT
+ 
+    cols = [c for c in ['container_number', 'po_number_multiple', 'supplier_vendor_name',
+                        'discharge_port', 'eta_for_filter', 'revised_eta', 'eta_dp'] if c in subset.columns]
+    out = subset[cols]
+    out = safe_sort_dataframe(out, 'eta_for_filter', ascending=True).head(100)
+ 
+    # format dates
+    for d in ['eta_for_filter', 'revised_eta', 'eta_dp']:
+        if d in out.columns and pd.api.types.is_datetime64_any_dtype(out[d]):
+            out[d] = out[d].dt.strftime('%Y-%m-%d')
+ 
+    out = out.rename(columns={'eta_for_filter': 'eta'})
+    return out.where(pd.notnull(out), None).to_dict(orient='records')
+
+
+
 # ------------------------------------------------------------------
 # 2️⃣ Delayed Containers (X days)
 # ------------------------------------------------------------------
 def ensure_datetime(df: pd.DataFrame, columns: list) -> pd.DataFrame:
     """Convert specified columns to datetime using explicit formats to avoid inference warnings."""
-    # Common date/time formats seen in shipment data
     known_formats = [
         "%Y-%m-%d",
         "%Y/%m/%d",
@@ -774,22 +844,16 @@ def ensure_datetime(df: pd.DataFrame, columns: list) -> pd.DataFrame:
         "%d/%m/%Y %H:%M",
         "%d-%m-%Y",
         "%d-%m-%Y %H:%M:%S",
-        "%d-%b-%Y",              # e.g., 22-May-2025
+        "%d-%b-%Y",
         "%d-%b-%Y %H:%M:%S",
+        "%m/%d/%Y %I:%M:%S %p",  # e.g., 2/20/2025 12:00:00 AM
     ]
-
     for col in columns:
         if col not in df.columns:
             continue
-
-        # Already datetime-like → skip
         if pd.api.types.is_datetime64_any_dtype(df[col]):
             continue
-
-        # Work on a copy; standardize blanks
         s = df[col].astype(str).str.strip().replace({"": None, "NaN": None, "nan": None, "NaT": None})
-
-        # Start with all NaT and fill in progressively using explicit formats
         parsed = pd.Series(pd.NaT, index=df.index, dtype="datetime64[ns]")
         for fmt in known_formats:
             mask = parsed.isna()
@@ -798,20 +862,8 @@ def ensure_datetime(df: pd.DataFrame, columns: list) -> pd.DataFrame:
             try:
                 parsed.loc[mask] = pd.to_datetime(s[mask], format=fmt, errors="coerce")
             except Exception:
-                # Ignore bad format
                 continue
-
-        # Assign parsed results (no generic inference → no warning)
         df[col] = parsed
-
-        # Optional: log how many failed to parse
-        try:
-            fail_count = int(parsed.isna().sum())
-            if fail_count:
-                logger.debug(f"ensure_datetime: column '{col}' has {fail_count} unparsed values")
-        except Exception:
-            pass
-
     return df
 
 
@@ -2336,6 +2388,7 @@ TOOLS = [
     )
     
 ]
+
 
 
 
