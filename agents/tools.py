@@ -885,12 +885,11 @@ def get_delayed_containers(query: str) -> str:
     # and arrived from today onwards (ata_dp >= today)
     today = pd.Timestamp.today().normalize()
     arrived_containers = df[
-        (df["ata_dp"].notna()) & 
-        (df["ata_dp"] == today)
+        (df["ata_dp"].notna())
     ]
     
-    if arrived_containers.empty:
-        return "No containers have arrived from today onwards for your authorized consignees."
+    #if arrived_containers.empty:
+    #   return "No containers have arrived from today onwards for your authorized consignees."
     
     # Calculate delay days for arrived containers
     arrived_containers = arrived_containers.copy()
@@ -911,7 +910,7 @@ def get_delayed_containers(query: str) -> str:
     elif at_least_match or greater_equal_match:
         # Range query: at least X days or >= X days
         days = int((at_least_match or greater_equal_match).group(1))
-        delayed_df = arrived_containers[arrived_containers["delay_days"] >= days]
+        delayed_df = arrived_containers[arrived_containers["delay_days"] <= days]
         query_type = f"at least {days}"
     elif exact_match:
         # Exact query: exactly X days
@@ -930,12 +929,12 @@ def get_delayed_containers(query: str) -> str:
                 query_type = f"exactly {days}"
             else:
                 # Treat as range for general queries
-                delayed_df = arrived_containers[arrived_containers["delay_days"] >= days]
+                delayed_df = arrived_containers[arrived_containers["delay_days"] <= days]
                 query_type = f"at least {days}"
         else:
             # Default to 1+ days delay
             days = 1
-            delayed_df = arrived_containers[arrived_containers["delay_days"] >= days]
+            delayed_df = arrived_containers[arrived_containers["delay_days"] <= days]
             query_type = f"at least {days}"
     
     # Only include containers that are actually delayed (positive delay days)
@@ -2328,6 +2327,7 @@ TOOLS = [
     )
     
 ]
+
 
 
 
