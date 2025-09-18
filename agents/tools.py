@@ -910,7 +910,7 @@ def get_delayed_containers(query: str) -> str:
     elif at_least_match or greater_equal_match:
         # Range query: at least X days or >= X days
         days = int((at_least_match or greater_equal_match).group(1))
-        delayed_df = arrived_containers[arrived_containers["delay_days"] <= days]
+        delayed_df = arrived_containers[arrived_containers["delay_days"] >= days]
         query_type = f"at least {days}"
     elif exact_match:
         # Exact query: exactly X days
@@ -925,11 +925,11 @@ def get_delayed_containers(query: str) -> str:
             # Check if query suggests exact match or range
             if "by " in query.lower() and "more" not in query.lower() and "at least" not in query.lower():
                 # Treat as exact match for "delayed by X days"
-                delayed_df = arrived_containers[arrived_containers["delay_days"] <= days]
+                delayed_df = arrived_containers[arrived_containers["delay_days"] == days]
                 query_type = f"exactly {days}"
             else:
                 # Treat as range for general queries
-                delayed_df = arrived_containers[arrived_containers["delay_days"] >= days]
+                delayed_df = arrived_containers[arrived_containers["delay_days"] <= days]
                 query_type = f"at least {days}"
         else:
             # Default to 1+ days delay
@@ -2327,6 +2327,7 @@ TOOLS = [
     )
     
 ]
+
 
 
 
