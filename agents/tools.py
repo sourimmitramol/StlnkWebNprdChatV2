@@ -936,29 +936,29 @@ def get_delayed_containers(query: str) -> str:
     import re
     df = _df()  # This now automatically filters by consignee
     df = ensure_datetime(df, ["eta_dp", "ata_dp"])
-    
+   
     # Only consider containers that have actually arrived (ata_dp is not null)
     # and arrived from today onwards (ata_dp >= today)
     today = pd.Timestamp.today().normalize()
     arrived_containers = df[
-        (df["ata_dp"].notna()) & 
-        (df["ata_dp"] == today)
+        (df["ata_dp"].notna())
+       
     ]
-    
-    if arrived_containers.empty:
-        return "No containers have arrived from today onwards for your authorized consignees."
-    
+   
+    #if arrived_containers.empty:
+        #return "No containers have arrived from today onwards for your authorized consignees."
+   
     # Calculate delay days for arrived containers
     arrived_containers = arrived_containers.copy()
     arrived_containers["delay_days"] = (arrived_containers["ata_dp"] - arrived_containers["eta_dp"]).dt.days
     arrived_containers["delay_days"] = arrived_containers["delay_days"].fillna(0).astype(int)
-
+ 
     # Enhanced regex to detect different query patterns
     exact_match = re.search(r"delayed by (?:exactly )?(\d+) days?", query, re.IGNORECASE)
     more_than_match = re.search(r"delayed by more than (\d+) days?", query, re.IGNORECASE)
     at_least_match = re.search(r"delayed by at least (\d+) days?", query, re.IGNORECASE)
     greater_equal_match = re.search(r"delayed by >=?\s*(\d+) days?", query, re.IGNORECASE)
-    
+   
     if more_than_match:
         # Range query: more than X days
         days = int(more_than_match.group(1))
@@ -986,52 +986,52 @@ def get_delayed_containers(query: str) -> str:
                 query_type = f"exactly {days}"
             else:
                 # Treat as range for general queries
-                delayed_df = arrived_containers[arrived_containers["delay_days"] >= days]
+                delayed_df = arrived_containers[arrived_containers["delay_days"] <= days]
                 query_type = f"at least {days}"
         else:
             # Default to 1+ days delay
             days = 1
-            delayed_df = arrived_containers[arrived_containers["delay_days"] >= days]
+            delayed_df = arrived_containers[arrived_containers["delay_days"] <= days]
             query_type = f"at least {days}"
-    
+   
     # Only include containers that are actually delayed (positive delay days)
     delayed_df = delayed_df[delayed_df["delay_days"] > 0]
-    
+   
     if delayed_df.empty:
         return f"No containers are delayed by {query_type} days for your authorized consignees (considering arrivals from today onwards)."
-    
+   
     cols = ["container_number", "eta_dp", "ata_dp", "delay_days"]
     if "consignee_code_multiple" in delayed_df.columns:
         cols.append("consignee_code_multiple")
     if "discharge_port" in delayed_df.columns:
         cols.append("discharge_port")
-    
+   
     cols = [c for c in cols if c in delayed_df.columns]
     delayed_df = delayed_df[cols].sort_values("delay_days", ascending=False)
-    
+   
     # Format dates for display
     delayed_df = delayed_df.copy()
     delayed_df["eta_dp"] = delayed_df["eta_dp"].dt.strftime("%Y-%m-%d")
     delayed_df["ata_dp"] = delayed_df["ata_dp"].dt.strftime("%Y-%m-%d")
-    
+   
     # Return both message and data
     result_data = delayed_df.to_dict(orient="records")
-    
+   
     message = f"Found {len(result_data)} containers delayed by {query_type} days for your consignee (arrivals from {today.strftime('%Y-%m-%d')} onwards).\n\n"
-    
+   
     # Add examples to the message
     example_count = min(5, len(result_data))
     for i, container in enumerate(result_data[:example_count]):
         delay_days = container['delay_days']
         port_info = f" at {container['discharge_port']}" if 'discharge_port' in container else ""
         message += f"• {container['container_number']}: Expected {container['eta_dp']}, Arrived {container['ata_dp']} ({delay_days} days late){port_info}\n"
-    
+   
     if len(result_data) > example_count:
         message += f"... and {len(result_data) - example_count} more containers.\n"
-    
+   
     # Embed the data for API extraction
     message += f"\n{result_data}"
-    
+   
     #return message
     return result_data
 
@@ -2384,6 +2384,7 @@ TOOLS = [
     )
     
 ]
+
 
 
 
