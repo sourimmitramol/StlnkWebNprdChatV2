@@ -551,23 +551,15 @@ def get_container_milestones(input_str: str) -> str:
     # Build the milestone list (only keep non-null dates)
     # -------------------------------------------------
     
-    if not pd.isna(row.get("ata_dp")):
-        row_milestone_map = [
-            ("<strong>Departed From</strong>", safe_val(row.get("load_port")), row.get("atd_lp")),
-            ("<strong>Final Load Port Arrival</strong>", safe_val(row.get("final_load_port")), row.get("ata_flp")),
-            ("<strong>Final Load Port Departure</strong>", safe_val(row.get("final_load_port")), row.get("atd_flp")),
-            ("<strong>Reached at Discharge Port</strong>", safe_val(row.get("discharge_port")), row.get("ata_dp")),
-            ("<strong>Reached at Last CY</strong>", safe_val(row.get("last_cy_location")), row.get("equipment_arrived_at_last_cy")),
-            ("<strong>Out Gate at Last CY</strong>", safe_val(row.get("out_gate_at_last_cy_lcn")), row.get("out_gate_at_last_cy")),
-            ("<strong>Delivered at</strong>", safe_val(row.get("delivery_date_to_consignee_lcn")), row.get("delivery_date_to_consignee")),
-            ("<strong>Empty Container Returned to</strong>", safe_val(row.get("empty_container_return_lcn")), row.get("empty_container_return_date")),
-        ]
-    else:
-        row_milestone_map = [
-            ("<strong>Departed From</strong>", safe_val(row.get("load_port")), row.get("atd_lp")),
-            ("<strong>Final Load Port Arrival</strong>", safe_val(row.get("final_load_port")), row.get("ata_flp")),
-            ("<strong>Final Load Port Departure</strong>", safe_val(row.get("final_load_port")), row.get("atd_flp")),
-            ("<strong>Will at Discharge Port</strong>", safe_val(row.get("discharge_port")), row.get("eta_dp")),
+    row_milestone_map = [
+            ("<strong>Departed From</strong>", row.get("load_port"), row.get("atd_lp")),
+            ("<strong>Final Load Port Arrival</strong>", row.get("final_load_port"), row.get("ata_flp")),
+            ("<strong>Final Load Port Departure</strong>", row.get("final_load_port"), row.get("atd_flp")),
+            ("<strong>Reached at Discharge Port</strong>", row.get("discharge_port"), row.get("ata_dp")),
+            ("<strong>Reached at Last CY</strong>", row.get("last_cy_location"), row.get("equipment_arrived_at_last_cy")),
+            ("<strong>Out Gate at Last CY</strong>", row.get("out_gate_at_last_cy_lcn"), row.get("out_gate_at_last_cy")),
+            ("<strong>Delivered at</strong>", row.get("delivery_date_to_consignee_lcn"), row.get("delivery_date_to_consignee")),
+            ("<strong>Empty Container Returned to</strong>", row.get("empty_container_return_lcn"), row.get("empty_container_return_date")),
         ]
     
 
@@ -2392,6 +2384,7 @@ TOOLS = [
     )
     
 ]
+
 
 
 
