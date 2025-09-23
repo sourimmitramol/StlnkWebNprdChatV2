@@ -577,6 +577,11 @@ def get_container_milestones(input_str: str) -> str:
     # return "\n".join(status_lines)
     return res
 
+def safe_date(val):
+    """Return only YYYY-MM-DD or None if NaT/NaN/None/empty."""
+    if pd.isna(val):  # catches NaN and NaT
+        return None
+    return str(val).split()[0]
 
 def get_top_values_for_column(query: str) -> str:
     """
@@ -2344,6 +2349,7 @@ TOOLS = [
     )
     
 ]
+
 
 
 
