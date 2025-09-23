@@ -2109,7 +2109,7 @@ def get_field_info(query: str) -> str:
         "vessel": r"\b(first\s*vessel\s*code|first\s*vessel\s*name|first\s*voyage\s*code|final\s*vessel\s*code|final\s*vessel\s*name|final\s*voyage\s*code)\b",
         "carrier": r"\b(final\s*carrier\s*code|final\s*carrier\s*scac\s*code|final\s*carrier\s*name|true\s*carrier\s*code|true\s*carrier\s*scac\s*code)\b",
         "date": r"\b(etd_lp|etd_flp|eta_dp|eta_fd|revised_eta|predictive_eta|atd_lp|ata_flp|atd_flp|ata_dp|revised_eta_fd|predictive_eta_fd|cargo_received_date_multiple)\b",
-        "location": r"\b(carrier_vehicle_load_lcn|vehicle_departure_lcn|vehicle_arrival_lcn|carrier_vehicle_unload_lcn|out_gate_location|equipment_arrival_at_last_lcn|out_gate_at_last_cy_lcn|delivery_location_to_consignee|empty_container_return_lcn)\b",
+        "location": r"\b(final_destination|carrier_vehicle_load_lcn|vehicle_departure_lcn|vehicle_arrival_lcn|carrier_vehicle_unload_lcn|out_gate_location|equipment_arrival_at_last_lcn|out_gate_at_last_cy_lcn|delivery_location_to_consignee|empty_container_return_lcn)\b",
     }
 
     field_type = None
@@ -2143,7 +2143,7 @@ def get_field_info(query: str) -> str:
                             "predictive_eta_fd", "cargo_received_date_multiple"]
                 if c in df.columns]
     elif field_type == "location":
-        cols = [c for c in ["carrier_vehicle_load_lcn", "vehicle_departure_lcn",
+        cols = [c for c in ["final_destination","carrier_vehicle_load_lcn", "vehicle_departure_lcn",
                             "vehicle_arrival_lcn", "carrier_vehicle_unload_lcn",
                             "out_gate_location", "equipment_arrival_at_last_lcn",
                             "out_gate_at_last_cy_lcn", "delivery_location_to_consignee",
@@ -3632,6 +3632,7 @@ TOOLS = [
         description="Check whether an ocean BL is marked hot via its container's hot flag (searches ocean_bl_no_multiple)."
     ),
 ]
+
 
 
 
