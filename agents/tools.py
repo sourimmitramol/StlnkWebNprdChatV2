@@ -1734,7 +1734,7 @@ def check_arrival_status(input_str: str) -> str:
             return f"PO {po_number} is on the water, discharge port: {discharge_port}."
 
     else:
-        return "Please provide a valid container number (e.g., TCLU8579495) or PO number to check arrival status."
+        return "Please provide a valid container number or PO number to check arrival status."
 
 
 def get_container_carrier(input_str: str) -> str:
@@ -2336,6 +2336,7 @@ TOOLS = [
     )
     
 ]
+
 
 
 
