@@ -2927,7 +2927,7 @@ def get_carrier_for_po(query: str) -> str:
         m = re.search(r'\b([A-Z0-9]{6,12})\b', query.upper())
         po = m.group(1) if m else None
     if not po:
-        return "Please specify a PO number (e.g. 'PO 5500009022' or '5500009022')."
+        return "Please specify a PO number"
 
     po_norm = _normalize_po_token(po)
     df = _df()
@@ -2984,7 +2984,7 @@ def get_carrier_for_po(query: str) -> str:
 #         m = re.search(r'\b([A-Z0-9]{6,12})\b', query.upper())
 #         po = m.group(1) if m else None
 #     if not po:
-#         return "Please specify a PO number (e.g. 'PO 5500009022' or '5500009022')."
+#         return "Please specify a PO number"
 
 #     po_norm = _normalize_po_token(po)
 #     df = _df()
@@ -3054,7 +3054,7 @@ def get_carrier_for_po(query: str) -> str:
         m = re.search(r'\b([A-Z0-9]{6,12})\b', query.upper())
         po = m.group(1) if m else None
     if not po:
-        return "Please specify a PO number (e.g. 'PO 5500009022' or '5500009022')."
+        return "Please specify a PO number."
 
     po_norm = _normalize_po_token(po)
     df = _df()
@@ -3103,7 +3103,7 @@ def is_po_hot(query: str) -> str:
         m = re.search(r'\b([A-Z0-9]{6,12})\b', query.upper())
         po = m.group(1) if m else None
     if not po:
-        return "Please specify a PO number (e.g. 'PO 5500009022' or '5500009022')."
+        return "Please specify a PO number."
 
     po_norm = _normalize_po_token(po)
     df = _df()
@@ -3625,6 +3625,7 @@ TOOLS = [
         description="Check whether an ocean BL is marked hot via its container's hot flag (searches ocean_bl_no_multiple)."
     ),
 ]
+
 
 
 
