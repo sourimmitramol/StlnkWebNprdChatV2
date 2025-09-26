@@ -3333,8 +3333,7 @@ TOOLS = [
         func=get_container_milestones,
         description="Retrieve all milestone dates for a specific container."
     ),
-    
-    
+
     Tool(
         name="Get Container Carrier",
         func=get_container_carrier,
@@ -3349,6 +3348,11 @@ TOOLS = [
         name="Get Delayed Containers",
         func=get_delayed_containers,
         description="Find containers delayed by a specified number of days."
+    ),
+     Tool(
+        name="Get Container ETD",
+        func=get_container_etd,
+        description="Return ETD for a specific container."
     ),
     Tool(
         name="Get Upcoming Arrivals",
@@ -3512,6 +3516,7 @@ TOOLS = [
         description="Check whether an ocean BL is marked hot via its container's hot flag (searches ocean_bl_no_multiple)."
     ),
 ]
+
 
 
 
