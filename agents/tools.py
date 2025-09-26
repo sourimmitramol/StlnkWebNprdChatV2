@@ -1844,41 +1844,6 @@ def get_arrivals_by_port(query: str) -> str:
 # ...existing code...
 
 
-# ------------------------------------------------------------------
-# 4️⃣ Container ETA/ATA (single container)
-# ------------------------------------------------------------------
-# def get_container_eta(query: str) -> str:
-#     """
-#     Return ETA and ATA details for a specific container.
-#     Input: Query must mention a container number (partial or full).
-#     Output: ETA/ATA and port details for the container.
-#     If not found, prompts for a valid container number.
-#     """
-#     cont = extract_container_number(query)
-#     if not cont:
-#         return "Please mention a container number."
-
-#     df = _df()
-#     df = ensure_datetime(df, ["eta_dp", "ata_dp"])
-#     row = df[df["container_number"].astype(str).str.contains(cont, case=False, na=False)]
-#     if row.empty:
-#         return f"No data for container {cont}."
-
-#     row = row.iloc[0]
-#     cols = ["container_number", "discharge_port", "eta_dp", "ata_dp"]
-#     cols = [c for c in cols if c in row.index]
-#     out = row[cols].to_frame().T
-#     out = ensure_datetime(out, ["eta_dp", "ata_dp"])
-#     out["eta_dp"] = out["eta_dp"].dt.strftime("%Y-%m-%d")
-#     out["ata_dp"] = out["ata_dp"].dt.strftime("%Y-%m-%d")
-#     return out.to_string(index=False)
-
-
-# ------------------------------------------------------------------
-# 5️⃣ Arrivals By Port / Country
-# ------------------------------------------------------------------
-
-
 
 # ------------------------------------------------------------------
 # 6️⃣ Keyword / fuzzy search
@@ -3550,6 +3515,7 @@ TOOLS = [
         description="Check whether an ocean BL is marked hot via its container's hot flag (searches ocean_bl_no_multiple)."
     ),
 ]
+
 
 
 
