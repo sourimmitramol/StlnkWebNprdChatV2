@@ -3431,6 +3431,63 @@ def is_bl_hot(query: str) -> str:
 
 
 
+def get_container_etd(query: str) -> str:
+    """
+    Return  ETD_LP(Estimated time of departure from Load Port) details for specific containers.
+    Input: Query mentioning one or more container numbers (comma-separated or space-separated).
+    Output: ETD_LP and port details for the containers.
+    """
+    # Extract all container numbers using regex pattern
+    container_pattern = re.findall(r'([A-Z]{4}\d{7})', query)
+   
+    if not container_pattern:
+        return "Please mention one or more container numbers."
+   
+    df = _df()
+   
+    # Add "MM/dd/yyyy hh:mm:ss tt" format to ensure_datetime function
+    # or directly parse dates here
+    #date_cols = ["eta_dp", "ata_dp"]
+    date_cols = ["etd_lp"]
+    for col in date_cols:
+        if col in df.columns:
+            try:
+                df[col] = pd.to_datetime(df[col], errors='coerce')
+            except:
+                pass
+   
+    # Create results table with all requested containers
+    results = []
+    for cont in container_pattern:
+        # First try exact match after normalizing
+        norm_cont = cont.upper().strip()
+        mask = df["container_number"].astype(str).str.upper().str.strip() == norm_cont
+        row = df[mask]
+       
+        # If no exact match, try contains
+        if row.empty:
+            row = df[df["container_number"].astype(str).str.contains(cont, case=False, na=False)]
+       
+        if not row.empty:
+            row = row.iloc[0]
+            #cols = ["container_number", "discharge_port", "eta_dp", "ata_dp"]
+            cols = ["container_number", "discharge_port", "etd_lp"]
+            cols = [c for c in cols if c in row.index]
+            single_result = row[cols].to_frame().T
+            results.append(single_result)
+        else:
+            # Create a row with "Not Available" for missing containers
+            missing_row = pd.DataFrame({
+                "container_number": [cont],
+                "discharge_port": ["Not Available"],
+                "etd_lp": ["Not Available"],
+                "etd_flp": ["Not Available"]
+            })
+            results.append(missing_row[["container_number", "discharge_port", "etd_lp"]])
+ 
+    # Combine all results
+    combined_results = pd.concat(results, ignore_index=True)
+
 
 # ------------------------------------------------------------------
 # TOOLS list – must be at module level, not inside any function!
@@ -3625,6 +3682,7 @@ TOOLS = [
         description="Check whether an ocean BL is marked hot via its container's hot flag (searches ocean_bl_no_multiple)."
     ),
 ]
+
 
 
 
