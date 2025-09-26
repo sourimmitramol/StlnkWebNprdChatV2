@@ -1058,13 +1058,13 @@ def get_upcoming_arrivals(query: str) -> str:
 
 
 # ------------------------------------------------------------------
-# 4️⃣ Container ETA/ATA (single container)
+# 4️⃣ Container ETD (single container)
 # ------------------------------------------------------------------
-def get_container_eta(query: str) -> str:
+def get_container_etd(query: str) -> str:
     """
-    Return ETA and ATA details for specific containers.
+    Return  ETD_LP(Estimated time of departure from Load Port) details for specific containers.
     Input: Query mentioning one or more container numbers (comma-separated or space-separated).
-    Output: ETA/ATA and port details for the containers.
+    Output: ETD_LP and port details for the containers.
     """
     # Extract all container numbers using regex pattern
     container_pattern = re.findall(r'([A-Z]{4}\d{7})', query)
@@ -1076,7 +1076,8 @@ def get_container_eta(query: str) -> str:
    
     # Add "MM/dd/yyyy hh:mm:ss tt" format to ensure_datetime function
     # or directly parse dates here
-    date_cols = ["eta_dp", "ata_dp"]
+    #date_cols = ["eta_dp", "ata_dp"]
+    date_cols = ["etd_lp"]
     for col in date_cols:
         if col in df.columns:
             try:
@@ -1098,7 +1099,8 @@ def get_container_eta(query: str) -> str:
        
         if not row.empty:
             row = row.iloc[0]
-            cols = ["container_number", "discharge_port", "eta_dp", "ata_dp"]
+            #cols = ["container_number", "discharge_port", "eta_dp", "ata_dp"]
+            cols = ["container_number", "discharge_port", "etd_lp"]
             cols = [c for c in cols if c in row.index]
             single_result = row[cols].to_frame().T
             results.append(single_result)
@@ -1107,16 +1109,16 @@ def get_container_eta(query: str) -> str:
             missing_row = pd.DataFrame({
                 "container_number": [cont],
                 "discharge_port": ["Not Available"],
-                "eta_dp": ["Not Available"],
-                "ata_dp": ["Not Available"]
+                "etd_lp": ["Not Available"],
+                "etd_flp": ["Not Available"]
             })
-            results.append(missing_row[["container_number", "discharge_port", "eta_dp", "ata_dp"]])
-   
+            results.append(missing_row[["container_number", "discharge_port", "etd_lp"]])
+ 
     # Combine all results
     combined_results = pd.concat(results, ignore_index=True)
    
     # Format date columns (only for actual datetime values)
-    for date_col in ["eta_dp", "ata_dp"]:
+    for date_col in "etd_lp":
         if date_col in combined_results.columns:
             combined_results[date_col] = combined_results[date_col].apply(
                 lambda x: x.strftime("%Y-%m-%d") if isinstance(x, pd.Timestamp) else x
@@ -2210,9 +2212,9 @@ TOOLS = [
         description="List containers scheduled to arrive within the next X days."
     ),
     Tool(
-        name="Get Container ETA",
-        func=get_container_eta,
-        description="Return ETA and ATA details for a specific container."
+        name="Get Container ETD",
+        func=get_container_etd,
+        description="Return ETD details for a specific container."
     ),
     Tool(
         name="Get Arrivals By Port",
@@ -2336,6 +2338,7 @@ TOOLS = [
     )
     
 ]
+
 
 
 
