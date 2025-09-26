@@ -1723,6 +1723,15 @@ def get_container_etd(query: str) -> str:
  
     # Combine all results
     combined_results = pd.concat(results, ignore_index=True)
+   
+    # Format date columns (only for actual datetime values)
+    for date_col in "etd_lp":
+        if date_col in combined_results.columns:
+            combined_results[date_col] = combined_results[date_col].apply(
+                lambda x: x.strftime("%Y-%m-%d") if isinstance(x, pd.Timestamp) else x
+            )
+   
+    return combined_results.to_string(index=False)
 
 
 import re
@@ -3516,6 +3525,7 @@ TOOLS = [
         description="Check whether an ocean BL is marked hot via its container's hot flag (searches ocean_bl_no_multiple)."
     ),
 ]
+
 
 
 
