@@ -3526,6 +3526,11 @@ TOOLS = [
         description="Return ETA and ATA details for a specific container."
     ),
     Tool(
+        name="Get Container ETD",
+        func=get_container_etd,
+        description="Return ETD details for a specific container."
+    ),
+    Tool(
         name="Get Arrivals By Port",
         func=get_arrivals_by_port,
         description="Find containers arriving at a specific port or country."
@@ -3682,6 +3687,7 @@ TOOLS = [
         description="Check whether an ocean BL is marked hot via its container's hot flag (searches ocean_bl_no_multiple)."
     ),
 ]
+
 
 
 
