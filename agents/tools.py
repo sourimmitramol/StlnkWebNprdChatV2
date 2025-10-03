@@ -1500,6 +1500,9 @@ def get_delayed_containers(query: str) -> str:
       - early arrivals (negative delays)
     """
 
+    import re
+    import pandas as pd
+
     df = _df()
     # Ensure required datetime fields exist and are parsed
     df = ensure_datetime(df, ["eta_dp", "ata_dp", "predictive_eta_fd", "revised_eta"])
@@ -3728,6 +3731,7 @@ TOOLS = [
         description="Check whether an ocean BL is marked hot via its container's hot flag (searches ocean_bl_no_multiple)."
     ),
 ]
+
 
 
 
