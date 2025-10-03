@@ -1794,7 +1794,8 @@ def get_delayed_containers(query: str) -> str:
 
     # Provide a short summary if user asked for summary-like phrasing
     # But since original returns records, we keep returning records
-    return out.reset_index(drop=True).to_dict(orient="records")
+    #return out.reset_index(drop=True).to_dict(orient="records")
+    return out.to_dict(orient="records")
 
 # ...existing code...
 
@@ -3731,6 +3732,7 @@ TOOLS = [
         description="Check whether an ocean BL is marked hot via its container's hot flag (searches ocean_bl_no_multiple)."
     ),
 ]
+
 
 
 
