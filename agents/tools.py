@@ -1714,7 +1714,7 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
             return f"No hot containers match the delay/early criteria ({query_type}) for your authorized consignees{where}."
 
     # select columns
-    cols = ["container_number", "eta_dp", "ata_dp", "effective_delay_days", "status", "consignee_code_multiple"]
+    cols = ["container_number", "eta_dp", "ata_dp", "effective_delay_days", "status", "consignee_code_multiple","hot_container_flag"]
     cols += [c for c in ["discharge_port", "vehicle_arrival_lcn", "final_destination", "place_of_delivery", "load_port"] if c in combined.columns]
     if "hot_container_flag" in combined.columns:
         cols.append("hot_container_flag")
@@ -1821,7 +1821,7 @@ def get_delayed_containers(query: str) -> str:
         where = f" at {code or name}" if (code or name) else ""
         return f"No containers are delayed by {query_type} days for your authorized consignees{where}."
  
-    cols = ["container_number", "eta_dp", "ata_dp", "delay_days", "consignee_code_multiple", "discharge_port"]
+    cols = ["container_number", "eta_dp", "ata_dp", "delay_days", "consignee_code_multiple", "discharge_port","hot_container_flag"]
     if "vehicle_arrival_lcn" in delayed_df.columns:
         cols.append("vehicle_arrival_lcn")
     cols = [c for c in cols if c in delayed_df.columns]
@@ -3769,6 +3769,7 @@ TOOLS = [
         description="Check whether an ocean BL is marked hot via its container's hot flag (searches ocean_bl_no_multiple)."
     ),
 ]
+
 
 
 
