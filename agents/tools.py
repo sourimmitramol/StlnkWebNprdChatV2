@@ -3596,7 +3596,10 @@ TOOLS = [
     Tool(
         name="Get Delayed Containers",
         func=get_delayed_containers,
-        description="Find containers delayed by a specified number of days."
+        description=(
+           "Use this tool for any question mentioning delay, late, ETA, overdue, "
+           "behind schedule, missed arrival, days, or hot containers with delays. "
+           "If the user mentions 'hot' and 'delay' together, use this tool."),
     ),
      Tool(
         name="Get Container ETD",
@@ -3716,7 +3719,10 @@ TOOLS = [
     Tool(
         name="Get Hot Containers",
         func=get_hot_containers,
-        description="Get list of hot containers for authorized consignees based on hot container flag"
+        description=(
+           "Use this tool ONLY if the user asks directly about hot containers "
+           "without mentioning any delay, lateness, ETA, or days. "
+           "For example: 'Show my hot containers' or 'List all priority shipments'."),
     ),
     Tool(
         name="Get Hot Containers By Consignee",
@@ -3765,6 +3771,7 @@ TOOLS = [
         description="Check whether an ocean BL is marked hot via its container's hot flag (searches ocean_bl_no_multiple)."
     ),
 ]
+
 
 
 
