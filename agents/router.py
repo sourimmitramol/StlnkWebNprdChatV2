@@ -100,56 +100,56 @@ def route_query(query: str, consignee_codes: list = None) -> str:
             return get_arrivals_by_port(query)
         
         # ========== PRIORITY 2: Handle delay queries ==========
-        if "delay" in q and "days" in q:
+        elif ("delay" in q or "late" in q or "overdue" in q or "missed" in q) and "days" in q:
             return get_delayed_containers(query)
         
         # ========== PRIORITY 3: Handle carrier queries (NEW - SPECIFIC) ==========
         # Questions 15, 16, 17, 18: Carrier queries for PO/Container/OBL
-        if ("carrier" in q or "who is" in q) and (po_no or container_no or "obl" in q):
+        elif ("carrier" in q or "who is" in q) and (po_no or container_no or "obl" in q):
             return get_container_carrier(query)
         
         # ========== PRIORITY 4: Hot containers routing ==========
-        if "hot container" in q or "hot containers" in q:
+        elif "hot container" in q or "hot containers" in q:
             return get_hot_containers_by_consignee(query)
         
         # ========== PRIORITY 5: Container status queries ==========
-        if any("milestone", "status", "track", "event history", "journey", "where") in q:
+        elif any("milestone", "status", "track", "event history", "journey", "where") in q:
             return get_container_milestones(query)
         
         # ========== PRIORITY 6: Question 8 - POs shipping in coming days ==========
-        if "po" in q and ("ship" in q or "etd" in q) and ("coming" in q or "next" in q):
+        elif "po" in q and ("ship" in q or "etd" in q) and ("coming" in q or "next" in q):
             return get_upcoming_pos(query)
         
         # ========== PRIORITY 7: Question 14 - Cargo in transit ==========
-        if ("cargo" in q or "po" in q) and "transit" in q:
+        elif ("cargo" in q or "po" in q) and "transit" in q:
             return check_transit_status(query)
         
         # ========== PRIORITY 8: Question 19-22 - Carrier/Supplier based queries ==========
-        if "carrier" in q and ("container" in q or "ship" in q) and ("last" in q or "days" in q):
+        elif "carrier" in q and ("container" in q or "ship" in q) and ("last" in q or "days" in q):
             return get_containers_by_carrier(query)
         
-        if "supplier" in q and ("container" in q or "po" in q):
+        elif "supplier" in q and ("container" in q or "po" in q):
             return get_containers_by_supplier(query)
         
         # ========== PRIORITY 9: Question 24 - PO arrival by month end ==========
-        if "po" in q and ("arrive" in q or "destination" in q) and ("month" in q or "end" in q):
+        elif "po" in q and ("arrive" in q or "destination" in q) and ("month" in q or "end" in q):
             return check_po_month_arrival(query)
         
         # ========== PRIORITY 10: Question 25 - Delayed POs ==========
-        if "po" in q and ("delay" in q or "delaying" in q):
+        elif "po" in q and ("delay" in q or "delaying" in q):
             return get_delayed_pos(query)
         
         # ========== PRIORITY 11: Question 27 - Weekly status changes ==========
-        if "status" in q and ("week" in q or "change" in q):
+        elif "status" in q and ("week" in q or "change" in q):
             return get_weekly_status_changes(query)       
         
         # ========== PRIORITY 13: Upcoming arrivals ==========
-        if ("arriving" in q or "arrive" in q) and ("next" in q or "coming" in q):
+        elif ("arriving" in q or "arrive" in q) and ("next" in q or "coming" in q):
             return get_upcoming_arrivals(query)
         
         # ========== PRIORITY 14: Question 7 - General field info (MOVED TO END) ==========
         # This is now more specific and won't interfere with carrier queries
-        if any([container_no, po_no]) and not any(keyword in q for keyword in [
+        elif any([container_no, po_no]) and not any(keyword in q for keyword in [
             "carrier", "status", "milestone", "arrived","track", "delay", "ship", "transit", 
             "supplier", "where", "location","event history", "journey"
         ]):
@@ -166,6 +166,7 @@ def route_query(query: str, consignee_codes: list = None) -> str:
         if consignee_codes and hasattr(threading.current_thread(), 'consignee_codes'):
             delattr(threading.current_thread(), 'consignee_codes')
             logger.debug("Cleaned up consignee codes from thread context")
+
 
 
 
