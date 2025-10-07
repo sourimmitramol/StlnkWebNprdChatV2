@@ -256,9 +256,6 @@ def get_hot_containers(query: str) -> str:
         range_match = re.search(r"(\d+)\s*[-–—]\s*(\d+)\s*days?", ql)
         less_than = re.search(r"(?:less\s+than|under|below|<)\s*(\d+)\s*days?", ql)
         more_than = re.search(r"(?:more\s+than|over|>\s*)(\d+)\s*days?", ql)
-        at_least  = re.search(r"(?:at\s+least|>=|minimum)\s*(\d+)\s*days?", ql)
-        up_to     = re.search(r"(?:up\s*to|no\s*more\s*than|within|maximum)\s*(\d+)\s*days?", ql)
-        or_more   = re.search(r"\b(\d+)\s*days?\s*(?:or\s+more|and\s+more|or\s+above)\b", ql)
         plus_sign = re.search(r"\b(\d+)\s*\+\s*days?\b", ql)  # ✅ detect 8+ days
         exact     = re.search(r"(?:by|of|in)\s+(\d+)\s+days?", ql)
 
@@ -270,15 +267,9 @@ def get_hot_containers(query: str) -> str:
         elif less_than:
             d = int(less_than.group(1))
             delayed = arrived[(arrived["delay_days"] > 0) & (arrived["delay_days"] < d)]
-        elif up_to:
-            d = int(up_to.group(1))
-            delayed = arrived[(arrived["delay_days"] > 0) & (arrived["delay_days"] <= d)]
         elif more_than or plus_sign:
             d = int((more_than or plus_sign).group(1))
             delayed = arrived[arrived["delay_days"] > d]
-        elif at_least or or_more:
-            d = int((at_least or or_more).group(1))
-            delayed = arrived[arrived["delay_days"] >= d]
         elif exact:
             d = int(exact.group(1))
             delayed = arrived[arrived["delay_days"] == d]
@@ -305,62 +296,6 @@ def get_hot_containers(query: str) -> str:
 
         return out.where(pd.notnull(out), None).to_dict(orient="records")
 
-    # B) Upcoming hot arrivals
-    if any(w in ql for w in ("arriv", "expected", "due", "will arrive", "arriving soon", "next")):
-        days = None
-        for pat in [
-            r"(?:next|upcoming|within|in)\s+(\d{1,3})\s+days?",
-            r"arriving.*?(\d{1,3})\s+days?",
-            r"will.*?arrive.*?(\d{1,3})\s+days?",
-            r"(\d{1,3})\s+days?",
-        ]:
-            m = re.search(pat, query, re.IGNORECASE)
-            if m:
-                days = int(m.group(1))
-                break
-        n_days = days if days is not None else 7
-
-        date_priority = [c for c in ['revised_eta', 'eta_dp'] if c in hot_df.columns]
-        if not date_priority:
-            return "No ETA columns (revised_eta / eta_dp) found in the data."
-        parse_cols = date_priority.copy()
-        if 'ata_dp' in hot_df.columns:
-            parse_cols.append('ata_dp')
-        hot_df = ensure_datetime(hot_df, parse_cols)
-
-        if 'revised_eta' in hot_df.columns and 'eta_dp' in hot_df.columns:
-            hot_df['eta_for_filter'] = hot_df['revised_eta'].where(hot_df['revised_eta'].notna(), hot_df['eta_dp'])
-        elif 'revised_eta' in hot_df.columns:
-            hot_df['eta_for_filter'] = hot_df['revised_eta']
-        else:
-            hot_df['eta_for_filter'] = hot_df['eta_dp']
-
-        today = pd.Timestamp.today().normalize()
-        end_date = today + pd.Timedelta(days=n_days)
-        mask = hot_df['eta_for_filter'].notna() & (hot_df['eta_for_filter'] >= today) & (hot_df['eta_for_filter'] <= end_date)
-        if 'ata_dp' in hot_df.columns:
-            mask &= hot_df['ata_dp'].isna()
-        upcoming = hot_df[mask].copy()
-        upcoming = upcoming[upcoming[hot_flag_col].apply(_is_hot)]
-
-        if upcoming.empty:
-            where = f" at {code or name}" if (code or name) else ""
-            return f"No hot containers arriving between {today.strftime('%Y-%m-%d')} and {end_date.strftime('%Y-%m-%d')}{where}."
-
-        cols = ['container_number', 'discharge_port', 'revised_eta', 'eta_dp', 'eta_for_filter']
-        if 'vehicle_arrival_lcn' in upcoming.columns:
-            cols.append('vehicle_arrival_lcn')
-        cols = [c for c in cols if c in upcoming.columns]
-        out = upcoming[cols].sort_values('eta_for_filter').head(100).copy()
-
-        for d in ['revised_eta', 'eta_dp', 'eta_for_filter']:
-            if d in out.columns and pd.api.types.is_datetime64_any_dtype(out[d]):
-                out[d] = out[d].dt.strftime('%Y-%m-%d')
-
-        if 'eta_for_filter' in out.columns:
-            out = out.rename(columns={'eta_for_filter': 'eta'})
-
-        return out.where(pd.notnull(out), None).to_dict(orient='records')
 
     # C) Fallback: simple hot listing
     display_cols = ['container_number', 'consignee_code_multiple']
@@ -2660,6 +2595,7 @@ TOOLS = [
     )
     
 ]
+
 
 
 
