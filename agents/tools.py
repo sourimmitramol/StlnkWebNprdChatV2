@@ -1767,7 +1767,7 @@ def get_hot_containers(query: str) -> str:
             where = f" at {code or name}" if (code or name) else ""
             return f"No hot containers are delayed for your authorized consignees{where}."
 
-        cols = ["container_number", "eta_dp", "ata_dp", "delay_days", "discharge_port"]
+        cols = ["container_number", "eta_dp", "ata_dp", "delay_days", "discharge_port","hot_container_flag"]
         if "vehicle_arrival_lcn" in delayed.columns:
             cols.append("vehicle_arrival_lcn")
         cols = [c for c in cols if c in delayed.columns]
@@ -1839,7 +1839,7 @@ def get_hot_containers(query: str) -> str:
 
     # C) Fallback: simple hot listing
     display_cols = ['container_number', 'consignee_code_multiple']
-    display_cols += [c for c in ['discharge_port', 'eta_dp', 'ata_dp'] if c in hot_df.columns]
+    display_cols += [c for c in ['discharge_port', 'eta_dp', 'revised_eta','hot_container_flag'] if c in hot_df.columns]
     display_cols = [c for c in display_cols if c in hot_df.columns]
 
     if 'eta_dp' in hot_df.columns:
@@ -3796,6 +3796,7 @@ TOOLS = [
         description="Check whether an ocean BL is marked hot via its container's hot flag (searches ocean_bl_no_multiple)."
     ),
 ]
+
 
 
 
