@@ -1733,7 +1733,8 @@ def get_hot_containers(query: str) -> str:
         more_than = re.search(r"(?:more\s+than|over|>\s*)(\d+)\s*days?", ql)
         at_least  = re.search(r"(?:at\s+least|>=|minimum)\s*(\d+)\s*days?", ql)
         up_to     = re.search(r"(?:up\s*to|no\s*more\s*than|within|maximum)\s*(\d+)\s*days?", ql)
-        or_more   = re.search(r"\b(\d+)\s*days?\s*(?:\+|or\s+more|and\s+more|or\s+above)\b", ql)
+        or_more   = re.search(r"\b(\d+)\s*days?\s*(?:or\s+more|and\s+more|or\s+above)\b", ql)
+        plus_sign = re.search(r"\b(\d+)\s*\+\s*days?\b", ql)  # ✅ detect 8+ days
         exact     = re.search(r"(?:by|of|in)\s+(\d+)\s+days?", ql)
 
         # apply range logic
@@ -1747,8 +1748,8 @@ def get_hot_containers(query: str) -> str:
         elif up_to:
             d = int(up_to.group(1))
             delayed = arrived[(arrived["delay_days"] > 0) & (arrived["delay_days"] <= d)]
-        elif more_than:
-            d = int(more_than.group(1))
+        elif more_than or plus_sign:
+            d = int((more_than or plus_sign).group(1))
             delayed = arrived[arrived["delay_days"] > d]
         elif at_least or or_more:
             d = int((at_least or or_more).group(1))
@@ -3795,6 +3796,7 @@ TOOLS = [
         description="Check whether an ocean BL is marked hot via its container's hot flag (searches ocean_bl_no_multiple)."
     ),
 ]
+
 
 
 
