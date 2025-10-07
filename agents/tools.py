@@ -1632,18 +1632,25 @@ def get_delayed_containers(query: str) -> str:
 def get_hot_containers(query: str) -> str:
     """
     Unified hot-container handler.
+
     Supports:
-      1) which hot container are delayed/late at <PORT>
-      2) which hot containers are delayed/late by X days at <PORT>
-      3) which hot containers will arrive at <PORT>
-      4) which hot containers will arrive at <PORT> in next X days
+      - which hot containers are delayed/late at <PORT>
+      - which hot containers are delayed/late by X days at <PORT>
+      - which hot containers are delayed less than / under / below X days
+      - which hot containers are delayed between X–Y days
+      - which hot containers missed ETA or are behind schedule
+      - which hot containers will arrive at <PORT>
+      - which hot containers will arrive at <PORT> in next X days
+      - "List hot shipments from <location> that are late by 5+ days"
+      - "Highlight hot shipments that missed ETA by 1–3 days"
+      - "Show me hot cargoes that missed ETA by more than [number] days"
 
     Notes:
-    - Consignee scoping comes from _df() (thread-local). If your API sets thread codes,
-      they are applied here automatically.
-    - Strict port filter: keep only rows whose discharge_port OR vehicle_arrival_lcn contains '(CODE)'.
+    - Consignee scoping comes from _df() (thread-local).
+    - Strict port filter: rows whose discharge_port OR vehicle_arrival_lcn contains '(CODE)'.
     """
     import re
+    import pandas as pd
 
     df = _df()  # already consignee-filtered if set
 
@@ -1654,98 +1661,116 @@ def get_hot_containers(query: str) -> str:
         return "Hot container flag column not found in the data."
     hot_flag_col = hot_flag_cols[0]
 
-    # Robust is_hot
     def _is_hot(v) -> bool:
         if pd.isna(v):
             return False
         s = str(v).strip().upper()
         return s in {"Y", "YES", "TRUE", "1", "HOT"} or v is True or v == 1
 
-    # Filter to hot rows first
     hot_df = df[df[hot_flag_col].apply(_is_hot)].copy()
     if hot_df.empty:
         return "No hot containers found for your authorized consignees."
 
-    # Strict optional location filter
-    port_cols = [c for c in ["discharge_port", "vehicle_arrival_lcn"] if c in hot_df.columns]
+    # Location filters
+    port_cols = [c for c in ["discharge_port", "vehicle_arrival_lcn", "final_destination", "place_of_delivery", "load_port"]
+                 if c in hot_df.columns]
 
-    def _extract_loc_code(q: str) -> str | None:
+    def _extract_loc_code_and_name(q: str):
         q_up = (q or "").upper()
-        # explicit (CODE)
         m = re.search(r"\(([A-Z0-9]{3,6})\)", q_up)
         if m:
-            return m.group(1)
-        # bare code token that exists in dataset values
-        if port_cols:
-            known = set()
+            return m.group(1), None
+        # known code in dataset
+        cand_codes = set(re.findall(r"\b[A-Z0-9]{3,6}\b", q_up))
+        if port_cols and cand_codes:
+            known_codes = set()
             for c in port_cols:
                 vals = hot_df[c].dropna().astype(str).str.upper()
-                known |= set(re.findall(r"\(([A-Z0-9]{3,6})\)", " ".join(vals.tolist())))
-            for tok in set(re.findall(r"\b[A-Z0-9]{3,6}\b", q_up)):
-                if tok in known:
-                    return tok
-        return None
+                known_codes |= set(re.findall(r"\(([A-Z0-9]{3,6})\)", " ".join(vals.tolist())))
+            for code in cand_codes:
+                if code in known_codes:
+                    return code, None
+        m2 = re.search(r"(?:\bat|\bin|to|from)\s+([A-Z][A-Z\s\.,'-]{2,})$", q_up)
+        name = m2.group(1).strip() if m2 else None
+        return None, name
 
-    code = _extract_loc_code(query)
-    if code:
-        pat = rf"\({re.escape(code)}\)"
+    code, name = _extract_loc_code_and_name(query)
+    if code or name:
         loc_mask = pd.Series(False, index=hot_df.index)
-        for c in port_cols:
-            loc_mask |= hot_df[c].astype(str).str.upper().str.contains(pat, na=False)
+        if code:
+            for c in port_cols:
+                loc_mask |= hot_df[c].astype(str).str.upper().str.contains(rf"\({re.escape(code)}\)", na=False)
+        else:
+            tokens = [t for t in re.split(r"\W+", (name or "")) if len(t) >= 3]
+            for c in port_cols:
+                col_vals = hot_df[c].astype(str).str.upper()
+                cond = pd.Series(True, index=hot_df.index)
+                for t in tokens:
+                    cond &= col_vals.str.contains(re.escape(t), na=False)
+                loc_mask |= cond
         hot_df = hot_df[loc_mask].copy()
         if hot_df.empty:
-            return f"No hot containers found at {code} for your authorized consignees."
+            where = f"{code or name}"
+            return f"No hot containers found at {where} for your authorized consignees."
 
     ql = (query or "").lower()
 
-    # A) Delayed/late hot containers (arrived only)
-    if any(w in ql for w in ("delay", "late", "overdue", "behind")):
+    # A) Delayed/late/missed ETA hot containers (arrived only)
+    if any(w in ql for w in ("delay", "late", "overdue", "behind", "missed", "eta", "deadline")):
         hot_df = ensure_datetime(hot_df, ["eta_dp", "ata_dp"])
         arrived = hot_df[hot_df["ata_dp"].notna()].copy()
         if arrived.empty:
-            where = f" at {code}" if code else ""
+            where = f" at {code or name}" if (code or name) else ""
             return f"No hot containers have arrived{where} for your authorized consignees."
 
-        # Recompute delay (ignore any pre-existing column)
-        arrived["delay_days"] = (arrived["ata_dp"] - arrived["eta_dp"]).dt.days
-        arrived["delay_days"] = arrived["delay_days"].fillna(0).astype(int)
+        arrived["delay_days"] = (arrived["ata_dp"] - arrived["eta_dp"]).dt.days.fillna(0).astype(int)
 
-        # Strict numeric qualifiers
-        more_than = re.search(
-            r"(?:(?:delayed|late|overdue|behind)\s+by\s+)?(?:more than|over|>\s*)\s*(\d+)\s*days?",
-            ql, re.IGNORECASE
-        )
-        at_least  = re.search(
-            r"(?:(?:delayed|late|overdue|behind)\s+by\s+)?(?:at\s+least|>=\s*|greater\s+than\s+or\s+equal\s+to|minimum)\s*(\d+)\s*days?",
-            ql, re.IGNORECASE
-        )
-        up_to     = re.search(r"(?:up\s*to|no\s*more\s*than|within|maximum)\s*(\d+)\s*days?", ql, re.IGNORECASE)
-        exact     = re.search(r"(?:delayed|late|overdue|behind)\s+by\s+(\d+)\s+days?", ql, re.IGNORECASE) or \
-                    re.search(r"\b(\d+)\s+days?\b(?:\s*(?:late|delayed|overdue|behind))?", ql, re.IGNORECASE)
+        # ------------------------------
+        # Numeric pattern parsing
+        # ------------------------------
+        range_match = re.search(r"(\d+)\s*[-–—]\s*(\d+)\s*days?", ql)
+        less_than = re.search(r"(?:less\s+than|under|below|<)\s*(\d+)\s*days?", ql)
+        more_than = re.search(r"(?:more\s+than|over|>\s*)(\d+)\s*days?", ql)
+        at_least  = re.search(r"(?:at\s+least|>=|minimum)\s*(\d+)\s*days?", ql)
+        up_to     = re.search(r"(?:up\s*to|no\s*more\s*than|within|maximum)\s*(\d+)\s*days?", ql)
+        or_more   = re.search(r"\b(\d+)\s*days?\s*(?:\+|or\s+more|and\s+more|or\s+above)\b", ql)
+        exact     = re.search(r"(?:by|of|in)\s+(\d+)\s+days?", ql)
 
-        if more_than:
-            d = int(more_than.group(1)); delayed = arrived[arrived["delay_days"] > d]
-        elif at_least:
-            d = int(at_least.group(1)); delayed = arrived[arrived["delay_days"] >= d]
+        # apply range logic
+        if range_match:
+            d1, d2 = int(range_match.group(1)), int(range_match.group(2))
+            low, high = min(d1, d2), max(d1, d2)
+            delayed = arrived[(arrived["delay_days"] >= low) & (arrived["delay_days"] <= high)]
+        elif less_than:
+            d = int(less_than.group(1))
+            delayed = arrived[(arrived["delay_days"] > 0) & (arrived["delay_days"] < d)]
         elif up_to:
-            d = int(up_to.group(1)); delayed = arrived[(arrived["delay_days"] > 0) & (arrived["delay_days"] <= d)]
+            d = int(up_to.group(1))
+            delayed = arrived[(arrived["delay_days"] > 0) & (arrived["delay_days"] <= d)]
+        elif more_than:
+            d = int(more_than.group(1))
+            delayed = arrived[arrived["delay_days"] > d]
+        elif at_least or or_more:
+            d = int((at_least or or_more).group(1))
+            delayed = arrived[arrived["delay_days"] >= d]
         elif exact:
-            d = int(exact.group(1)); delayed = arrived[arrived["delay_days"] == d]
+            d = int(exact.group(1))
+            delayed = arrived[arrived["delay_days"] == d]
         else:
             delayed = arrived[arrived["delay_days"] > 0]
+        # ------------------------------
 
-        # Keep only HOT and strictly positive delay
         delayed = delayed[delayed[hot_flag_col].apply(_is_hot)]
         delayed = delayed[delayed["delay_days"] > 0]
-
         if delayed.empty:
-            where = f" at {code}" if code else ""
+            where = f" at {code or name}" if (code or name) else ""
             return f"No hot containers are delayed for your authorized consignees{where}."
 
         cols = ["container_number", "eta_dp", "ata_dp", "delay_days", "discharge_port"]
         if "vehicle_arrival_lcn" in delayed.columns:
             cols.append("vehicle_arrival_lcn")
         cols = [c for c in cols if c in delayed.columns]
+
         out = delayed[cols].sort_values("delay_days", ascending=False).head(100).copy()
 
         for dcol in ["eta_dp", "ata_dp"]:
@@ -1754,9 +1779,8 @@ def get_hot_containers(query: str) -> str:
 
         return out.where(pd.notnull(out), None).to_dict(orient="records")
 
-    # B) Upcoming arrivals of hot containers (ATA null)
+    # B) Upcoming hot arrivals
     if any(w in ql for w in ("arriv", "expected", "due", "will arrive", "arriving soon", "next")):
-        # Parse window, default 7
         days = None
         for pat in [
             r"(?:next|upcoming|within|in)\s+(\d{1,3})\s+days?",
@@ -1766,10 +1790,10 @@ def get_hot_containers(query: str) -> str:
         ]:
             m = re.search(pat, query, re.IGNORECASE)
             if m:
-                days = int(m.group(1)); break
+                days = int(m.group(1))
+                break
         n_days = days if days is not None else 7
 
-        # ETA preference per-row and exclude arrived
         date_priority = [c for c in ['revised_eta', 'eta_dp'] if c in hot_df.columns]
         if not date_priority:
             return "No ETA columns (revised_eta / eta_dp) found in the data."
@@ -1791,12 +1815,10 @@ def get_hot_containers(query: str) -> str:
         if 'ata_dp' in hot_df.columns:
             mask &= hot_df['ata_dp'].isna()
         upcoming = hot_df[mask].copy()
-
-        # HOT enforcement again (safety)
         upcoming = upcoming[upcoming[hot_flag_col].apply(_is_hot)]
 
         if upcoming.empty:
-            where = f" at {code}" if code else ""
+            where = f" at {code or name}" if (code or name) else ""
             return f"No hot containers arriving between {today.strftime('%Y-%m-%d')} and {end_date.strftime('%Y-%m-%d')}{where}."
 
         cols = ['container_number', 'discharge_port', 'revised_eta', 'eta_dp', 'eta_for_filter']
@@ -1832,6 +1854,7 @@ def get_hot_containers(query: str) -> str:
     if len(result_data) == 0:
         return "No hot containers found for your authorized consignees."
     return result_data.where(pd.notnull(result_data), None).to_dict(orient="records")
+
 
 
 
@@ -3772,6 +3795,7 @@ TOOLS = [
         description="Check whether an ocean BL is marked hot via its container's hot flag (searches ocean_bl_no_multiple)."
     ),
 ]
+
 
 
 
