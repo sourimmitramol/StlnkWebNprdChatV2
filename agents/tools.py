@@ -252,7 +252,7 @@ def get_hot_upcoming_arrivals(query: str) -> str:
 
 
 # ...existing code...
-# def get_hot_containers(query: str) -> str:
+# (query: str) -> str:
 #     """
 #     Get list of hot containers for specified consignee codes.
 #     Also supports:
@@ -1758,7 +1758,7 @@ def get_hot_containers(query: str) -> str:
             where = f" at {code or name}" if (code or name) else ""
             return f"No hot containers are delayed for your authorized consignees{where}."
 
-        cols = ["container_number", "eta_dp", "ata_dp", "delay_days", "discharge_port","hot_container_flag"]
+        cols = ["container_number", "eta_dp", "ata_dp", "delay_days", "discharge_port","hot_container_flag",'consignee_code_multiple']
         if "vehicle_arrival_lcn" in delayed.columns:
             cols.append("vehicle_arrival_lcn")
         cols = [c for c in cols if c in delayed.columns]
@@ -3731,6 +3731,7 @@ TOOLS = [
         description="Check whether an ocean BL is marked hot via its container's hot flag (searches ocean_bl_no_multiple)."
     ),
 ]
+
 
 
 
