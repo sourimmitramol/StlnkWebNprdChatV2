@@ -177,75 +177,75 @@ def get_hot_upcoming_arrivals(query: str) -> str:
             days = int(m.group(1))
             break
     n_days = days if days is not None else default_days
-
+ 
     today = pd.Timestamp.today().normalize()
     end_date = today + pd.Timedelta(days=n_days)
-
+ 
     # <-- ADDED: log parsed timeframe for debugging
     try:
         logger.info(f"[get_arrivals_by_port] query={query!r} parsed_n_days={n_days} today={today.strftime('%Y-%m-%d')} end_date={end_date.strftime('%Y-%m-%d')}")
     except Exception:
         print(f"[get_arrivals_by_port] parsed_n_days={n_days} today={today} end_date={end_date}")
     df = _df()  # respects consignee filtering
-
+ 
     # transport mode filter (if mentioned in query)
     modes = extract_transport_modes(query)
     if modes and 'transport_mode' in df.columns:
         df = df[df['transport_mode'].astype(str).str.lower().apply(lambda s: any(m in s for m in modes))]
-
+ 
     # find hot flag column
     hot_flag_cols = [c for c in df.columns if 'hot_container_flag' in c.lower()]
     if not hot_flag_cols:
         hot_flag_cols = [c for c in df.columns if 'hot_container' in c.lower()]
     if not hot_flag_cols:
         return "No hot-container flag column found in the dataset."
-
+ 
     hot_col = hot_flag_cols[0]
-
+ 
     # select hot rows
     hot_mask = df[hot_col].astype(str).str.strip().str.upper().isin({'Y', 'YES', 'TRUE', '1', 'HOT'})
     hot_df = df[hot_mask].copy()
     if hot_df.empty:
         return "No hot containers found for your authorized consignees."
-
+ 
     # determine per-row ETA using revised_eta then eta_dp
     date_priority = [c for c in ['revised_eta', 'eta_dp'] if c in hot_df.columns]
     if not date_priority:
         return "No ETA columns (revised_eta / eta_dp) found in the data to compute upcoming arrivals."
-
+ 
     parse_cols = date_priority.copy()
     if 'ata_dp' in hot_df.columns:
         parse_cols.append('ata_dp')
     hot_df = ensure_datetime(hot_df, parse_cols)
-
+ 
     if 'revised_eta' in hot_df.columns and 'eta_dp' in hot_df.columns:
         hot_df['eta_for_filter'] = hot_df['revised_eta'].where(hot_df['revised_eta'].notna(), hot_df['eta_dp'])
     elif 'revised_eta' in hot_df.columns:
         hot_df['eta_for_filter'] = hot_df['revised_eta']
     else:
         hot_df['eta_for_filter'] = hot_df['eta_dp']
-
+ 
     # filter: eta_for_filter between today..end_date and ata_dp is null (not arrived)
     date_mask = (hot_df['eta_for_filter'] >= today) & (hot_df['eta_for_filter'] <= end_date)
     if 'ata_dp' in hot_df.columns:
         date_mask &= hot_df['ata_dp'].isna()
-
+ 
     result = hot_df[date_mask].copy()
     if result.empty:
         return f"No hot containers (or related POs) arriving between {today.strftime('%Y-%m-%d')} and {end_date.strftime('%Y-%m-%d')}."
-
+ 
     # prepare output columns and format dates
     out_cols = ['container_number', 'po_number_multiple', 'discharge_port', 'revised_eta', 'eta_dp', 'eta_for_filter']
     out_cols = [c for c in out_cols if c in result.columns]
     out_df = result[out_cols].sort_values('eta_for_filter').head(50).copy()
-
+ 
     for d in ['revised_eta', 'eta_dp', 'eta_for_filter']:
         if d in out_df.columns and pd.api.types.is_datetime64_any_dtype(out_df[d]):
             out_df[d] = out_df[d].dt.strftime('%Y-%m-%d')
-
+ 
     if 'eta_for_filter' in out_df.columns:
         out_df = out_df.drop(columns=['eta_for_filter'])
-
+ 
     return out_df.where(pd.notnull(out_df), None).to_dict(orient='records')
 
 
@@ -3731,6 +3731,7 @@ TOOLS = [
         description="Check whether an ocean BL is marked hot via its container's hot flag (searches ocean_bl_no_multiple)."
     ),
 ]
+
 
 
 
