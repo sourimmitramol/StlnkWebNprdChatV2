@@ -1792,6 +1792,194 @@ def get_hot_containers(query: str) -> str:
     return result_data.where(pd.notnull(result_data), None).to_dict(orient="records")
 
 
+def get_hot_containers(question: str = None, consignee_code: str = None, **kwargs) -> str:
+    """
+    Unified hot-container handler.
+
+    Enhancements:
+      ✅ Supports consignee_code filtering (comma-separated)
+      ✅ Detects consignee name in question to further narrow results
+      ✅ Handles "less than", "more than", "8+", "1–3", "missed ETA", etc.
+    """
+    import re
+    import pandas as pd
+
+    query = (question or "")
+    df = _df()  # already consignee-filtered if thread context applies
+
+    # -----------------------
+    # Apply consignee code filter (multi-code supported)
+    # -----------------------
+    if consignee_code and "consignee_code_multiple" in df.columns:
+        codes = [c.strip() for c in str(consignee_code).split(",") if c.strip()]
+        mask = pd.Series(False, index=df.index)
+        for c in codes:
+            mask |= df["consignee_code_multiple"].astype(str).str.contains(c)
+        df = df[mask].copy()
+
+    if df.empty:
+        return "No container records found for provided consignee codes."
+
+    # -----------------------
+    # Identify hot-flag column
+    # -----------------------
+    hot_flag_cols = [c for c in df.columns if 'hot_container_flag' in c.lower()] or \
+                    [c for c in df.columns if 'hot_container' in c.lower()]
+    if not hot_flag_cols:
+        return "Hot container flag column not found in the data."
+    hot_flag_col = hot_flag_cols[0]
+
+    def _is_hot(v) -> bool:
+        if pd.isna(v):
+            return False
+        s = str(v).strip().upper()
+        return s in {"Y", "YES", "TRUE", "1", "HOT"} or v is True or v == 1
+
+    hot_df = df[df[hot_flag_col].apply(_is_hot)].copy()
+    if hot_df.empty:
+        return "No hot containers found for your authorized consignees."
+
+    # -----------------------
+    # Detect consignee name in question
+    # -----------------------
+    consignee_name_filter = None
+    if "consignee_code_multiple" in hot_df.columns:
+        all_names = hot_df["consignee_code_multiple"].dropna().astype(str).unique().tolist()
+        q_up = query.upper()
+        for name in all_names:
+            clean_name = re.sub(r"\([^)]*\)", "", name).strip().upper()
+            if clean_name and clean_name in q_up:
+                consignee_name_filter = clean_name
+                break
+        if consignee_name_filter:
+            hot_df = hot_df[hot_df["consignee_code_multiple"].astype(str).str.upper().str.contains(consignee_name_filter)]
+            if hot_df.empty:
+                return f"No hot containers found for consignee '{consignee_name_filter}'."
+
+    # -----------------------
+    # Location filters
+    # -----------------------
+    port_cols = [c for c in ["discharge_port", "vehicle_arrival_lcn", "final_destination",
+                             "place_of_delivery", "load_port"]
+                 if c in hot_df.columns]
+
+    def _extract_loc_code_and_name(q: str):
+        q_up = (q or "").upper()
+        m = re.search(r"\(([A-Z0-9]{3,6})\)", q_up)
+        if m:
+            return m.group(1), None
+        cand_codes = set(re.findall(r"\b[A-Z0-9]{3,6}\b", q_up))
+        if port_cols and cand_codes:
+            known_codes = set()
+            for c in port_cols:
+                vals = hot_df[c].dropna().astype(str).str.upper()
+                known_codes |= set(re.findall(r"\(([A-Z0-9]{3,6})\)", " ".join(vals.tolist())))
+            for code in cand_codes:
+                if code in known_codes:
+                    return code, None
+        m2 = re.search(r"(?:\bat|\bin|to|from)\s+([A-Z][A-Z\s\.,'-]{2,})$", q_up)
+        name = m2.group(1).strip() if m2 else None
+        return None, name
+
+    code, name = _extract_loc_code_and_name(query)
+    if code or name:
+        loc_mask = pd.Series(False, index=hot_df.index)
+        if code:
+            for c in port_cols:
+                loc_mask |= hot_df[c].astype(str).str.upper().str.contains(rf"\({re.escape(code)}\)", na=False)
+        else:
+            tokens = [t for t in re.split(r"\W+", (name or "")) if len(t) >= 3]
+            for c in port_cols:
+                col_vals = hot_df[c].astype(str).str.upper()
+                cond = pd.Series(True, index=hot_df.index)
+                for t in tokens:
+                    cond &= col_vals.str.contains(re.escape(t), na=False)
+                loc_mask |= cond
+        hot_df = hot_df[loc_mask].copy()
+        if hot_df.empty:
+            where = f"{code or name}"
+            return f"No hot containers found at {where} for your authorized consignees."
+
+    ql = (query or "").lower()
+
+    # -----------------------
+    # A) Delayed / late / missed ETA hot containers (arrived only)
+    # -----------------------
+    if any(w in ql for w in ("delay", "late", "overdue", "behind", "missed", "eta", "deadline")):
+        hot_df = ensure_datetime(hot_df, ["eta_dp", "ata_dp"])
+        arrived = hot_df[hot_df["ata_dp"].notna()].copy()
+        if arrived.empty:
+            where = f" at {code or name}" if (code or name) else ""
+            return f"No hot containers have arrived{where} for your authorized consignees."
+
+        arrived["delay_days"] = (arrived["ata_dp"] - arrived["eta_dp"]).dt.days.fillna(0).astype(int)
+
+        # --- numeric logic ---
+        range_match = re.search(r"(\d+)\s*[-–—]\s*(\d+)\s*days?", ql)
+        less_than = re.search(r"(?:less\s+than|under|below|<)\s*(\d+)\s*days?", ql)
+        more_than = re.search(r"(?:more\s+than|over|>\s*)(\d+)\s*days?", ql)
+        plus_sign = re.search(r"\b(\d+)\s*\+\s*days?\b", ql)
+        exact = re.search(r"(?:by|of|in)\s+(\d+)\s+days?", ql)
+
+        if range_match:
+            d1, d2 = int(range_match.group(1)), int(range_match.group(2))
+            low, high = min(d1, d2), max(d1, d2)
+            delayed = arrived[(arrived["delay_days"] >= low) & (arrived["delay_days"] <= high)]
+        elif less_than:
+            d = int(less_than.group(1))
+            delayed = arrived[(arrived["delay_days"] > 0) & (arrived["delay_days"] < d)]
+        elif more_than or plus_sign:
+            d = int((more_than or plus_sign).group(1))
+            delayed = arrived[arrived["delay_days"] > d]
+        elif exact:
+            d = int(exact.group(1))
+            delayed = arrived[arrived["delay_days"] == d]
+        else:
+            delayed = arrived[arrived["delay_days"] > 0]
+
+        # hot filter
+        delayed = delayed[delayed[hot_flag_col].apply(_is_hot)]
+        delayed = delayed[delayed["delay_days"] > 0]
+
+        if delayed.empty:
+            where = f" at {code or name}" if (code or name) else ""
+            return f"No hot containers are delayed for your authorized consignees{where}."
+
+        cols = ["container_number", "eta_dp", "ata_dp", "delay_days", "discharge_port",
+                "hot_container_flag", "consignee_code_multiple"]
+        if "vehicle_arrival_lcn" in delayed.columns:
+            cols.append("vehicle_arrival_lcn")
+        cols = [c for c in cols if c in delayed.columns]
+
+        out = delayed[cols].sort_values("delay_days", ascending=False).head(200).copy()
+        for dcol in ["eta_dp", "ata_dp"]:
+            if dcol in out.columns and pd.api.types.is_datetime64_any_dtype(out[dcol]):
+                out[dcol] = out[dcol].dt.strftime("%Y-%m-%d")
+
+        return out.where(pd.notnull(out), None).to_dict(orient="records")
+
+    # -----------------------
+    # C) Fallback - simple hot list
+    # -----------------------
+    display_cols = ['container_number', 'consignee_code_multiple']
+    display_cols += [c for c in ['discharge_port', 'eta_dp', 'revised_eta',
+                                 'hot_container_flag'] if c in hot_df.columns]
+    display_cols = [c for c in display_cols if c in hot_df.columns]
+
+    if 'eta_dp' in hot_df.columns:
+        hot_df = safe_sort_dataframe(hot_df, 'eta_dp', ascending=True)
+    else:
+        hot_df = safe_sort_dataframe(hot_df, 'container_number', ascending=True)
+
+    result_data = hot_df[display_cols].head(200).copy()
+    for col in result_data.columns:
+        if pd.api.types.is_datetime64_dtype(result_data[col]):
+            result_data[col] = result_data[col].dt.strftime('%Y-%m-%d')
+
+    if len(result_data) == 0:
+        return "No hot containers found for your authorized consignees."
+    return result_data.where(pd.notnull(result_data), None).to_dict(orient="records")
+
 
 
 
@@ -3731,6 +3919,7 @@ TOOLS = [
         description="Check whether an ocean BL is marked hot via its container's hot flag (searches ocean_bl_no_multiple)."
     ),
 ]
+
 
 
 
