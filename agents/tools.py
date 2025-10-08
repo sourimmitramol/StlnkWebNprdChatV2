@@ -3555,7 +3555,13 @@ TOOLS = [
         func=is_bl_hot,
         description="Check whether an ocean BL is marked hot via its container's hot flag (searches ocean_bl_no_multiple)."
     ),
+    Tool(
+        name="Handle Non-shipping queries",
+        func=handle_non_shipping_queries,
+        description="This is for non-shipping generic queries. Like 'how are you' or 'hello' or 'hey' or 'who are you' etc."
+    )
 ]
+
 
 
 
