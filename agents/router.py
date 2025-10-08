@@ -29,7 +29,7 @@ from agents.tools import (
     get_hot_upcoming_arrivals,
     check_po_month_arrival,
     get_weekly_status_changes,
-    get_hot_containers_by_consignee,  # Add this missing import
+    get_hot_containers,  # Add this missing import
     _df,  # Import the DataFrame function to test filtering
 )
 
@@ -111,7 +111,7 @@ def route_query(query: str, consignee_codes: list = None) -> str:
         
         # ========== PRIORITY 4: Hot containers routing ==========
         if "hot container" in q or "hot containers" in q:
-            return get_hot_containers_by_consignee(query)
+            return get_hot_containers(query)
         
         # ========== PRIORITY 5: Container status queries ==========
         if any(keyword in q for keyword in ["milestone", "status", "track", "event history", "journey", "where"]):
@@ -167,6 +167,7 @@ def route_query(query: str, consignee_codes: list = None) -> str:
         if consignee_codes and hasattr(threading.current_thread(), 'consignee_codes'):
             delattr(threading.current_thread(), 'consignee_codes')
             logger.debug("Cleaned up consignee codes from thread context")
+
 
 
 
