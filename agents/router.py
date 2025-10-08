@@ -26,14 +26,12 @@ from agents.tools import (
     check_transit_status,
     get_containers_by_carrier,
     get_containers_by_supplier,
+    get_hot_upcoming_arrivals,
     check_po_month_arrival,
     get_weekly_status_changes,
-    handle_non_shipping_queries,
-    get_hot_containers_by_consignee,  # Add this missing import
+    get_hot_containers,  # Add this missing import
     _df,  # Import the DataFrame function to test filtering
 )
-
-
 
 def validate_consignee_filtering(consignee_codes: list) -> bool:
     """Validate that consignee filtering is working properly"""
@@ -82,7 +80,6 @@ def validate_consignee_filtering(consignee_codes: list) -> bool:
 def route_query(query: str, consignee_codes: list = None) -> str:
     """Route query with consignee authorization support"""
     try:
-        
         # Set thread-local consignee codes for tools
         if consignee_codes:
             threading.current_thread().consignee_codes = consignee_codes
@@ -93,7 +90,7 @@ def route_query(query: str, consignee_codes: list = None) -> str:
                 return f"No data available for your authorized consignee codes: {consignee_codes}"
         
         q = query.lower()
-
+        
         # Enhanced container/PO/OBL/Booking detection (do this early)
         from utils.container import extract_container_number, extract_po_number
         container_no = extract_container_number(query)
@@ -104,7 +101,7 @@ def route_query(query: str, consignee_codes: list = None) -> str:
             return get_arrivals_by_port(query)
         
         # ========== PRIORITY 2: Handle delay queries ==========
-        if "delay" in q and "days" in q:
+        if ("delay" in q or "late" in q or "overdue" in q or "missed" in q) and "days" in q:
             return get_delayed_containers(query)
         
         # ========== PRIORITY 3: Handle carrier queries (NEW - SPECIFIC) ==========
@@ -113,15 +110,15 @@ def route_query(query: str, consignee_codes: list = None) -> str:
             return get_container_carrier(query)
         
         # ========== PRIORITY 4: Hot containers routing ==========
-        if "hot container" in q or "hot containers" in q or "hot po" in q:
-            return get_hot_containers_by_consignee(query)
+        if "hot container" in q or "hot containers" in q:
+            return get_hot_containers(query)
         
         # ========== PRIORITY 5: Container status queries ==========
-        if any("milestone", "status", "track", "event history", "journey", "where") in q:
+        if any(keyword in q for keyword in ["milestone", "status", "track", "event history", "journey", "where"]):
             return get_container_milestones(query)
         
         # ========== PRIORITY 6: Question 8 - POs shipping in coming days ==========
-        if "po" in q and ("ship" in q or "etd" in q) and ("coming" in q or "next" in q):
+        elif "po" in q and ("ship" in q or "etd" in q) and ("coming" in q or "next" in q):
             return get_upcoming_pos(query)
         
         # ========== PRIORITY 7: Question 14 - Cargo in transit ==========
@@ -170,6 +167,8 @@ def route_query(query: str, consignee_codes: list = None) -> str:
         if consignee_codes and hasattr(threading.current_thread(), 'consignee_codes'):
             delattr(threading.current_thread(), 'consignee_codes')
             logger.debug("Cleaned up consignee codes from thread context")
+
+
 
 
 
