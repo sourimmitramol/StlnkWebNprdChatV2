@@ -512,14 +512,6 @@ def get_hot_upcoming_arrivals(query: str) -> str:
 # ...existing code...
 
 
-# Make the consignee-specific entry point a plain alias to the unified function
-def get_hot_containers_by_consignee(query: str) -> str:
-    """
-    Alias to get_hot_containers. Consignee scoping comes from _df() via thread-local codes.
-    """
-    return get_hot_containers(query)
-
-# ...existing code...
 
 def check_transit_status(query: str) -> str:
     """Question 14: Check if cargo/PO is currently in transit"""
@@ -3873,11 +3865,6 @@ TOOLS = [
            "For example: 'Show my hot containers' or 'List all priority shipments'."),
     ),
     Tool(
-        name="Get Hot Containers By Consignee",
-        func=get_hot_containers_by_consignee,
-        description="Get hot containers for specific consignee codes mentioned in the query"
-    ),
-    Tool(
         name="Get Carrier For PO",
         func=get_carrier_for_po,
         description="Find the final_carrier_name for a PO (matches po_number_multiple / po_number). Use queries like 'who is carrier for PO 5500009022' or '5500009022'."
@@ -3919,6 +3906,7 @@ TOOLS = [
         description="Check whether an ocean BL is marked hot via its container's hot flag (searches ocean_bl_no_multiple)."
     ),
 ]
+
 
 
 
