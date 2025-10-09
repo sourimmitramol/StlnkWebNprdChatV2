@@ -3473,6 +3473,198 @@ def is_bl_hot(query: str) -> str:
         return f"BL {bl} is not marked hot. Related containers: {', '.join(all_containers)}."
 
 
+# ---- Modification done by raju:---- UPDATE SQL -------
+from sqlalchemy import text, create_engine
+from langchain_community.utilities import SQLDatabase
+from langchain_core.prompts import PromptTemplate
+import threading
+ 
+# Building a llm for generating sql-query from user query
+_QUERY_GENERATOR_LLM = AzureChatOpenAI(
+    azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
+    api_key=settings.AZURE_OPENAI_API_KEY, # type: ignore
+    api_version=settings.AZURE_OPENAI_API_VERSION,
+    azure_deployment=settings.AZURE_OPENAI_DEPLOYMENT,
+    temperature=0.01 # Critical: Set to 0.01 for reliable SQL generation
+)
+ 
+_SQL_PROMPT_TEMPLATE = """
+You are an expert SQLite query generator. Convert the user question into a safe and correct SQLite query against the 'shipment' table.
+USE THE SQL QUERY TOOL first if it fails then only check with other tool. When displaying date only give in dd/MMM/YYYY structure only.
+ 
+ 
+{conversation_context}
+ 
+COLUMN MAPPING GUIDE - Use these exact column names:
+- "final destination", "fd", "in dc", "in-dc", "dc", "distribution center", "delivery location" → final_destination
+- "discharge port", "port", "arrival port", "destination port" → discharge_port  
+- "load port", "origin port", "shipping port" → load_port
+- "container", "container number", "shipment", "cargo" → container_number
+- "shipment", "obl no" → ocean_bl_no_multiple
+- "po", "purchase order", "po number" → po_number_multiple
+- "carrier", "shipping line" → final_carrier_name
+- "supplier", "vendor" → supplier_vendor_name
+- "eta", "estimated arrival" → eta_dp
+- "revised eta", "updated eta" → revised_eta
+- "ata", "actual arrival" → ata_dp
+- "etd", "estimated departure" → etd_lp
+- "late", "delayed", "delay" → delay
+- "hot", "priority", "hot container" → hot_container_flag
+- "transport mode", "mode", "shipment type" → transport_mode
+ 
+RULES:
+1. The table name is 'shipment' (not 'shipment_data')
+2. Always use SELECT queries only - no INSERT, UPDATE, DELETE, DROP
+3. For GROUP BY queries: use 'SELECT transport_mode, COUNT(*) as count FROM shipment GROUP BY transport_mode'
+4. For counting: use 'SELECT COUNT(*) FROM shipment WHERE ...'
+5. For listing containers: use 'SELECT container_number, final_destination, discharge_port, revised_eta, eta_dp FROM shipment WHERE ...'
+6. For location queries:
+   - Final destination: WHERE final_destination LIKE '%LOCATION%'
+   - Discharge port: WHERE discharge_port LIKE '%LOCATION%'
+   - Use correct column based on user's terminology
+7. For date ranges: use date comparisons with CURRENT_DATE
+8. Always include LIMIT 50 for listing queries to prevent large results
+9. Return only the SQL query, no explanations
+ 
+ 
+COMMON COLUMNS in shipment table:
+- container_number, po_number_multiple, ocean_bl_no_multiple
+- discharge_port, final_destination, load_port, final_load_port
+- revised_eta, eta_dp, ata_dp, etd_lp, atd_lp
+- final_carrier_name, supplier_vendor_name
+- consignee_code_multiple, hot_container_flag
+- transport_mode
+ 
+USER QUESTION: {question}
+ 
+SQL QUERY:
+"""
+_SQL_PROMPT = PromptTemplate.from_template(_SQL_PROMPT_TEMPLATE)
+ 
+def get_blob_sql_engine():
+    """
+    Load the shipment CSV into a persistent SQLite DB and return an engine.
+    """
+    from services.azure_blob import get_shipment_df
+    from sqlalchemy import create_engine
+ 
+    df = _df().copy()  # This with respects to consignee filtering, making a deep copy of the dataset
+    engine = create_engine("sqlite:///shipment_blob.db", echo=False, future=True)
+    with engine.begin() as conn:
+        df.to_sql("shipment", conn, if_exists="replace", index=False)
+    return engine
+ 
+# Need to get hold consignees from front-end
+def get_thread_consignee_codes():
+    """Get current consignee codes from thread-local storage"""
+    import threading
+    return getattr(threading.current_thread(), 'consignee_codes', None)
+ 
+# Need a function to build the table from current dataset in blob storage
+def get_gadget_sql_engine():
+    """Alias for get_blob_sql_engine"""
+    return get_blob_sql_engine()
+ 
+def validate_sql_query(sql_query: str) -> bool:
+    """
+    Basic validation to prevent dangerous SQL operations
+    """
+    dangerous_keywords = ['DROP', 'DELETE', 'UPDATE', 'INSERT', 'ALTER', 'CREATE', 'TRUNCATE']
+    sql_upper = sql_query.upper().strip()
+   
+    # Check for dangerous operations
+    for keyword in dangerous_keywords:
+        if keyword in sql_upper:
+            return False
+   
+    # Ensure it's a SELECT query (read-only)
+    if not sql_upper.startswith('SELECT'):
+        return False
+       
+    return True
+ 
+ 
+def sql_query_tool(natural_language_query: str, session_id: str = "default") -> str:
+    """
+    Execute natural language queries against the shipment database with memory.
+    """
+    try:
+        # Retrieve authorized codes dynamically
+        authorized_codes = get_thread_consignee_codes()
+        if not authorized_codes:
+            return "Data query failed: Security context (consignee codes) is missing."
+ 
+        # 1. Get conversation context from memory
+        conversation_context = _get_conversation_context(session_id)
+       
+        # 2. Get the SQL Engine
+        engine = get_gadget_sql_engine()
+       
+        # 3. Generate the SQL Query with memory context
+        chain = _SQL_PROMPT | _QUERY_GENERATOR_LLM
+        sql_query = chain.invoke({
+            "question": natural_language_query,
+            "conversation_context": conversation_context
+        }).content.strip()
+ 
+        # Clean up the SQL query
+        sql_query = sql_query.replace("```sql", "").replace("```", "").strip()
+        if sql_query.endswith(';'):
+            sql_query = sql_query[:-1]
+ 
+        # Validate SQL query for safety
+        if not validate_sql_query(sql_query):
+            return "Generated query was rejected for security reasons."
+ 
+        # Check if query has date fields and modify to format them
+        # if any(field in sql_query.upper() for field in ['REVISED_ETA', 'ETA_DP', 'ETD', 'ATA', 'ATD']):
+        #     # Replace date fields with formatted versions
+        #     modified_query = sql_query
+           
+        #     # Format for SQL Server
+        #     date_fields = ['revised_eta', 'eta_dp', 'etd', 'ata', 'atd']
+        #     for field in date_fields:
+        #         if field.upper() in sql_query.upper():
+        #             # Replace field with formatted version
+        #             modified_query = modified_query.replace(
+        #                 field,
+        #                 f"CONVERT(VARCHAR(10), {field}, 120) as {field}"
+        #             )
+       
+        # logger.info(f"Modified SQL query: {sql_query}")
+        logger.info(f"Generated SQL: {sql_query}")
+ 
+        # 4. Execute the SQL Query
+        from sqlalchemy import text
+        with engine.connect() as connection:
+            result_proxy = connection.execute(text(sql_query))
+           
+            if result_proxy.returns_rows:
+                result = result_proxy.fetchall()
+                if not result:
+                    response = "No matching data found for your request."
+                else:
+                    column_names = list(result_proxy.keys())
+                    df_result = pd.DataFrame(result, columns=column_names)
+                   
+                    # Format response based on query type
+                    if len(result) == 1 and len(column_names) == 1:
+                        # Single value result (count, etc.)
+                        response = f"Result: {df_result.iloc[0, 0]}"
+                    else:
+                        # Tabular result
+                        response = f"Found {len(df_result)} records:\n{df_result.to_string(index=False)}"
+            else:
+                response = "Query executed successfully."
+ 
+        # 5. Store in memory for future context
+        _add_to_memory(session_id, natural_language_query, sql_query, response)
+       
+        return response
+ 
+    except Exception as e:
+        logger.error(f"SQL query failed: {e}")
+        return f"Unable to process your query with SQL tool. Please try a different approach."
 
 
 
@@ -3675,6 +3867,7 @@ TOOLS = [
         description="This is for non-shipping generic queries. Like 'how are you' or 'hello' or 'hey' or 'who are you' etc."
     )
 ]
+
 
 
 
