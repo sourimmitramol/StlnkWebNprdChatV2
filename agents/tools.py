@@ -1432,7 +1432,7 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
     Supports:
       - Numeric range queries (1–3 days, less than 10, more than 5, etc.)
       - Location filtering (e.g., at Singapore)
-      - Consignee filtering by code(s) and/or consignee name in query
+      - Consignee filtering by code(s) and/or explicit consignee name in query
     """
     import re
     import pandas as pd
@@ -1444,37 +1444,77 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
     # -----------------------
     # Apply consignee_code filter (multi-code supported)
     # -----------------------
-
     logger.info(f"consignee_code={consignee_code}")
- 
+
     if consignee_code and "consignee_code_multiple" in df.columns:
         codes = [c.strip() for c in str(consignee_code).split(",") if c.strip()]
         mask = pd.Series(False, index=df.index)
         for c in codes:
-            mask |= df["consignee_code_multiple"].astype(str).str.contains(c)
+            # substring match on code (dataset usually stores code inside parentheses)
+            mask |= df["consignee_code_multiple"].astype(str).str.contains(re.escape(c), na=False)
         df = df[mask].copy()
 
     if df.empty:
         return "No containers found for the provided consignee codes."
 
     # -----------------------
-    # Consignee name detection in question
+    # Detect explicit "for <consignee name>" in query
+    # If present, require it to match known consignees; if not matched -> return no results
+    # If not present, fall back to implicit detection (old behaviour).
     # -----------------------
     consignee_name_filter = None
+    explicit_mention = None
+    # Try to capture "for <name>" or "for consignee <name>" (avoid matching "for 3 days")
+    m = re.search(r"\bfor\s+(?:consignee\s+)?([A-Za-z][A-Za-z0-9&\.,'\- ]{1,80}?)(?:\s|$|,|\.)", query, re.IGNORECASE)
+    if m:
+        cand = m.group(1).strip()
+        # ensure it's not a numeric time like "3 days" (require at least one letter)
+        if re.search(r"[A-Za-z]", cand):
+            explicit_mention = cand
+
+    # Build candidate consignee names from the dataset (after any code filtering)
+    matched_names = []
     if "consignee_code_multiple" in df.columns:
         all_names = df["consignee_code_multiple"].dropna().astype(str).unique().tolist()
-        q_up = query.upper()
-        for name in all_names:
-            clean_name = re.sub(r"\([^)]*\)", "", name).strip().upper()
-            if clean_name and clean_name in q_up:
-                consignee_name_filter = clean_name
-                break
-        if consignee_name_filter:
-            df = df[df["consignee_code_multiple"].astype(str).str.upper().str.contains(consignee_name_filter)]
-            if df.empty:
-                return f"No containers found for consignee '{consignee_name_filter}'."
+        if explicit_mention:
+            em_norm = re.sub(r"\s+", " ", explicit_mention).strip().upper()
+            for name in all_names:
+                # remove trailing "(CODE)" and uppercase for matching
+                clean_name = re.sub(r"\([^)]*\)", "", name).strip().upper()
+                if not clean_name:
+                    continue
+                # partial match: user mention contained in clean_name or vice versa
+                if em_norm in clean_name or clean_name in em_norm:
+                    matched_names.append(name)
+            if matched_names:
+                # filter df to only those matched consignees
+                mask = pd.Series(False, index=df.index)
+                for mn in matched_names:
+                    mask |= df["consignee_code_multiple"].astype(str).str.upper().str.contains(re.escape(re.sub(r"\([^)]*\)", "", mn).strip().upper()), na=False)
+                df = df[mask].copy()
+                if df.empty:
+                    return f"No containers found for consignee '{explicit_mention}'."
+                consignee_name_filter = explicit_mention  # remember for logs/messages
+            else:
+                # User explicitly asked for a consignee name that doesn't match any known consignees
+                return f"No containers found for consignee '{explicit_mention}'."
+        else:
+            # No explicit mention: keep old implicit behavior (if a known full name appears anywhere in the query, filter by it)
+            q_up = query.upper()
+            found_any = False
+            for name in all_names:
+                clean_name = re.sub(r"\([^)]*\)", "", name).strip().upper()
+                if clean_name and clean_name in q_up:
+                    df = df[df["consignee_code_multiple"].astype(str).str.upper().str.contains(re.escape(clean_name), na=False)].copy()
+                    consignee_name_filter = clean_name
+                    found_any = True
+                    break
+            # if not found_any, continue without filtering by name
 
-    logger.info(f"consignee_name_filter={consignee_name_filter}") 
+    logger.info(f"consignee_name_filter={consignee_name_filter}")
+
+    if df.empty:
+        return "No container records available after consignee scoping."
 
     arrived = df[df["ata_dp"].notna()].copy()
     if arrived.empty:
@@ -1573,6 +1613,7 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
     delayed_df = delayed_df[delayed_df["delay_days"] > 0]
     if delayed_df.empty:
         where = f" at {code or name}" if (code or name) else ""
+        # If user explicitly requested a non-matching consignee, earlier we returned; this message covers no results after filters
         return f"No containers are delayed by {query_type} days for your authorized consignees{where}."
 
     # -----------------------
@@ -1590,6 +1631,7 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
             out[col] = out[col].dt.strftime("%Y-%m-%d")
 
     return out.where(pd.notnull(out), None).to_dict(orient="records")
+
 
 
 # ...existing code...
@@ -3917,6 +3959,7 @@ TOOLS = [
         description="This is for non-shipping generic queries. Like 'how are you' or 'hello' or 'hey' or 'who are you' etc."
     )
 ]
+
 
 
 
