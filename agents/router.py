@@ -95,6 +95,54 @@ def route_query(query: str, consignee_codes: list = None) -> str:
         from utils.container import extract_container_number, extract_po_number
         container_no = extract_container_number(query)
         po_no = extract_po_number(query) 
+
+        # Raju's statement starts from here...
+        # ========== PRIORITY 0: SQL Queries for complex analytical questions ==========
+        sql_trigger_phrases = [
+            "how many", "count of", "list all", "show me", "display", "get me",
+            "which", "what is the", "find all", "statistics", "analytics",
+            "average", "total", "sum of", "maximum", "minimum", "highest", "lowest",
+            "group by", "order by", "sort by", "filter by", "where", "select",
+            "group", "aggregate", "categorize", "break down by", "by mode", "by type"
+        ]
+ 
+        sql_exclude_phrases = [
+            "status of", "track container", "milestone", "carrier for po",
+            "carrier for container", "supplier for", "hot container status",
+            "delay status", "where is container", "current location"
+        ]
+       
+ 
+        # Check if query should use SQL tool
+        use_sql_tool = (
+            any(phrase in q for phrase in sql_trigger_phrases) and
+            not any(exclude in q for exclude in sql_exclude_phrases)
+        )
+ 
+        # Also use SQL for general data exploration queries
+        if any(explore_phrase in q for explore_phrase in [
+            "containers at", "containers from", "containers in", "containers arriving",
+            "containers coming", "shipments from", "shipments to", "data for", "records of",
+            "group by", "categorize", "breakdown"
+        ]):
+            use_sql_tool = True
+ 
+        # FORCE SQL for analytical operations
+        if any(force_sql in q for force_sql in ["select", "show me", "get me", "group by", "count", "sum", "average", "aggregate"]):
+            use_sql_tool = True
+ 
+        if use_sql_tool:
+            try:
+                result = sql_query_tool(query)
+                # If SQL tool returns a valid response, use it
+                if result and "No matching data" not in result and "failed" not in result.lower():
+                    logger.info(f"Result: {result}")
+                    return result
+                # If SQL fails, continue to specific tools
+            except Exception as e:
+                logger.warning(f"SQL tool failed, falling back: {e}")              
+        # my statement ends here...
+        
         
         # ========== PRIORITY 1: Handle port/location queries ==========
         if any(phrase in q for phrase in ["list containers from", "containers from", "from port"]):
@@ -167,6 +215,7 @@ def route_query(query: str, consignee_codes: list = None) -> str:
         if consignee_codes and hasattr(threading.current_thread(), 'consignee_codes'):
             delattr(threading.current_thread(), 'consignee_codes')
             logger.debug("Cleaned up consignee codes from thread context")
+
 
 
 
