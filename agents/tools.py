@@ -3692,10 +3692,12 @@ def sql_query_tool(natural_language_query: str, session_id: str = "default") -> 
                     # Format response based on query type
                     if len(result) == 1 and len(column_names) == 1:
                         # Single value result (count, etc.)
-                        response = f"Result: {df_result.iloc[0, 0]}"
+                        #response = f"Result: {df_result.iloc[0, 0]}"
+                        response = f"{df_result.to_dic()}"
                     else:
                         # Tabular result
-                        response = f"Found {len(df_result)} records:\n{df_result.to_string(index=False)}"
+                        #response = f"Found {len(df_result)} records:\n{df_result.to_string(index=False)}"
+                        response = f"{df_result.to_dic()}"
             else:
                 response = "Query executed successfully."
  
@@ -3909,6 +3911,7 @@ TOOLS = [
         description="This is for non-shipping generic queries. Like 'how are you' or 'hello' or 'hey' or 'who are you' etc."
     )
 ]
+
 
 
 
