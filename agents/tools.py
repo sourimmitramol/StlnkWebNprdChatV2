@@ -1444,6 +1444,9 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
     # -----------------------
     # Apply consignee_code filter (multi-code supported)
     # -----------------------
+
+    logger.info(f"consignee_code={consignee_code}")
+ 
     if consignee_code and "consignee_code_multiple" in df.columns:
         codes = [c.strip() for c in str(consignee_code).split(",") if c.strip()]
         mask = pd.Series(False, index=df.index)
@@ -1470,6 +1473,8 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
             df = df[df["consignee_code_multiple"].astype(str).str.upper().str.contains(consignee_name_filter)]
             if df.empty:
                 return f"No containers found for consignee '{consignee_name_filter}'."
+
+    logger.info(f"consignee_name_filter={consignee_name_filter}") 
 
     arrived = df[df["ata_dp"].notna()].copy()
     if arrived.empty:
@@ -3912,6 +3917,7 @@ TOOLS = [
         description="This is for non-shipping generic queries. Like 'how are you' or 'hello' or 'hey' or 'who are you' etc."
     )
 ]
+
 
 
 
