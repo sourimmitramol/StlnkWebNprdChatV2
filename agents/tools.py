@@ -23,6 +23,48 @@ from sqlalchemy import create_engine
 import threading
 from difflib import get_close_matches
 
+# modified by raju for supporting continuity of user chat interaction---:
+from langchain_core.prompts import PromptTemplate
+import json
+from datetime import datetime
+from typing import Dict, List
+ 
+# Add this global memory storage (prepared for in future production ready --> use Redis)
+_SQL_CONVERSATION_MEMORY: Dict[str, List[Dict]] = {}  # type: ignore
+ 
+def _get_session_memory(session_id: str = "default") -> List[Dict]:  # type: ignore
+    """Get or create conversation memory for a user chat interaction session"""
+    if session_id not in _SQL_CONVERSATION_MEMORY:
+        _SQL_CONVERSATION_MEMORY[session_id] = []
+    return _SQL_CONVERSATION_MEMORY[session_id]  # type: ignore
+ 
+def _add_to_memory(session_id: str, query: str, sql: str, result: str):
+    """Add query to conversation memory"""
+    memory = _get_session_memory(session_id)  # type: ignore
+    memory.append({  # type: ignore
+        "timestamp": datetime.now().isoformat(),
+        "user_query": query,
+        "generated_sql": sql,
+        "result": result
+    })
+    # Keep only last 10 conversations to prevent memory overload
+    if len(memory) > 10:  # type: ignore
+        memory.pop(0)
+ 
+def _get_conversation_context(session_id: str) -> str:
+    """Get recent conversation context for better SQL generation"""
+    memory = _get_session_memory(session_id)  # type: ignore
+    if not memory:
+        return ""
+   
+    context_lines = ["Previous conversations:"]
+    for i, conv in enumerate(memory[-3:]):  # Last 3 conversations  # type: ignore
+        context_lines.append(f"{i+1}. User: {conv['user_query']}")
+        context_lines.append(f"   SQL: {conv['generated_sql']}")
+        context_lines.append(f"   Result: {conv['result'][:100]}...")
+   
+    return "\n".join(context_lines)
+# modification ends here...
 
 
 
@@ -3867,6 +3909,7 @@ TOOLS = [
         description="This is for non-shipping generic queries. Like 'how are you' or 'hello' or 'hey' or 'who are you' etc."
     )
 ]
+
 
 
 
