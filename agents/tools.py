@@ -1654,6 +1654,7 @@ def get_hot_containers(question: str = None, consignee_code: str = None, **kwarg
       ✅ Supports consignee_code filtering (comma-separated)
       ✅ Detects consignee name in question to further narrow results
       ✅ Handles "less than", "more than", "8+", "1–3", "missed ETA", etc.
+      ✅ Location detection now supports both codes (USLAX) and names ("Los Angeles")
     """
     import re
     import pandas as pd
@@ -1662,7 +1663,7 @@ def get_hot_containers(question: str = None, consignee_code: str = None, **kwarg
     df = _df()  # already consignee-filtered if thread context applies
 
     # -----------------------
-    # Apply consignee code filter (multi-code supported)
+    # Apply consignee code filter
     # -----------------------
     if consignee_code and "consignee_code_multiple" in df.columns:
         codes = [c.strip() for c in str(consignee_code).split(",") if c.strip()]
@@ -1711,7 +1712,7 @@ def get_hot_containers(question: str = None, consignee_code: str = None, **kwarg
                 return f"No hot containers found for consignee '{consignee_name_filter}'."
 
     # -----------------------
-    # Location filters
+    # Location filters (enhanced)
     # -----------------------
     port_cols = [c for c in ["discharge_port", "vehicle_arrival_lcn", "final_destination",
                              "place_of_delivery", "load_port"]
@@ -1719,9 +1720,13 @@ def get_hot_containers(question: str = None, consignee_code: str = None, **kwarg
 
     def _extract_loc_code_and_name(q: str):
         q_up = (q or "").upper()
+
+        # (1) Code like (USLAX)
         m = re.search(r"\(([A-Z0-9]{3,6})\)", q_up)
         if m:
             return m.group(1), None
+
+        # (2) Bare port code e.g., "USLAX" (check against known dataset codes)
         cand_codes = set(re.findall(r"\b[A-Z0-9]{3,6}\b", q_up))
         if port_cols and cand_codes:
             known_codes = set()
@@ -1731,11 +1736,29 @@ def get_hot_containers(question: str = None, consignee_code: str = None, **kwarg
             for code in cand_codes:
                 if code in known_codes:
                     return code, None
-        m2 = re.search(r"(?:\bat|\bin|to|from)\s+([A-Z][A-Z\s\.,'-]{2,})$", q_up)
-        name = m2.group(1).strip() if m2 else None
-        return None, name
+
+        # (3) Named port/city with prepositions (on/at/in/to/from)
+        m2_list = re.findall(r"(?:\b(?:ON|AT|IN|TO|FROM)\s+([A-Z][A-Z0-9\s\.,'\-]{2,}))", q_up)
+        if m2_list:
+            cand = max(m2_list, key=len).strip()
+            # Clean noise like "BY", "DELAYED", "DAYS", etc.
+            cand = re.sub(r"(?:(?:\d+\s*DAYS?)|ARRIV(?:ING|AL)?|LATE|DELAYED|OVERDUE|BEHIND|BY|ONWARD).*", "", cand).strip()
+            if cand:
+                return None, cand
+
+        # (4) Fallback: match known port names in query (e.g., "Los Angeles")
+        if port_cols:
+            for c in port_cols:
+                vals = hot_df[c].dropna().astype(str).str.upper().unique().tolist()
+                for val in vals:
+                    val_clean = re.sub(r"\([^)]*\)", "", val).strip()
+                    if len(val_clean) > 2 and val_clean in q_up:
+                        return None, val_clean
+
+        return None, None
 
     code, name = _extract_loc_code_and_name(query)
+
     if code or name:
         loc_mask = pd.Series(False, index=hot_df.index)
         if code:
@@ -1757,7 +1780,7 @@ def get_hot_containers(question: str = None, consignee_code: str = None, **kwarg
     ql = (query or "").lower()
 
     # -----------------------
-    # A) Delayed / late / missed ETA hot containers (arrived only)
+    # A) Delayed / missed ETA hot containers
     # -----------------------
     if any(w in ql for w in ("delay", "late", "overdue", "behind", "missed", "eta", "deadline")):
         hot_df = ensure_datetime(hot_df, ["eta_dp", "ata_dp"])
@@ -1768,7 +1791,6 @@ def get_hot_containers(question: str = None, consignee_code: str = None, **kwarg
 
         arrived["delay_days"] = (arrived["ata_dp"] - arrived["eta_dp"]).dt.days.fillna(0).astype(int)
 
-        # --- numeric logic ---
         range_match = re.search(r"(\d+)\s*[-–—]\s*(\d+)\s*days?", ql)
         less_than = re.search(r"(?:less\s+than|under|below|<)\s*(\d+)\s*days?", ql)
         more_than = re.search(r"(?:more\s+than|over|>\s*)(\d+)\s*days?", ql)
@@ -1791,7 +1813,6 @@ def get_hot_containers(question: str = None, consignee_code: str = None, **kwarg
         else:
             delayed = arrived[arrived["delay_days"] > 0]
 
-        # hot filter
         delayed = delayed[delayed[hot_flag_col].apply(_is_hot)]
         delayed = delayed[delayed["delay_days"] > 0]
 
@@ -1833,6 +1854,7 @@ def get_hot_containers(question: str = None, consignee_code: str = None, **kwarg
     if len(result_data) == 0:
         return "No hot containers found for your authorized consignees."
     return result_data.where(pd.notnull(result_data), None).to_dict(orient="records")
+
 
 
 
@@ -3968,6 +3990,7 @@ TOOLS = [
         description="This is for non-shipping generic queries. Like 'how are you' or 'hello' or 'hey' or 'who are you' etc."
     )
 ]
+
 
 
 
