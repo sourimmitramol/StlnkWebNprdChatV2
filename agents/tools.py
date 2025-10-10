@@ -2431,56 +2431,183 @@ def get_upcoming_pos(query: str) -> str:
 # ------------------------------------------------------------------
 # 11️⃣ Delayed PO's (complex ETA / milestone logic)
 # ------------------------------------------------------------------
-def get_delayed_pos(_: str = "") -> str:
+def get_delayed_pos(question: str = None, consignee_code: str = None, **kwargs) -> str:
     """
-    Find PO's that are delayed based on delivery/empty-container status and ETA logic.
-    Input: No specific input required.
-    Output: Table of delayed PO's with ETA, delivery, and return details.
-    Uses predictive/revised ETA and milestone logic.
+    Find delayed POs with ETA/ATA difference logic.
+    Supports:
+      - Numeric filters (less than, more than, 1–3 days, etc.)
+      - Consignee filtering (by code or name)
+      - Location filtering (port name or code, fuzzy matching)
     """
+    import re
+    import pandas as pd
+    from rapidfuzz import fuzz, process
+
+    query = (question or "")
     df = _df()
+
+    # -----------------------
+    # Validate required columns
+    # -----------------------
     po_col = "po_number_multiple" if "po_number_multiple" in df.columns else "po_number"
     if po_col not in df.columns:
         return "PO column missing from data."
 
-    # ------------------------------------------------------------------
-    # Ensure all date columns are datetime
-    # ------------------------------------------------------------------
-    date_cols = ["delivery_date_to_consignee", "empty_container_return_date",
-                 "predictive_eta_fd", "revised_eta_fd", "eta_fd"]
-    for c in date_cols:
-        if c in df.columns:
-            df[c] = pd.to_datetime(df[c], errors="coerce")
+    date_cols = ["eta_dp", "ata_dp", "predictive_eta_fd", "revised_eta_fd", "eta_fd"]
+    df = ensure_datetime(df, [c for c in date_cols if c in df.columns])
 
-    not_delivered = df["delivery_date_to_consignee"].isna() if "delivery_date_to_consignee" in df.columns else pd.Series(True, index=df.index)
-    not_returned = df["empty_container_return_date"].isna() if "empty_container_return_date" in df.columns else pd.Series(True, index=df.index)
+    # -----------------------
+    # Apply consignee filter
+    # -----------------------
+    if consignee_code and "consignee_code_multiple" in df.columns:
+        codes = [c.strip() for c in str(consignee_code).split(",") if c.strip()]
+        mask = pd.Series(False, index=df.index)
+        for c in codes:
+            mask |= df["consignee_code_multiple"].astype(str).str.contains(c)
+        df = df[mask].copy()
+    if df.empty:
+        return "No PO records found for provided consignee codes."
 
-    # NVL logic – use predictive if present, else revised
-    if "predictive_eta_fd" in df.columns and "revised_eta_fd" in df.columns:
-        df["next_eta"] = df["predictive_eta_fd"].fillna(df["revised_eta_fd"])
-    elif "predictive_eta_fd" in df.columns:
-        df["next_eta"] = df["predictive_eta_fd"]
-    elif "revised_eta_fd" in df.columns:
-        df["next_eta"] = df["revised_eta_fd"]
+    # -----------------------
+    # Detect consignee name in question
+    # -----------------------
+    consignee_name_filter = None
+    if "consignee_code_multiple" in df.columns:
+        all_names = df["consignee_code_multiple"].dropna().astype(str).unique().tolist()
+        q_up = query.upper()
+        for name in all_names:
+            clean_name = re.sub(r"\([^)]*\)", "", name).strip().upper()
+            if clean_name and clean_name in q_up:
+                consignee_name_filter = clean_name
+                break
+        if consignee_name_filter:
+            df = df[df["consignee_code_multiple"].astype(str).str.upper().str.contains(consignee_name_filter)]
+            if df.empty:
+                return f"No delayed POs found for consignee '{consignee_name_filter}'."
+
+    # -----------------------
+    # Compute delay_days
+    # -----------------------
+    if "ata_dp" in df.columns and "eta_dp" in df.columns:
+        df["delay_days"] = (df["ata_dp"] - df["eta_dp"]).dt.days
+    elif "predictive_eta_fd" in df.columns and "eta_fd" in df.columns:
+        df["delay_days"] = (df["predictive_eta_fd"] - df["eta_fd"]).dt.days
     else:
-        df["next_eta"] = pd.NaT
+        df["delay_days"] = pd.Series(0, index=df.index)
 
-    today = pd.Timestamp.today().normalize()
-    future_eta = df["next_eta"] > today
-    past_eta = (df["eta_fd"] < today) & df["eta_fd"].notna()
+    df["delay_days"] = df["delay_days"].fillna(0).astype(int)
 
-    mask = (not_delivered & not_returned) & (future_eta | past_eta)
-    delayed = df[mask]
+    arrived = df[df["ata_dp"].notna()].copy()
+    if arrived.empty:
+        return "No POs have arrived for your authorized consignees."
+
+    # -----------------------
+    # Location filter (code, name, or fuzzy)
+    # -----------------------
+    port_cols = [c for c in ["discharge_port", "final_destination", "place_of_delivery", "load_port"] if c in arrived.columns]
+
+    def _extract_loc_code_and_name(q: str):
+        q_up = (q or "").upper()
+        m = re.search(r"\(([A-Z0-9]{3,6})\)", q_up)
+        if m:
+            return m.group(1), None
+
+        cand_codes = set(re.findall(r"\b[A-Z0-9]{3,6}\b", q_up))
+        if port_cols and cand_codes:
+            known_codes = set()
+            for c in port_cols:
+                vals = arrived[c].dropna().astype(str).str.upper()
+                known_codes |= set(re.findall(r"\(([A-Z0-9]{3,6})\)", " ".join(vals.tolist())))
+            for code in cand_codes:
+                if code in known_codes:
+                    return code, None
+
+        # Named port (at/in/on/from/to)
+        m2_list = re.findall(r"(?:\b(?:ON|AT|IN|TO|FROM)\s+([A-Z][A-Z0-9\s\.,'\-]{2,}))", q_up)
+        if m2_list:
+            cand = max(m2_list, key=len).strip()
+            cand = re.sub(r"(?:\d+\s*DAYS?|DELAY|LATE|BEHIND|ETA|BY).*", "", cand).strip()
+            if cand:
+                return None, cand
+
+        # Fuzzy match fallback
+        all_ports = set()
+        for c in port_cols:
+            vals = arrived[c].dropna().astype(str)
+            vals = vals.str.replace(r"\([^)]*\)", "", regex=True).str.strip().str.upper().tolist()
+            all_ports.update(vals)
+
+        if all_ports:
+            best = process.extractOne(q_up, all_ports, scorer=fuzz.token_set_ratio, score_cutoff=85)
+            if best:
+                return None, best[0]
+        return None, None
+
+    code, name = _extract_loc_code_and_name(query)
+
+    if code or name:
+        loc_mask = pd.Series(False, index=arrived.index)
+        if code:
+            for c in port_cols:
+                loc_mask |= arrived[c].astype(str).str.upper().str.contains(rf"\({re.escape(code)}\)", na=False)
+        else:
+            tokens = [t for t in re.split(r"\W+", (name or "")) if len(t) >= 3]
+            for c in port_cols:
+                col_vals = arrived[c].astype(str).str.upper()
+                cond = pd.Series(True, index=arrived.index)
+                for t in tokens:
+                    cond &= col_vals.str.contains(re.escape(t), na=False)
+                loc_mask |= cond
+        arrived = arrived[loc_mask].copy()
+        if arrived.empty:
+            where = f"{code or name}"
+            return f"No delayed POs found at {where} for your authorized consignees."
+
+    q = query.lower()
+
+    # -----------------------
+    # Delay day filters
+    # -----------------------
+    range_match = re.search(r"(\d+)\s*[-–—]\s*(\d+)\s*days?", q)
+    less_than = re.search(r"(?:less\s+than|under|below|<)\s*(\d+)\s*days?", q)
+    more_than = re.search(r"(?:more\s+than|over|>\s*)(\d+)\s*days?", q)
+    plus_sign = re.search(r"\b(\d+)\s*\+\s*days?\b", q)
+    exact = re.search(r"(?:by|of|in)\s+(\d+)\s+days?", q)
+
+    if range_match:
+        d1, d2 = int(range_match.group(1)), int(range_match.group(2))
+        low, high = min(d1, d2), max(d1, d2)
+        delayed = arrived[(arrived["delay_days"] >= low) & (arrived["delay_days"] <= high)]
+    elif less_than:
+        d = int(less_than.group(1))
+        delayed = arrived[(arrived["delay_days"] > 0) & (arrived["delay_days"] < d)]
+    elif more_than or plus_sign:
+        d = int((more_than or plus_sign).group(1))
+        delayed = arrived[arrived["delay_days"] > d]
+    elif exact:
+        d = int(exact.group(1))
+        delayed = arrived[arrived["delay_days"] == d]
+    else:
+        delayed = arrived[arrived["delay_days"] > 0]
 
     if delayed.empty:
-        return "No delayed PO's found based on the current criteria."
+        where = f" at {code or name}" if (code or name) else ""
+        return f"No delayed POs found for your authorized consignees{where}."
 
-    show = [po_col, "eta_fd", "predictive_eta_fd", "revised_eta_fd",
-            "delivery_date_to_consignee", "empty_container_return_date"]
-    show = [c for c in show if c in delayed.columns]
+    # -----------------------
+    # Output formatting
+    # -----------------------
+    cols = [po_col, "container_number", "eta_dp", "ata_dp", "delay_days",
+            "consignee_code_multiple", "discharge_port", "hot_container_flag"]
+    cols = [c for c in cols if c in delayed.columns]
 
-    result = delayed[show].drop_duplicates().head(15).to_string(index=False)
-    return f"Delayed PO's:\n\n{result}"
+    out = delayed[cols].sort_values("delay_days", ascending=False).head(100).copy()
+    for dcol in ["eta_dp", "ata_dp"]:
+        if dcol in out.columns and pd.api.types.is_datetime64_any_dtype(out[dcol]):
+            out[dcol] = out[dcol].dt.strftime("%Y-%m-%d")
+
+    return out.where(pd.notnull(out), None).to_dict(orient="records")
+
 
 
 # ------------------------------------------------------------------
@@ -4112,6 +4239,7 @@ TOOLS = [
         description="Find containers arriving at a specific final destination/distribution center (FD/DC) within a timeframe. Handles queries like 'containers arriving at FD Nashville in next 3 days' or 'list containers to DC Phoenix next week'."
     )
 ]
+
 
 
 
