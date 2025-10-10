@@ -1630,8 +1630,7 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
     # -----------------------
     cols = ["container_number", "eta_dp", "ata_dp", "delay_days",
             "consignee_code_multiple", "discharge_port", "vehicle_arrival_lcn", "final_destination", "place_of_delivery", "hot_container_flag"]
-    if "vehicle_arrival_lcn" in delayed_df.columns:
-        cols.append("vehicle_arrival_lcn")
+    
     cols = [c for c in cols if c in delayed_df.columns]
 
     out = delayed_df[cols].sort_values("delay_days", ascending=False).copy()
@@ -3969,6 +3968,7 @@ TOOLS = [
         description="This is for non-shipping generic queries. Like 'how are you' or 'hello' or 'hey' or 'who are you' etc."
     )
 ]
+
 
 
 
