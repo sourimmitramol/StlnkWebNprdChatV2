@@ -3594,6 +3594,122 @@ def is_bl_hot(query: str) -> str:
         return f"BL {bl} is not marked hot. Related containers: {', '.join(all_containers)}."
 
 
+################### fd related query strated from here #########################
+def get_containers_by_final_destination(query: str) -> str:
+    """
+    Find containers arriving at a specific final destination/distribution center within a specified time period.
+    - Handles queries like "list containers arriving at Nashville in next 3 days" or "containers to DC Phoenix next week"
+    - Uses final_destination column for filtering
+    - Per-row ETA selection: use revised_eta if present, otherwise eta_dp
+    - Exclude rows where ata_dp is NOT null (already arrived)
+    Returns list[dict] with container details
+    """
+    # Log the incoming query for debugging
+    try:
+        logger.info(f"[get_containers_by_final_destination] Received query: {query!r}")
+    except:
+        print(f"[get_containers_by_final_destination] Received query: {query!r}")
+   
+    # Parse days
+    default_days = 7
+    days = None
+    for pat in [
+        r"(?:next|upcoming|within|in)\s+(\d{1,3})\s+days?",
+        r"arriving.*?(\d{1,3})\s+days?",
+        r"(\d{1,3})\s+days?"
+    ]:
+        m = re.search(pat, query, re.IGNORECASE)
+        if m:
+            days = int(m.group(1))
+            break
+    n_days = days if days is not None else default_days
+ 
+    today = pd.Timestamp.today().normalize()
+    end_date = today + pd.Timedelta(days=n_days)
+ 
+    # Log parsed timeframe for debugging
+    try:
+        logger.info(f"[get_containers_by_final_destination] parsed_n_days={n_days} today={today.strftime('%Y-%m-%d')} end_date={end_date.strftime('%Y-%m-%d')}")
+    except Exception:
+        print(f"[get_containers_by_final_destination] parsed_n_days={n_days} today={today} end_date={end_date}")
+   
+    df = _df()  # respects consignee filtering
+ 
+    # Check if final_destination column exists
+    if 'final_destination' not in df.columns:
+        return "No final_destination column found in the dataset."
+   
+    # Extract destination from query using various patterns
+    location_patterns = [
+        r'(?:at|to|in)\s+(?:fd|dc|final\s+destination|distribution\s+center)\s+([A-Za-z\s\.]{3,}?)(?:[,\s]|$)',  # "fd Nashville", "dc Phoenix"
+        r'(?:fd|dc|final\s+destination|distribution\s+center)\s+(?:at|to|in)\s+([A-Za-z\s\.]{3,}?)(?:[,\s]|$)',  # "fd at Nashville"
+        r'(?:at|to|in)\s+([A-Za-z\s\.]{3,}?)(?:\s+fd|\s+dc|\s+final\s+destination|\s+distribution\s+center)(?:[,\s]|$)',  # "at Nashville fd"
+        r'(?:at|to|in)\s+([A-Za-z\s\.]{3,}?)(?:[,\s]|$)'  # fallback: "at Nashville"
+    ]
+   
+    destination_name = None
+    for pattern in location_patterns:
+        match = re.search(pattern, query, re.IGNORECASE)
+        if match:
+            destination_name = match.group(1).strip()
+            break
+   
+    if not destination_name:
+        return "Please specify a final destination or distribution center."
+   
+    # Filter by destination
+    destination_mask = df['final_destination'].astype(str).str.upper().str.contains(destination_name.upper(), na=False)
+    filtered_df = df[destination_mask].copy()
+   
+    if filtered_df.empty:
+        return f"No containers found with final destination containing '{destination_name}' for your authorized consignees."
+   
+    # determine per-row ETA using revised_eta then eta_dp
+    date_priority = [c for c in ['revised_eta', 'eta_dp'] if c in filtered_df.columns]
+    if not date_priority:
+        return "No ETA columns (revised_eta / eta_dp) found in the data to compute upcoming arrivals."
+ 
+    parse_cols = date_priority.copy()
+    if 'ata_dp' in filtered_df.columns:
+        parse_cols.append('ata_dp')
+   
+    filtered_df = ensure_datetime(filtered_df, parse_cols)
+ 
+    if 'revised_eta' in filtered_df.columns and 'eta_dp' in filtered_df.columns:
+        filtered_df['eta_for_filter'] = filtered_df['revised_eta'].where(filtered_df['revised_eta'].notna(), filtered_df['eta_dp'])
+    elif 'revised_eta' in filtered_df.columns:
+        filtered_df['eta_for_filter'] = filtered_df['revised_eta']
+    else:
+        filtered_df['eta_for_filter'] = filtered_df['eta_dp']
+ 
+    # filter: eta_for_filter between today..end_date and ata_dp is null (not arrived)
+    date_mask = (filtered_df['eta_for_filter'] >= today) & (filtered_df['eta_for_filter'] <= end_date)
+    if 'ata_dp' in filtered_df.columns:
+        date_mask &= filtered_df['ata_dp'].isna()
+ 
+    result = filtered_df[date_mask].copy()
+    if result.empty:
+        return f"No containers arriving at final destination '{destination_name}' between {today.strftime('%Y-%m-%d')} and {end_date.strftime('%Y-%m-%d')} for your authorized consignees."
+ 
+    # prepare output columns and format dates
+    out_cols = ['container_number', 'po_number_multiple', 'final_destination', 'revised_eta', 'eta_dp', 'eta_for_filter']
+    out_cols = [c for c in out_cols if c in result.columns]
+ 
+    out_df = result[out_cols].sort_values('eta_for_filter').head(50).copy()
+ 
+    for d in ['revised_eta', 'eta_dp', 'eta_for_filter']:
+        if d in out_df.columns and pd.api.types.is_datetime64_any_dtype(out_df[d]):
+            out_df[d] = out_df[d].dt.strftime('%Y-%m-%d')
+ 
+    if 'eta_for_filter' in out_df.columns:
+        out_df = out_df.drop(columns=['eta_for_filter'])
+ 
+    return out_df.where(pd.notnull(out_df), None).to_dict(orient='records')
+ 
+######################### fd related query ended here ##########################
+
+
+
 # ---- Modification done by raju:---- UPDATE SQL -------
 from sqlalchemy import text, create_engine
 from langchain_community.utilities import SQLDatabase
@@ -3989,8 +4105,14 @@ TOOLS = [
         name="Handle Non-shipping queries",
         func=handle_non_shipping_queries,
         description="This is for non-shipping generic queries. Like 'how are you' or 'hello' or 'hey' or 'who are you' etc."
+    ),
+    Tool(
+        name="Get Containers By Final Destination",
+        func=get_containers_by_final_destination,
+        description="Find containers arriving at a specific final destination/distribution center (FD/DC) within a timeframe. Handles queries like 'containers arriving at FD Nashville in next 3 days' or 'list containers to DC Phoenix next week'."
     )
 ]
+
 
 
 
