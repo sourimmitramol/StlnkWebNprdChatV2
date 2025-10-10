@@ -61,5 +61,10 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
         df['delay_days'] = (df['ata_dp'] - df['eta_dp']).dt.days
         logger.info("Added `delay_days` column")
 
+    def extract_last_code(text):
+        matches = re.findall(r'\(([^()]*)\)', str(text))
+        return matches[-1] if matches else None
+    df['port_code'] = df['discharge_port'].apply(extract_last_code)
+
     logger.info(f"Pre‑processing finished – {len(df)} rows remain")
     return df
