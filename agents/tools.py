@@ -1513,7 +1513,8 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
     # -----------------------
     # Location filtering (improved: supports 'on' and matches anywhere, plus fallback)
     # -----------------------
-    port_cols = [c for c in ["discharge_port", "vehicle_arrival_lcn", "final_destination", "place_of_delivery"]
+    #port_cols = [c for c in ["discharge_port", "vehicle_arrival_lcn", "final_destination", "place_of_delivery"]
+    port_cols = [c for c in ["discharge_port"]
                  if c in arrived.columns]
 
     def _extract_loc_code_and_name(q: str):
@@ -1629,7 +1630,7 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
     # Output formatting
     # -----------------------
     cols = ["container_number", "eta_dp", "ata_dp", "delay_days",
-            "consignee_code_multiple", "discharge_port", "vehicle_arrival_lcn", "final_destination", "place_of_delivery", "hot_container_flag"]
+            "consignee_code_multiple", "discharge_port", "hot_container_flag"]
     
     cols = [c for c in cols if c in delayed_df.columns]
 
@@ -1714,8 +1715,8 @@ def get_hot_containers(question: str = None, consignee_code: str = None, **kwarg
     # -----------------------
     # Location filters (enhanced)
     # -----------------------
-    port_cols = [c for c in ["discharge_port", "vehicle_arrival_lcn", "final_destination",
-                             "place_of_delivery", "load_port"]
+    #port_cols = [c for c in ["discharge_port", "vehicle_arrival_lcn", "final_destination","place_of_delivery", "load_port"]
+    port_cols = [c for c in ["discharge_port"]
                  if c in hot_df.columns]
 
     def _extract_loc_code_and_name(q: str):
@@ -1822,8 +1823,8 @@ def get_hot_containers(question: str = None, consignee_code: str = None, **kwarg
 
         cols = ["container_number", "eta_dp", "ata_dp", "delay_days", "discharge_port",
                 "hot_container_flag", "consignee_code_multiple"]
-        if "vehicle_arrival_lcn" in delayed.columns:
-            cols.append("vehicle_arrival_lcn")
+        #if "vehicle_arrival_lcn" in delayed.columns:
+        #    cols.append("vehicle_arrival_lcn")
         cols = [c for c in cols if c in delayed.columns]
 
         out = delayed[cols].sort_values("delay_days", ascending=False).head(200).copy()
@@ -3990,6 +3991,7 @@ TOOLS = [
         description="This is for non-shipping generic queries. Like 'how are you' or 'hello' or 'hey' or 'who are you' etc."
     )
 ]
+
 
 
 
