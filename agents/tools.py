@@ -198,36 +198,44 @@ def _df_filtered_by_consignee(consignee_codes=None):
 
 # ...existing code...
 
+
 def get_hot_upcoming_arrivals(query: str) -> str:
     """
     List hot containers (and related POs) arriving within next N days.
     - Per-row ETA selection: use revised_eta if present, otherwise eta_dp.
     - Exclude rows where ata_dp is NOT null (already arrived).
     - Default days = 7. Query examples: "next 3 days", "in next 5 days".
-    - Now supports port/location filtering (e.g., "at USLAX", "in Los Angeles")
+    - Now supports robust port/location filtering (e.g., "at USLAX", "in Los Angeles")
     Returns list[dict] (container_number, po_number_multiple, discharge_port, revised_eta, eta_dp).
     """
-    # Log the incoming query for debugging
     try:
         logger.info(f"[get_hot_upcoming_arrivals] Received query: {query!r}")
-    except:
+    except Exception:
         print(f"[get_hot_upcoming_arrivals] Received query: {query!r}")
-   
-    # Handle malformed agent input like '"USLAX, 10 days"'
-    if re.match(r'^"?([A-Z]{2,6}),\s*(\d+)\s*days?"?$', query.strip()):
-        match = re.match(r'^"?([A-Z]{2,6}),\s*(\d+)\s*days?"?$', query.strip())
-        if match:
-            location = match.group(1)
-            days = int(match.group(2))
-            query = f"What hot containers are arriving at {location} in the next {days} days?"
+ 
+    # ----------------------------
+    # handle simple malformed inputs like: "USLAX, 10 days" or "USLAX 10 days"
+    # ----------------------------
+    m = re.match(r'^\s*"?([A-Z0-9]{3,6})\s*[, ]\s*(\d{1,3})\s*days?\.?"?\s*$',
+                 query.strip(), flags=re.IGNORECASE)
+    if m:
+        location_token = m.group(1).upper()
+        days_val = int(m.group(2))
+        query = f"What hot containers are arriving at {location_token} in the next {days_val} days?"
+        try:
             logger.info(f"[get_hot_upcoming_arrivals] Converted malformed query to: {query}")
-   
+        except Exception:
+            print(f"[get_hot_upcoming_arrivals] Converted malformed query to: {query}")
+ 
+    # ----------------------------
     # parse days
+    # ----------------------------
     default_days = 7
     days = None
     for pat in [
         r"(?:next|upcoming|within|in)\s+(\d{1,3})\s+days?",
         r"arriving.*?(\d{1,3})\s+days?",
+        r"\bin\s+(\d{1,3})\s+days?\b",
         r"(\d{1,3})\s+days?"
     ]:
         m = re.search(pat, query, re.IGNORECASE)
@@ -238,13 +246,11 @@ def get_hot_upcoming_arrivals(query: str) -> str:
  
     today = pd.Timestamp.today().normalize()
     end_date = today + pd.Timedelta(days=n_days)
- 
-    # Log parsed timeframe for debugging
     try:
         logger.info(f"[get_hot_upcoming_arrivals] parsed_n_days={n_days} today={today.strftime('%Y-%m-%d')} end_date={end_date.strftime('%Y-%m-%d')}")
     except Exception:
         print(f"[get_hot_upcoming_arrivals] parsed_n_days={n_days} today={today} end_date={end_date}")
-   
+ 
     df = _df()  # respects consignee filtering
  
     # find hot flag column
@@ -262,106 +268,130 @@ def get_hot_upcoming_arrivals(query: str) -> str:
     if hot_df.empty:
         return "No hot containers found for your authorized consignees."
  
-    # ========== ENHANCED LOCATION FILTERING ==========
-    # Extract port code or location name from query
+    # ========== ENHANCED LOCATION FILTERING (robust parenthetical code extraction) ==========
     port_cols = [c for c in ["discharge_port", "vehicle_arrival_lcn", "final_destination", "place_of_delivery"]
-                if c in hot_df.columns]
-   
-    # Initialize location filtering variables
-    location_mask = pd.Series(False, index=hot_df.index)
+                 if c in hot_df.columns]
+ 
+    location_mask = pd.Series(False, index=hot_df.index, dtype=bool)
     location_found = False
     location_name = None
-   
-    # 1. Extract port code from query (e.g., USLAX from "at USLAX")
-    port_code_match = re.search(r'\b([A-Z]{2}[A-Z0-9]{3,6})\b', query.upper())
-    if port_code_match:
-        port_code = port_code_match.group(1)
-        location_name = port_code
-        logger.info(f"[get_hot_upcoming_arrivals] Filtering by port code: {port_code}")
-       
-        # Enhanced matching to extract port codes from formatted strings
+ 
+    # 1) Extract candidate uppercase tokens from query that look like port codes (3-6 alnum)
+    #    Then try to confirm them against actual codes inside the data (including codes inside parentheses).
+    candidate_tokens = re.findall(r'\b[A-Z0-9]{3,6}\b', query.upper())
+    # skip obvious words that can appear in queries
+    skip_tokens = {"NEXT", "DAYS", "IN", "AT", "ON", "THE", "AND", "TO", "FROM", "ARRIVE", "ARRIVING"}
+    candidate_tokens = [t for t in candidate_tokens if t not in skip_tokens and not t.isdigit()]
+ 
+    def port_row_contains_code(port_string, token):
+        if pd.isna(port_string):
+            return False
+        s = str(port_string).upper()
+        # 1) check explicit parenthesis codes: e.g., "LOS ANGELES, CA(USLAX)"
+        if re.search(r'\(' + re.escape(token) + r'\)', s):
+            return True
+        # 2) check standalone token presence as whole word
+        if re.search(r'\b' + re.escape(token) + r'\b', s):
+            return True
+        # 3) try to extract any parenthetical codes and match them
+        extracted = re.findall(r'\(([A-Z0-9]{3,6})\)', s)
+        if extracted and token in extracted:
+            return True
+        return False
+ 
+    # Try query tokens first (most likely to be explicit port codes like USLAX)
+    for tok in candidate_tokens:
+        tok_mask = pd.Series(False, index=hot_df.index, dtype=bool)
         for col in port_cols:
-            if col in hot_df.columns:
-                def extract_and_match_port_code(port_string):
-                    if pd.isna(port_string):
-                        return False
-                    port_str = str(port_string)
-                   
-                    # Use the provided pattern to extract port codes from parentheses
-                    extracted_codes = re.findall(r'\(([^()]*)\)', port_str)
-                    if extracted_codes:
-                        # Get the last (most specific) code in parentheses
-                        last_code = extracted_codes[-1].strip().upper()
-                        # Check if it matches our target port code
-                        if last_code == port_code:
-                            return True
-                   
-                    # Also check if the port code appears directly in the string
-                    return port_code.upper() in port_str.upper()
-               
-                location_mask |= hot_df[col].apply(extract_and_match_port_code)
-       
-        if location_mask.any():
+            tok_mask |= hot_df[col].apply(lambda s, t=tok: port_row_contains_code(s, t))
+        if tok_mask.any():
+            location_mask = tok_mask
             location_found = True
-            logger.info(f"[get_hot_upcoming_arrivals] Found {location_mask.sum()} rows matching port code {port_code}")
-   
-    # 2. If no port code match, try city name matching
+            location_name = tok
+            try:
+                logger.info(f"[get_hot_upcoming_arrivals] Filtering by port code (from query): {tok}, matches={tok_mask.sum()}")
+            except Exception:
+                pass
+            break
+ 
+    # 2) If not found yet, search the query for a parenthesised code (e.g., user might have typed "(USLAX)")
     if not location_found:
+        paren_match = re.search(r'\(([A-Z0-9]{3,6})\)', query.upper())
+        if paren_match:
+            tok = paren_match.group(1)
+            tok_mask = pd.Series(False, index=hot_df.index, dtype=bool)
+            for col in port_cols:
+                tok_mask |= hot_df[col].apply(lambda s, t=tok: port_row_contains_code(s, t))
+            if tok_mask.any():
+                location_mask = tok_mask
+                location_found = True
+                location_name = tok
+                try:
+                    logger.info(f"[get_hot_upcoming_arrivals] Filtering by parenthetical code in query: {tok}, matches={tok_mask.sum()}")
+                except Exception:
+                    pass
+ 
+    # 3) If still not found from query tokens, attempt city/name matching (e.g., "Los Angeles", "Long Beach")
+    if not location_found:
+        # look for "at|in|to <city>" or known port city keywords
         city_patterns = [
-            r'(?:at|in|to)\s+([A-Za-z\s\.]{3,}?)(?:[,\s]|$)',  # "at LOS ANGELES", "in VANCOUVER"
-            r'\b(LOS ANGELES|NEW YORK|HONG KONG|VANCOUVER|MELBOURNE|TOKYO|BUSAN|SHANGHAI|BARCELONA|SOUTHAMPTON|OAKLAND|LYON|FOS|OGDEN|SAVANNAH|LONG BEACH)\b'  # Common port names
+            r'(?:at|in|to)\s+([A-Za-z\s\.\-]{3,})(?:[,\s]|$)',  # "at LOS ANGELES"
+            r'\b(LOS ANGELES|LONG BEACH|NEW YORK|HONG KONG|VANCOUVER|MELBOURNE|TOKYO|BUSAN|SHANGHAI|BARCELONA|SOUTHAMPTON|OAKLAND|SAVANNAH)\b'
         ]
-       
         for pattern in city_patterns:
-            city_match = re.search(pattern, query.upper(), re.IGNORECASE)
+            city_match = re.search(pattern, query, re.IGNORECASE)
             if city_match:
                 city = city_match.group(1).strip().upper()
                 location_name = city
-                logger.info(f"[get_hot_upcoming_arrivals] Filtering by city name: {city}")
-               
-                # Enhanced city name matching using port code extraction
+                try:
+                    logger.info(f"[get_hot_upcoming_arrivals] Filtering by city name: {city}")
+                except Exception:
+                    pass
+                city_mask = pd.Series(False, index=hot_df.index, dtype=bool)
                 for col in port_cols:
-                    if col in hot_df.columns:
-                        def match_city_in_port(port_string):
-                            if pd.isna(port_string):
-                                return False
-                            port_str = str(port_string).upper()
-                            # Match the city name in the port string
-                            return city in port_str
-                       
-                        location_mask |= hot_df[col].apply(match_city_in_port)
-               
-                # If no exact match, try partial match with first word of city
-                if not location_mask.any() and ' ' in city:
+                    def match_city(port_string, city=city):
+                        if pd.isna(port_string):
+                            return False
+                        s = str(port_string).upper()
+                        # remove parentheses content to match main city part (e.g., "LOS ANGELES, CA(USLAX)" -> "LOS ANGELES, CA")
+                        cleaned = re.sub(r'\([^)]*\)', '', s).strip()
+                        return city in cleaned
+                    city_mask |= hot_df[col].apply(match_city)
+                # partial fallback: if city has multiple words and no exact matches, try first word
+                if not city_mask.any() and ' ' in city:
                     first_word = city.split()[0]
-                    if len(first_word) >= 3:  # Only use first word if substantial
-                        logger.info(f"[get_hot_upcoming_arrivals] Trying partial match with: {first_word}")
+                    if len(first_word) >= 3:
                         for col in port_cols:
-                            if col in hot_df.columns:
-                                def match_partial_city(port_string):
-                                    if pd.isna(port_string):
-                                        return False
-                                    return first_word in str(port_string).upper()
-                               
-                                location_mask |= hot_df[col].apply(match_partial_city)
-               
-                if location_mask.any():
+                            def match_partial(port_string, fw=first_word):
+                                if pd.isna(port_string):
+                                    return False
+                                s = str(port_string).upper()
+                                cleaned = re.sub(r'\([^)]*\)', '', s).strip()
+                                return fw in cleaned
+                            city_mask |= hot_df[col].apply(match_partial)
+                if city_mask.any():
+                    location_mask = city_mask
                     location_found = True
                     break
-   
-    # Apply location filter if a location was specified
+ 
+    # Apply location filter (if any)
     if location_name:
-        # If we found a location match, apply the filter
         if location_mask.any():
             hot_df = hot_df[location_mask].copy()
-            logger.info(f"[get_hot_upcoming_arrivals] After location filtering: {len(hot_df)} rows")
+            try:
+                logger.info(f"[get_hot_upcoming_arrivals] After location filtering: {len(hot_df)} rows")
+            except Exception:
+                pass
             if hot_df.empty:
                 return f"No hot containers arriving at {location_name} in the next {n_days} days for your authorized consignees."
         else:
-            # If location was specified but no match, return empty
-            logger.warning(f"[get_hot_upcoming_arrivals] Location {location_name} specified but no matches found")
+            # location specified but nothing matched
+            try:
+                logger.warning(f"[get_hot_upcoming_arrivals] Location {location_name} specified but no matches found")
+            except Exception:
+                pass
             return f"No hot containers arriving at {location_name} in the next {n_days} days for your authorized consignees."
-   
+ 
     # determine per-row ETA using revised_eta then eta_dp
     date_priority = [c for c in ['revised_eta', 'eta_dp'] if c in hot_df.columns]
     if not date_priority:
@@ -404,230 +434,6 @@ def get_hot_upcoming_arrivals(query: str) -> str:
  
     return out_df.where(pd.notnull(out_df), None).to_dict(orient='records')
 
-
-
-
-# ...existing code...
-# (query: str) -> str:
-#     """
-#     Get list of hot containers for specified consignee codes.
-#     Also supports:
-#       1) which hot container are delayed/late at <PORT>
-#       2) which hot containers are delayed/late by X days at <PORT>
-#       3) which hot containers will arrive at <PORT>
-#       4) which hot containers will arrive at <PORT> in next X days
-
-#     - Strict port code filter: include only rows whose discharge_port OR vehicle_arrival_lcn contains '(CODE)'
-#     - Delay semantics:
-#         > N → delay_days > N
-#         >= N / at least N / N or more → delay_days >= N
-#         up to N / within N / max N / no more than N → 0 < delay_days ≤ N
-#         exactly N / plain 'N days' → delay_days == N
-#         default (no number) → delay_days > 0
-#     - Arrivals semantics:
-#         upcoming window defaults to 7 days when not specified; excludes already-arrived (ata_dp is null)
-#     """
-#     import re
-
-#     df = _df()  # This automatically filters by consignee
-
-
-#     # Find hot flag column
-#     hot_flag_cols = [c for c in df.columns if 'hot_container_flag' in c.lower()] or \
-#                     [c for c in df.columns if 'hot_container' in c.lower()]
-#     if not hot_flag_cols:
-#         return "Hot container flag column not found in the data."
-#     hot_flag_col = hot_flag_cols[0]
-
-#     # Robust hot detector
-#     def _is_hot(v) -> bool:
-#         if pd.isna(v):
-#             return False
-#         s = str(v).strip().upper()
-#         return s in {"Y", "YES", "TRUE", "1", "HOT"} or v is True or v == 1
-
-#     # Filter to hot rows
-#     hot_mask = df[hot_flag_col].apply(_is_hot)
-#     hot_df = df[hot_mask].copy()
-#     if hot_df.empty:
-#         return "No hot containers found for your authorized consignees."
-
-#     # Optional strict location filter (code or name)
-#     port_cols = [c for c in ["discharge_port", "vehicle_arrival_lcn", "final_destination", "place_of_delivery"] if c in hot_df.columns]
-
-#     def _extract_loc_code_and_name(q: str):
-#         q_up = (q or "").upper()
-#         # Prefer explicit code in parentheses, e.g., (NLRTM)
-#         m = re.search(r"\(([A-Z0-9]{3,6})\)", q_up)
-#         if m:
-#             return m.group(1), None
-#         # Bare code tokens (3–6 alnum) only if present in dataset codes
-#         cand_codes = set(re.findall(r"\b[A-Z0-9]{3,6}\b", q_up))
-#         if port_cols and cand_codes:
-#             known_codes = set()
-#             for c in port_cols:
-#                 vals = hot_df[c].dropna().astype(str).str.upper()
-#                 known_codes |= set(re.findall(r"\(([A-Z0-9]{3,6})\)", " ".join(vals.tolist())))
-#             for code in cand_codes:
-#                 if code in known_codes:
-#                     return code, None
-#         # Fallback name after at|in|to
-#         m2 = re.search(r"(?:\bat|\bin|\bto)\s+([A-Z][A-Z\s\.,'-]{3,})$", q_up)
-#         name = m2.group(1).strip() if m2 else None
-#         return None, name
-
-#     code, name = _extract_loc_code_and_name(query)
-#     if code or name:
-#         loc_mask = pd.Series(False, index=hot_df.index)
-#         if code:
-#             pat = rf"\({re.escape(code)}\)"
-#             for c in port_cols:
-#                 loc_mask |= hot_df[c].astype(str).str.upper().str.contains(pat, na=False)
-#         else:
-#             tokens = [w for w in re.split(r"\W+", name or "") if len(w) >= 3]
-#             for c in port_cols:
-#                 col_vals = hot_df[c].astype(str).str.upper()
-#                 cond = pd.Series(True, index=hot_df.index)
-#                 for t in tokens:
-#                     cond &= col_vals.str.contains(re.escape(t), na=False)
-#                 loc_mask |= cond
-#         hot_df = hot_df[loc_mask].copy()
-#         if hot_df.empty:
-#             where = f"{code or name}"
-#             return f"No hot containers found at {where} for your authorized consignees."
-
-#     ql = (query or "").lower()
-
-#     # Branch A: delayed/late hot containers (arrived only)
-#     if any(w in ql for w in ("delay", "late", "overdue", "behind")):
-#         hot_df = ensure_datetime(hot_df, ["eta_dp", "ata_dp"])
-#         arrived = hot_df[hot_df["ata_dp"].notna()].copy()
-#         if arrived.empty:
-#             where = f" at {code or name}" if (code or name) else ""
-#             return f"No hot containers have arrived{where} for your authorized consignees."
-
-#         arrived["delay_days"] = (arrived["ata_dp"] - arrived["eta_dp"]).dt.days
-#         arrived["delay_days"] = arrived["delay_days"].fillna(0).astype(int)
-
-#         # Parse numeric qualifiers
-#         more_than   = re.search(r"(?:more than|over|>\s*)\s*(\d+)\s*days?", ql)
-#         at_least    = re.search(r"(?:at\s+least|>=\s*|or\s+more|minimum)\s*(\d+)\s*days?", ql)
-#         up_to       = re.search(r"(?:up\s*to|no\s*more\s*than|within|maximum)\s*(\d+)\s*days?", ql)
-#         exact       = re.search(r"(?:delayed|late|overdue|behind)?\s*by?\s*(\d+)\s*days?", ql) or re.search(r"\b(\d+)\s*days?\b", ql)
-
-#         if more_than:
-#             d = int(more_than.group(1)); delayed = arrived[arrived["delay_days"] > d]
-#         elif at_least:
-#             d = int(at_least.group(1)); delayed = arrived[arrived["delay_days"] >= d]
-#         elif up_to:
-#             d = int(up_to.group(1)); delayed = arrived[(arrived["delay_days"] > 0) & (arrived["delay_days"] <= d)]
-#         elif exact:
-#             d = int(exact.group(1)); delayed = arrived[arrived["delay_days"] == d]
-#         else:
-#             delayed = arrived[arrived["delay_days"] > 0]
-
-#         # Belt-and-suspenders: ensure they are still HOT
-#         if hot_flag_col in delayed.columns:
-#             delayed = delayed[delayed[hot_flag_col].apply(_is_hot)]
-#         delayed = delayed[delayed["delay_days"] > 0]
-
-#         if delayed.empty:
-#             where = f" at {code or name}" if (code or name) else ""
-#             return f"No hot containers are delayed for your authorized consignees{where}."
-
-#         cols = ["container_number", "eta_dp", "ata_dp", "delay_days", "discharge_port"]
-#         if "vehicle_arrival_lcn" in delayed.columns:
-#             cols.append("vehicle_arrival_lcn")
-#         cols = [c for c in cols if c in delayed.columns]
-#         out = delayed[cols].sort_values("delay_days", ascending=False).head(100).copy()
-
-#         # Format dates
-#         for dcol in ["eta_dp", "ata_dp"]:
-#             if dcol in out.columns and pd.api.types.is_datetime64_any_dtype(out[dcol]):
-#                 out[dcol] = out[dcol].dt.strftime("%Y-%m-%d")
-
-#         return out.where(pd.notnull(out), None).to_dict(orient="records")
-
-#     # Branch B: upcoming arrivals of hot containers (ATA null)
-#     if any(w in ql for w in ("arriv", "expected", "due", "will arrive", "arriving soon", "next")):
-#         # Parse "next X days" (default 7 if not specified)
-#         days = None
-#         for pat in [
-#             r"(?:next|upcoming|within|in)\s+(\d{1,3})\s+days?",
-#             r"arriving.*?(\d{1,3})\s+days?",
-#             r"will.*?arrive.*?(\d{1,3})\s+days?",
-#             r"(\d{1,3})\s+days?",
-#         ]:
-#             m = re.search(pat, query, re.IGNORECASE)
-#             if m:
-#                 days = int(m.group(1)); break
-#         n_days = days if days is not None else 7
-
-#         # ETA preference per-row and exclude arrived
-#         date_priority = [c for c in ['revised_eta', 'eta_dp'] if c in hot_df.columns]
-#         if not date_priority:
-#             return "No ETA columns (revised_eta / eta_dp) found in the data."
-#         parse_cols = date_priority.copy()
-#         if 'ata_dp' in hot_df.columns:
-#             parse_cols.append('ata_dp')
-#         hot_df = ensure_datetime(hot_df, parse_cols)
-
-#         if 'revised_eta' in hot_df.columns and 'eta_dp' in hot_df.columns:
-#             hot_df['eta_for_filter'] = hot_df['revised_eta'].where(hot_df['revised_eta'].notna(), hot_df['eta_dp'])
-#         elif 'revised_eta' in hot_df.columns:
-#             hot_df['eta_for_filter'] = hot_df['revised_eta']
-#         else:
-#             hot_df['eta_for_filter'] = hot_df['eta_dp']
-
-#         today = pd.Timestamp.today().normalize()
-#         end_date = today + pd.Timedelta(days=n_days)
-#         mask = hot_df['eta_for_filter'].notna() & (hot_df['eta_for_filter'] >= today) & (hot_df['eta_for_filter'] <= end_date)
-#         if 'ata_dp' in hot_df.columns:
-#             mask &= hot_df['ata_dp'].isna()
-#         upcoming = hot_df[mask].copy()
-
-#         # Ensure still HOT (in case of column drops/joins)
-#         if hot_flag_col in upcoming.columns:
-#             upcoming = upcoming[upcoming[hot_flag_col].apply(_is_hot)]
-
-#         if upcoming.empty:
-#             where = f" at {code or name}" if (code or name) else ""
-#             return f"No hot containers arriving between {today.strftime('%Y-%m-%d')} and {end_date.strftime('%Y-%m-%d')}{where}."
-
-#         cols = ['container_number', 'discharge_port', 'revised_eta', 'eta_dp', 'eta_for_filter','delay_days']
-#         if 'vehicle_arrival_lcn' in upcoming.columns:
-#             cols.append('vehicle_arrival_lcn')
-#         cols = [c for c in cols if c in upcoming.columns]
-#         out = upcoming[cols].sort_values('eta_for_filter').head(100).copy()
-
-#         for d in ['revised_eta', 'eta_dp', 'eta_for_filter']:
-#             if d in out.columns and pd.api.types.is_datetime64_any_dtype(out[d]):
-#                 out[d] = out[d].dt.strftime('%Y-%m-%d')
-
-#         if 'eta_for_filter' in out.columns:
-#             out = out.rename(columns={'eta_for_filter': 'eta'})
-
-#         return out.where(pd.notnull(out), None).to_dict(orient='records')
-
-#     # Fallback: simple hot listing (no delay/arrival/port qualifiers)
-#     display_cols = ['container_number', 'consignee_code_multiple', 'delay_days']
-#     display_cols += [c for c in ['discharge_port', 'eta_dp', 'ata_dp'] if c in hot_df.columns]
-#     display_cols = [c for c in display_cols if c in hot_df.columns]
-
-#     if 'eta_dp' in hot_df.columns:
-#         hot_df = safe_sort_dataframe(hot_df, 'eta_dp', ascending=True)
-#     else:
-#         hot_df = safe_sort_dataframe(hot_df, 'container_number', ascending=True)
-
-#     result_data = hot_df[display_cols].head(200).copy()
-#     for col in result_data.columns:
-#         if pd.api.types.is_datetime64_dtype(result_data[col]):
-#             result_data[col] = result_data[col].dt.strftime('%Y-%m-%d')
-
-#     if len(result_data) == 0:
-#         return "No hot containers found for your authorized consignees."
-#     return result_data.where(pd.notnull(result_data), None).to_dict(orient="records")
-# # ...existing code...
 
 
 
@@ -4239,6 +4045,7 @@ TOOLS = [
         description="Find containers arriving at a specific final destination/distribution center (FD/DC) within a timeframe. Handles queries like 'containers arriving at FD Nashville in next 3 days' or 'list containers to DC Phoenix next week'."
     )
 ]
+
 
 
 
