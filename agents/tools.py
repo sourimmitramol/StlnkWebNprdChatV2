@@ -1431,7 +1431,7 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
     Find containers delayed by specified number of days.
     Supports:
       - Numeric range queries (1–3 days, less than 10, more than 5, etc.)
-      - Location filtering (e.g., at Singapore)
+      - Location filtering (e.g., at Singapore or on Los Angeles)
       - Consignee filtering by code(s) and/or explicit consignee name in query
     """
     import re
@@ -1459,57 +1459,45 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
 
     # -----------------------
     # Detect explicit "for <consignee name>" in query
-    # If present, require it to match known consignees; if not matched -> return no results
-    # If not present, fall back to implicit detection (old behaviour).
     # -----------------------
     consignee_name_filter = None
     explicit_mention = None
-    # Try to capture "for <name>" or "for consignee <name>" (avoid matching "for 3 days")
     m = re.search(r"\bfor\s+(?:consignee\s+)?([A-Za-z][A-Za-z0-9&\.,'\- ]{1,80}?)(?:\s|$|,|\.)", query, re.IGNORECASE)
     if m:
         cand = m.group(1).strip()
-        # ensure it's not a numeric time like "3 days" (require at least one letter)
         if re.search(r"[A-Za-z]", cand):
             explicit_mention = cand
 
-    # Build candidate consignee names from the dataset (after any code filtering)
     matched_names = []
     if "consignee_code_multiple" in df.columns:
         all_names = df["consignee_code_multiple"].dropna().astype(str).unique().tolist()
         if explicit_mention:
             em_norm = re.sub(r"\s+", " ", explicit_mention).strip().upper()
             for name in all_names:
-                # remove trailing "(CODE)" and uppercase for matching
                 clean_name = re.sub(r"\([^)]*\)", "", name).strip().upper()
                 if not clean_name:
                     continue
-                # partial match: user mention contained in clean_name or vice versa
                 if em_norm in clean_name or clean_name in em_norm:
                     matched_names.append(name)
             if matched_names:
-                # filter df to only those matched consignees
                 mask = pd.Series(False, index=df.index)
                 for mn in matched_names:
-                    mask |= df["consignee_code_multiple"].astype(str).str.upper().str.contains(re.escape(re.sub(r"\([^)]*\)", "", mn).strip().upper()), na=False)
+                    mask |= df["consignee_code_multiple"].astype(str).str.upper().str.contains(
+                        re.escape(re.sub(r"\([^)]*\)", "", mn).strip().upper()), na=False)
                 df = df[mask].copy()
                 if df.empty:
                     return f"No containers found for consignee '{explicit_mention}'."
-                consignee_name_filter = explicit_mention  # remember for logs/messages
+                consignee_name_filter = explicit_mention
             else:
-                # User explicitly asked for a consignee name that doesn't match any known consignees
                 return f"No containers found for consignee '{explicit_mention}'."
         else:
-            # No explicit mention: keep old implicit behavior (if a known full name appears anywhere in the query, filter by it)
             q_up = query.upper()
-            found_any = False
             for name in all_names:
                 clean_name = re.sub(r"\([^)]*\)", "", name).strip().upper()
                 if clean_name and clean_name in q_up:
                     df = df[df["consignee_code_multiple"].astype(str).str.upper().str.contains(re.escape(clean_name), na=False)].copy()
                     consignee_name_filter = clean_name
-                    found_any = True
                     break
-            # if not found_any, continue without filtering by name
 
     logger.info(f"consignee_name_filter={consignee_name_filter}")
 
@@ -1523,16 +1511,20 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
     arrived["delay_days"] = (arrived["ata_dp"] - arrived["eta_dp"]).dt.days.fillna(0).astype(int)
 
     # -----------------------
-    # Location filtering (like at Singapore / (SGSIN))
+    # Location filtering (improved: supports 'on' and matches anywhere, plus fallback)
     # -----------------------
     port_cols = [c for c in ["discharge_port", "vehicle_arrival_lcn", "final_destination", "place_of_delivery"]
                  if c in arrived.columns]
 
     def _extract_loc_code_and_name(q: str):
         q_up = (q or "").upper()
+
+        # 1) explicit code like (USLAX) or (SGSIN)
         m = re.search(r"\(([A-Z0-9]{3,6})\)", q_up)
         if m:
             return m.group(1), None
+
+        # 2) bare code tokens (e.g., USLAX) that are present in the port columns' codes
         cand_codes = set(re.findall(r"\b[A-Z0-9]{3,6}\b", q_up))
         if port_cols and cand_codes:
             known_codes = set()
@@ -1542,9 +1534,27 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
             for code in cand_codes:
                 if code in known_codes:
                     return code, None
-        m2 = re.search(r"(?:\bat|\bin|to|from)\s+([A-Z][A-Z\s\.,'-]{3,})$", q_up)
-        name = m2.group(1).strip() if m2 else None
-        return None, name
+
+        # 3) look for preposition + location anywhere: at|in|to|from|on <NAME>
+        #    choose the longest match (helps when multiple prepositions appear).
+        m2_list = re.findall(r"(?:\b(?:AT|IN|TO|FROM|ON)\s+([A-Z][A-Z0-9\s\.,'\-]{2,}))", q_up)
+        if m2_list:
+            cand = max(m2_list, key=len).strip()
+            # remove trailing known noise like "3 DAYS", "ARRIVING", "LATE" etc.
+            cand = re.sub(r"(?:(?:\d+\s*DAYS?)|ARRIV(?:ING|AL)?|LATE|DELAYED|OVERDUE|BEHIND|BY|ONWARD).*", "", cand).strip()
+            if cand:
+                return None, cand
+
+        # 4) fallback: scan actual port column values and return the first port name that appears in the query
+        if port_cols:
+            for c in port_cols:
+                vals = arrived[c].dropna().astype(str).str.upper().unique().tolist()
+                for val in vals:
+                    val_clean = re.sub(r"\([^)]*\)", "", val).strip()
+                    if len(val_clean) > 2 and val_clean in q_up:
+                        return None, val_clean
+
+        return None, None
 
     code, name = _extract_loc_code_and_name(query)
     if code or name:
@@ -1613,14 +1623,13 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
     delayed_df = delayed_df[delayed_df["delay_days"] > 0]
     if delayed_df.empty:
         where = f" at {code or name}" if (code or name) else ""
-        # If user explicitly requested a non-matching consignee, earlier we returned; this message covers no results after filters
         return f"No containers are delayed by {query_type} days for your authorized consignees{where}."
 
     # -----------------------
     # Output formatting
     # -----------------------
     cols = ["container_number", "eta_dp", "ata_dp", "delay_days",
-            "consignee_code_multiple", "discharge_port", "hot_container_flag"]
+            "consignee_code_multiple", "discharge_port", "vehicle_arrival_lcn", "final_destination", "place_of_delivery", "hot_container_flag"]
     if "vehicle_arrival_lcn" in delayed_df.columns:
         cols.append("vehicle_arrival_lcn")
     cols = [c for c in cols if c in delayed_df.columns]
@@ -1631,6 +1640,7 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
             out[col] = out[col].dt.strftime("%Y-%m-%d")
 
     return out.where(pd.notnull(out), None).to_dict(orient="records")
+
 
 
 
@@ -3959,6 +3969,7 @@ TOOLS = [
         description="This is for non-shipping generic queries. Like 'how are you' or 'hello' or 'hey' or 'who are you' etc."
     )
 ]
+
 
 
 
