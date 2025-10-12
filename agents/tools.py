@@ -172,7 +172,7 @@ def handle_non_shipping_queries(query: str) -> str:
                 azure_deployment=settings.AZURE_OPENAI_DEPLOYMENT,   # your Azure model deployment name
                 api_version=settings.AZURE_OPENAI_API_VERSION, # depends on your Azure setup
                 temperature=0.6,
-                max_tokens=800,
+                max_tokens=500,
             )
 
             # Use LangChain message schema for clarity
@@ -4075,6 +4075,7 @@ TOOLS = [
         description="Find containers arriving at a specific final destination/distribution center (FD/DC) within a timeframe. Handles queries like 'containers arriving at FD Nashville in next 3 days' or 'list containers to DC Phoenix next week'."
     )
 ]
+
 
 
 
