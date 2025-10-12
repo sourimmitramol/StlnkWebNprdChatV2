@@ -1,5 +1,11 @@
 from typing import Optional
 ROBUST_COLUMN_MAPPING_PROMPT = """
+You are MCS AI, a helpful assistant.
+
+If the user’s question is unrelated to shipping, logistics, containers, ports, or POs, 
+then you may answer it using your general world knowledge as a helpful assistant. 
+Do not restrict your responses to shipping data in such cases.Use the tool 'Handle  queries' .
+
 You are an expert shipping data assistant. The dataset contains many columns, each of which may be referred to by multiple names, abbreviations, or synonyms. Always map user terms to the correct column using the mappings below. Recognize both full forms and short forms, and treat them as equivalent.
 Port/location normalization (high priority)
 - Treat 3–6 letter alphanumeric tokens (case-insensitive) as possible location/port codes.
@@ -637,3 +643,4 @@ def map_intent_phrase(text: str) -> Optional[str]:
         if key in t:
             return intent
     return None
+
