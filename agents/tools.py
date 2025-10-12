@@ -165,13 +165,29 @@ def handle_non_shipping_queries(query: str) -> str:
     # -------------------------------
     shipping_keywords = ["container", "shipment", "cargo", "po", "eta", "vessel", "port", "delivery", "bill of lading"]
     if not any(word in q for word in shipping_keywords):
+
+        # ---------------------------------------
+        # 🤖 Adaptive max_tokens logic
+        # ---------------------------------------
+        q_len = len(query.split())
+
+        if q_len <= 5:
+            max_toks = 150   # short (e.g. "Hi", "Weather in LA?")
+        elif q_len <= 15:
+            max_toks = 400   # medium (e.g. "What is global warming?")
+        elif q_len <= 40:
+            max_toks = 800   # long factual/explanatory
+        else:
+            max_toks = 1200  # detailed or multi-topic questions
+
+     
         try:
             # Initialize Azure Chat Model
             llm = AzureChatOpenAI(
                 azure_deployment=settings.AZURE_OPENAI_DEPLOYMENT,   # your Azure model deployment name
                 api_version=settings.AZURE_OPENAI_API_VERSION, # depends on your Azure setup
                 temperature=0.6,
-                max_tokens=300,
+                max_tokens=max_toks,
             )
 
             # Use LangChain message schema for clarity
@@ -4064,9 +4080,9 @@ TOOLS = [
         description="Check whether an ocean BL is marked hot via its container's hot flag (searches ocean_bl_no_multiple)."
     ),
     Tool(
-        name="Handle Non-shipping queries",
+        name="Handle  queries",
         func=handle_non_shipping_queries,
-        description="This is for non-shipping generic queries. Like 'how are you' or 'hello' or 'hey' or 'who are you' etc."
+        description="This is for  generic queries. Like 'how are you' or 'hello' or 'hey' or 'who are you' etc."
     ),
     Tool(
         name="Get Containers By Final Destination",
@@ -4074,6 +4090,7 @@ TOOLS = [
         description="Find containers arriving at a specific final destination/distribution center (FD/DC) within a timeframe. Handles queries like 'containers arriving at FD Nashville in next 3 days' or 'list containers to DC Phoenix next week'."
     )
 ]
+
 
 
 
