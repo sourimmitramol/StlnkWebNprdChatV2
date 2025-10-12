@@ -213,16 +213,19 @@ def route_query(query: str, consignee_codes: list = None) -> str:
 
         
         # Default fallback
-        return "I couldn't understand your query. Please try rephrasing or provide more specific information."
+        #return "I couldn't understand your query. Please try rephrasing or provide more specific information."
+        return handle_non_shipping_queries(query)
         
     except Exception as e:
         logger.error(f"Error in route_query: {e}", exc_info=True)
-        return f"Error processing your query: {str(e)}"
+        #return f"Error processing your query: {str(e)}"
+        return handle_non_shipping_queries(query)
     finally:
         # ========== ALWAYS CLEAN UP CONSIGNEE CONTEXT ==========
         if consignee_codes and hasattr(threading.current_thread(), 'consignee_codes'):
             delattr(threading.current_thread(), 'consignee_codes')
             logger.debug("Cleaned up consignee codes from thread context")
+
 
 
 
