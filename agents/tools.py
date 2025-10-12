@@ -88,39 +88,70 @@ def _df() -> pd.DataFrame:
     return df
 
 
-def handle_non_shipping_queries(query: str) -> dict:
+def handle_non_shipping_queries(query: str) -> str:
     """
-    Handle greetings, thanks, small talk, and other non-shipping queries.
-    Always returns a friendly Anna response.
+    Handle greetings, thanks, small talk, and general non-shipping queries.
+    Uses Azure OpenAI (AzureChatOpenAI) for general/knowledge-based questions.
     """
+    import re
 
     q = query.lower().strip()
 
-    # Greetings
+    # -------------------------------
+    # Quick responses for small-talk
+    # -------------------------------
     greetings = ["hi", "hello", "hey", "gm", "good morning", "good afternoon", "good evening", "hola"]
     if any(word in q for word in greetings):
         return "Hello! I’m MCS AI, your shipping assistant. How can I help you today?"
 
-    # Thanks
     thanks = ["thank", "thx", "thanks", "thank you", "ty", "much appreciated"]
     if any(word in q for word in thanks):
         return "You’re very welcome! Always happy to help. – MCS AI"
 
-    # How are you / small talk
     if "how are you" in q or "how r u" in q:
         return "I’m doing great, thanks for asking! How about you? – MCS AI"
 
-    # Who are you / introduction
     if "who are you" in q or "your name" in q or "what is your name" in q:
         return "I’m MCS AI, your AI-powered shipping assistant. I can help you track containers, POs, and more."
 
-    # Goodbye
     farewells = ["bye", "goodbye", "see you", "take care", "cya", "see ya"]
     if any(word in q for word in farewells):
         return "Goodbye! Have a wonderful day ahead. – MCS AI"
 
-    # Fallback for anything non-shipping
+    # -------------------------------
+    # Detect non-shipping query
+    # -------------------------------
+    shipping_keywords = ["container", "shipment", "cargo", "po", "eta", "vessel", "port", "delivery", "bill of lading"]
+    if not any(word in q for word in shipping_keywords):
+
+        try:
+            # Initialize Azure Chat Model
+            llm = AzureChatOpenAI(
+                azure_deployment=settings.AZURE_OPENAI_DEPLOYMENT,   # your Azure model deployment name
+                api_version=settings.AZURE_OPENAI_API_VERSION, # depends on your Azure setup
+                temperature=0.8,
+                max_tokens=300,
+            )
+
+            # Use LangChain message schema for clarity
+            from langchain.schema import HumanMessage, SystemMessage
+
+            messages = [
+                SystemMessage(content="You are MCS AI, a helpful and friendly assistant who answers general non-shipping questions concisely."),
+                HumanMessage(content=query)
+            ]
+
+            response = llm.invoke(messages)
+            return response.content.strip()
+
+        except Exception as e:
+            return f"Sorry, I couldn’t process that request through Azure OpenAI right now ({e}). Please try again later."
+
+    # -------------------------------
+    # Default fallback for anything else
+    # -------------------------------
     return "That doesn’t look like a shipping-related question, but I’m MCS AI and I’m here to help! 😊 What would you like to know?"
+
 
 
 
@@ -4025,6 +4056,7 @@ TOOLS = [
         description="Find containers arriving at a specific final destination/distribution center (FD/DC) within a timeframe. Handles queries like 'containers arriving at FD Nashville in next 3 days' or 'list containers to DC Phoenix next week'."
     )
 ]
+
 
 
 
