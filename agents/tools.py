@@ -1012,16 +1012,6 @@ def get_container_milestones(input_str: str) -> str:
             else:
                 return f"No record found for {query}."
 
-    # -------------------------------------
-    # Build milestone list for the container
-    # -------------------------------------
-    def safe_date(v):
-        if pd.isna(v) or not v:
-            return None
-        try:
-            return pd.to_datetime(v).strftime("%Y-%m-%d")
-        except Exception:
-            return str(v)
 
     milestones = [
         ("<strong>Departed From</strong>", row.get("load_port"), safe_date(row.get("atd_lp"))),
@@ -4370,6 +4360,7 @@ TOOLS = [
         description="Find containers arriving at a specific final destination/distribution center (FD/DC) within a timeframe. Handles queries like 'containers arriving at FD Nashville in next 3 days' or 'list containers to DC Phoenix next week'."
     )
 ]
+
 
 
 
