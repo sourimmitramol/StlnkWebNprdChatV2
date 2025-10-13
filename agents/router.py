@@ -5,6 +5,7 @@ from agents.prompts import map_synonym_to_column
 from agents.tools import (
     sql_query_tool,
     get_container_milestones,
+    get_pos_milestone,
     get_container_carrier,
     check_arrival_status,
     get_delayed_containers,
@@ -225,6 +226,7 @@ def route_query(query: str, consignee_codes: list = None) -> str:
         if consignee_codes and hasattr(threading.current_thread(), 'consignee_codes'):
             delattr(threading.current_thread(), 'consignee_codes')
             logger.debug("Cleaned up consignee codes from thread context")
+
 
 
 
