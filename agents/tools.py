@@ -998,7 +998,7 @@ def get_container_milestones(input_str: str) -> str:
         match_po = df[df["po_number_multiple"].str.contains(query, case=False, na=False)]
         if not match_po.empty:
             container_no = match_po.iloc[0]["container_number"]
-            header_text = f"The Container of PO <po>{query}</po> is <con>{container_no}</con> . Status of this PO is as below.\n"
+            header_text = f"The Container <con>{container_no}</con> is associated with the PO <po>{query}</po> . Status is in below : \n\n"
             row = match_po.iloc[0]
         else:
             # -----------------------------
@@ -1007,7 +1007,7 @@ def get_container_milestones(input_str: str) -> str:
             match_obl = df[df["ocean_bl_no_multiple"].str.contains(query, case=False, na=False)]
             if not match_obl.empty:
                 container_no = match_obl.iloc[0]["container_number"]
-                header_text = f"The Container of OBL <obl>{query}</obl> is <con>{container_no}</con> . Status of this OBL is as below.\n"
+                header_text = f"The Container <con>{container_no}</con> is associated with the OBL <obl>{query}</obl> . Status is in below : \n\n"
                 row = match_obl.iloc[0]
             else:
                 return f"No record found for {query}."
@@ -4347,6 +4347,7 @@ TOOLS = [
         description="Find containers arriving at a specific final destination/distribution center (FD/DC) within a timeframe. Handles queries like 'containers arriving at FD Nashville in next 3 days' or 'list containers to DC Phoenix next week'."
     )
 ]
+
 
 
 
