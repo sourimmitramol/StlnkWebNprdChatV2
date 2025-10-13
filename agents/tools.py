@@ -3796,10 +3796,23 @@ def get_containers_by_final_destination(query: str) -> str:
     """
     Find containers arriving at a specific final destination/distribution center within a specified time period.
     - Handles queries like "list containers arriving at Nashville in next 3 days" or "containers to DC Phoenix next week"
-    - Uses final_destination column for filtering
-    - Per-row ETA selection: use revised_eta if present, otherwise eta_dp
-    - Exclude rows where ata_dp is NOT null (already arrived)
-    Returns list[dict] with container details
+    - Phrase synonyms: fd, in-dc, in dc, final destination, distribution center, warehouse, terminal
+    - Use final_destination column for filtering
+    - Reached/Arrived: Include rows where delivery_date_to_consignee is NOT null
+    - Delay calculation: delay => delivery_date_to_consignee - eta_fd
+    - Early calculation: (- delay) i.e. delay < 0
+    - Delay period: take from user query if mentioned else default = 7 days
+    - Delay/Early filter: where delivery_date_to_consignee != null AND delay
+        - by or less that filter: delay < delay_period
+        - more than filter: delay > delay_period
+    - `del_date` date priority: predictive_eta_fd -> revised_eta_fd -> eta_fd
+    - Arriving/Coming: delivery_date_to_consignee == null AND del_date between current date and current_date + time_delta
+    - Per-row ETA selection: use revised_eta if present, otherwise eta_fd
+    - Hot containers filter: Use hot_container_flag column
+    - Transport mode filter: Use transport_mode column
+    - consignee Filterization: filter only based on consignee_name, which will get from user query
+   
+    Returns list[dict] with container, po, obl columns  AND Columns names related to Operation performed on
     """
     # Log the incoming query for debugging
     try:
@@ -3862,34 +3875,29 @@ def get_containers_by_final_destination(query: str) -> str:
         return f"No containers found with final destination containing '{destination_name}' for your authorized consignees."
    
     # determine per-row ETA using revised_eta then eta_dp
-    date_priority = [c for c in ['revised_eta', 'eta_dp'] if c in filtered_df.columns]
+    date_priority = [c for c in ['predictive_eta_fd', 'revised_eta_fd', 'eta_fd'] if c in filtered_df.columns]
     if not date_priority:
-        return "No ETA columns (revised_eta / eta_dp) found in the data to compute upcoming arrivals."
+        return "No ETA columns (predictive_eta_fd-> revised_eta_fd-> eta_fd) found in the data to compute upcoming arrivals."
  
     parse_cols = date_priority.copy()
-    if 'ata_dp' in filtered_df.columns:
-        parse_cols.append('ata_dp')
+    if 'delivery_date_to_consignee' in filtered_df.columns:
+        parse_cols.append('delivery_date_to_consignee')
    
     filtered_df = ensure_datetime(filtered_df, parse_cols)
  
-    if 'revised_eta' in filtered_df.columns and 'eta_dp' in filtered_df.columns:
-        filtered_df['eta_for_filter'] = filtered_df['revised_eta'].where(filtered_df['revised_eta'].notna(), filtered_df['eta_dp'])
-    elif 'revised_eta' in filtered_df.columns:
-        filtered_df['eta_for_filter'] = filtered_df['revised_eta']
-    else:
-        filtered_df['eta_for_filter'] = filtered_df['eta_dp']
+    filtered_df['eta_for_filter'] = filtered_df['predictive_eta_fd'].combine_first(filtered_df['revised_eta_fd']).combine_first(filtered_df['eta_fd'])
  
     # filter: eta_for_filter between today..end_date and ata_dp is null (not arrived)
     date_mask = (filtered_df['eta_for_filter'] >= today) & (filtered_df['eta_for_filter'] <= end_date)
-    if 'ata_dp' in filtered_df.columns:
-        date_mask &= filtered_df['ata_dp'].isna()
+    if 'delivery_date_to_consignee' in filtered_df.columns:
+        date_mask &= filtered_df['delivery_date_to_consignee'].isna()
  
     result = filtered_df[date_mask].copy()
     if result.empty:
         return f"No containers arriving at final destination '{destination_name}' between {today.strftime('%Y-%m-%d')} and {end_date.strftime('%Y-%m-%d')} for your authorized consignees."
  
     # prepare output columns and format dates
-    out_cols = ['container_number', 'po_number_multiple', 'final_destination', 'revised_eta', 'eta_dp', 'eta_for_filter']
+    out_cols = ['container_number', 'po_number_multiple', 'final_destination', 'revised_eta_fd', 'eta_fd', 'eta_for_filter']
     out_cols = [c for c in out_cols if c in result.columns]
  
     out_df = result[out_cols].sort_values('eta_for_filter').head(50).copy()
@@ -4309,6 +4317,7 @@ TOOLS = [
         description="Find containers arriving at a specific final destination/distribution center (FD/DC) within a timeframe. Handles queries like 'containers arriving at FD Nashville in next 3 days' or 'list containers to DC Phoenix next week'."
     )
 ]
+
 
 
 
