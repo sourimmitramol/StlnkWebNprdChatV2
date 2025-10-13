@@ -192,10 +192,12 @@ def _df_filtered_by_consignee(consignee_codes=None):
 def get_hot_upcoming_arrivals(query: str) -> str:
     """
     List hot containers (and related POs) arriving within next N days.
-    - Per-row ETA selection: use revised_eta if present, otherwise eta_dp.
-    - Exclude rows where ata_dp is NOT null (already arrived).
-    - Default days = 7. Query examples: "next 3 days", "in next 5 days".
-    - Now supports robust port/location filtering (e.g., "at USLAX", "in Los Angeles")
+    Extended behavior:
+      - If hot-flag column missing or no hot rows, fallback to answering PO/consignee/location queries
+        from the full dataset.
+      - If the user explicitly asks about PO(s) or a specific consignee, search the full dataset
+        (not just hot rows) so queries like "Which POs will arrive..." return results even when
+        hot is not present.
     Returns list[dict] (container_number, po_number_multiple, discharge_port, revised_eta, eta_dp).
     """
     try:
@@ -203,11 +205,12 @@ def get_hot_upcoming_arrivals(query: str) -> str:
     except Exception:
         print(f"[get_hot_upcoming_arrivals] Received query: {query!r}")
  
+    query = (query or "").strip()
     # ----------------------------
     # handle simple malformed inputs like: "USLAX, 10 days" or "USLAX 10 days"
     # ----------------------------
     m = re.match(r'^\s*"?([A-Z0-9]{3,6})\s*[, ]\s*(\d{1,3})\s*days?\.?"?\s*$',
-                 query.strip(), flags=re.IGNORECASE)
+                 query, flags=re.IGNORECASE)
     if m:
         location_token = m.group(1).upper()
         days_val = int(m.group(2))
@@ -215,7 +218,7 @@ def get_hot_upcoming_arrivals(query: str) -> str:
         try:
             logger.info(f"[get_hot_upcoming_arrivals] Converted malformed query to: {query}")
         except Exception:
-            print(f"[get_hot_upcoming_arrivals] Converted malformed query to: {query}")
+            pass
  
     # ----------------------------
     # parse days
@@ -230,8 +233,11 @@ def get_hot_upcoming_arrivals(query: str) -> str:
     ]:
         m = re.search(pat, query, re.IGNORECASE)
         if m:
-            days = int(m.group(1))
-            break
+            try:
+                days = int(m.group(1))
+                break
+            except Exception:
+                pass
     n_days = days if days is not None else default_days
  
     today = pd.Timestamp.today().normalize()
@@ -239,37 +245,183 @@ def get_hot_upcoming_arrivals(query: str) -> str:
     try:
         logger.info(f"[get_hot_upcoming_arrivals] parsed_n_days={n_days} today={today.strftime('%Y-%m-%d')} end_date={end_date.strftime('%Y-%m-%d')}")
     except Exception:
-        print(f"[get_hot_upcoming_arrivals] parsed_n_days={n_days} today={today} end_date={end_date}")
+        pass
  
-    df = _df()  # respects consignee filtering
+    df = _df()  # respects consignee filtering in original code
  
-    # find hot flag column
+    # detect hot-flag column(s)
     hot_flag_cols = [c for c in df.columns if 'hot_container_flag' in c.lower()]
     if not hot_flag_cols:
         hot_flag_cols = [c for c in df.columns if 'hot_container' in c.lower()]
+ 
+    # determine whether user query explicitly requests POs or consignees (so we should search full df)
+    query_upper = query.upper()
+    asks_about_po = bool(re.search(r'\bPO\b', query_upper)) or bool(re.search(r'\bPOs?\b', query_upper)) \
+                    or bool(re.search(r'\bWHICH POs?\b', query_upper)) \
+                    or bool(re.search(r'\bLIST UPCOMING POs?\b', query_upper)) \
+                    or bool(re.search(r'\bSHOW POs?\b', query_upper)) \
+                    or bool(re.search(r'\bSHOW PO\b', query_upper)) \
+                    or bool(re.search(r'\bPO-?\d+\b', query_upper)) \
+                    or bool(re.search(r'\b\d{4,}\b', query_upper))  # presence of numeric token - possible PO
+ 
+    asks_about_consignee = False
+    # crude detection: presence of the word "consignee" or "for <name>" or "for <company>"
+    if re.search(r'\bCONSIGNEE\b', query_upper) or re.search(r'\bFOR\s+[A-Z0-9\&\.\- ]{3,}', query_upper):
+        asks_about_consignee = True
+ 
+    # select hot rows if hot flag exists
+    hot_df = None
+    if hot_flag_cols:
+        hot_col = hot_flag_cols[0]
+        hot_mask = df[hot_col].astype(str).str.strip().str.upper().isin({'Y', 'YES', 'TRUE', '1', 'HOT'})
+        hot_df = df[hot_mask].copy()
+ 
+    # decide whether to use hot_df or full df for subsequent filtering:
+    # - default: use hot_df if available and non-empty
+    # - fallback: if hot flag missing or hot_df empty, use full df
+    # - also: if user asks about PO(s) or a specific consignee, prefer full df so answers are not suppressed
+    use_full_df = False
     if not hot_flag_cols:
-        return "No hot-container flag column found in the dataset."
+        use_full_df = True
+    elif hot_df is None or hot_df.empty:
+        use_full_df = True
+    elif asks_about_po or asks_about_consignee:
+        # if they explicitly asked for POs/consignee, use full df to not hide results
+        use_full_df = True
  
-    hot_col = hot_flag_cols[0]
+    base_df = df.copy() if use_full_df else hot_df.copy()
  
-    # select hot rows
-    hot_mask = df[hot_col].astype(str).str.strip().str.upper().isin({'Y', 'YES', 'TRUE', '1', 'HOT'})
-    hot_df = df[hot_mask].copy()
-    if hot_df.empty:
-        return "No hot containers found for your authorized consignees."
+    # if after choosing base_df it's empty, return a friendly message
+    if base_df.empty:
+        if use_full_df:
+            return "No rows found in the dataset to answer your request."
+        else:
+            return "No hot containers found for your authorized consignees."
  
-    # ========== ENHANCED LOCATION FILTERING (robust parenthetical code extraction) ==========
-    port_cols = [c for c in ["discharge_port", "vehicle_arrival_lcn", "final_destination", "place_of_delivery"]
-                 if c in hot_df.columns]
+    # ---------------------------
+    # === PO matching (prefix-insensitive) ===
+    # ---------------------------
+    # We'll construct a normalization mapping from po_number_multiple (if present)
+    mentioned_po_norms = set()
+    mentioned_po_originals = set()
+    if 'po_number_multiple' in base_df.columns:
+        try:
+            def normalize_po(s: str) -> str:
+                if s is None:
+                    return ""
+                s = str(s).upper()
+                s = re.sub(r'[^A-Z0-9]', '', s)  # remove non-alnum
+                if s.startswith('PO'):
+                    s = s[2:]
+                return s.lstrip('0')  # drop leading zeros so 00123 -> 123
  
-    location_mask = pd.Series(False, index=hot_df.index, dtype=bool)
+            # build normalized map (normalized -> set(original strings))
+            norm_to_originals = {}
+            for raw in base_df['po_number_multiple'].dropna().astype(str).tolist():
+                for part in re.split(r',\s*', raw):
+                    p = part.strip()
+                    if not p:
+                        continue
+                    p_up = p.upper()
+                    p_norm = normalize_po(p_up)
+                    if not p_norm:
+                        continue
+                    norm_to_originals.setdefault(p_norm, set()).add(p_up)
+            normalized_pos_set = set(norm_to_originals.keys())
+ 
+            # extract PO-like tokens from query (tokens containing digits)
+            q_tokens = re.findall(r'\b[A-Z0-9\#\-/]*\d+[A-Z0-9\#\-/]*\b', query_upper)
+            for tok in q_tokens:
+                tok_no_punct = re.sub(r'[^A-Z0-9]', '', tok)
+                tok_norm = normalize_po(tok)
+                if tok_norm and tok_norm in normalized_pos_set:
+                    mentioned_po_norms.add(tok_norm)
+                    mentioned_po_originals.update(norm_to_originals.get(tok_norm, set()))
+                else:
+                    # also check if token exactly matches any original form (whole word)
+                    for norm, originals in norm_to_originals.items():
+                        for orig in originals:
+                            if re.search(r'\b' + re.escape(orig) + r'\b', query_upper):
+                                mentioned_po_norms.add(norm)
+                                mentioned_po_originals.update(originals)
+        except Exception:
+            # fail-safe: do not prevent overall function if PO processing errors
+            mentioned_po_norms = set()
+            mentioned_po_originals = set()
+ 
+    # If POs mentioned, filter base_df to rows containing those POs (match against po_number_multiple)
+    if mentioned_po_norms and 'po_number_multiple' in base_df.columns:
+        def row_has_norm(cell):
+            if pd.isna(cell):
+                return False
+            parts = [x.strip().upper() for x in re.split(r',\s*', str(cell)) if x.strip()]
+            norms = {re.sub(r'[^A-Z0-9]', '', p).upper() for p in parts}
+            # normalize each part similarly to normalize_po logic
+            norms = { (n[2:] if n.startswith('PO') else n).lstrip('0') for n in norms }
+            return bool(set(norms) & mentioned_po_norms)
+        po_mask = base_df['po_number_multiple'].apply(row_has_norm)
+        base_df = base_df[po_mask].copy()
+        if base_df.empty:
+            readable = sorted(list(mentioned_po_originals)) if mentioned_po_originals else sorted(list(mentioned_po_norms))
+            return f"No containers found matching PO(s) {readable} in the data for your authorized consignees."
+ 
+    # ---------------------------
+    # === Consignee matching (if requested) ===
+    # ---------------------------
+    # User said: "List upcoming POs for WILSON SPORTING GOODS EUROPE."
+    # We must detect that "WILSON SPORTING GOODS EUROPE" appears inside consignee_code_multiple and filter to that consignee only.
+    mentioned_consignee_tokens = set()
+    if 'consignee_code_multiple' in base_df.columns:
+        try:
+            # build set of distinct consignee tokens present in the dataset (split comma-separated)
+            all_consignees = set()
+            for raw in base_df['consignee_code_multiple'].dropna().astype(str).tolist():
+                for part in re.split(r',\s*', raw):
+                    p = part.strip()
+                    if p:
+                        all_consignees.add(p.upper())
+ 
+            # try to find which consignee(s) are mentioned in the query
+            # prefer longest matches to avoid substring collisions
+            sorted_consignees = sorted(all_consignees, key=lambda x: -len(x))
+            for cand in sorted_consignees:
+                # match whole word or whole phrase
+                if re.search(r'\b' + re.escape(cand) + r'\b', query_upper):
+                    mentioned_consignee_tokens.add(cand)
+ 
+            # also a loose heuristic: if query contains "for <name>" extract the trailing phrase and try match
+            m_for = re.search(r'\bFOR\s+([A-Z0-9\&\.\-\s]{3,})', query_upper)
+            if m_for:
+                target = m_for.group(1).strip()
+                # check against dataset consignees
+                for cand in sorted_consignees:
+                    if target in cand:
+                        mentioned_consignee_tokens.add(cand)
+        except Exception:
+            mentioned_consignee_tokens = set()
+ 
+    # If user asked about a specific consignee, filter to rows containing that consignee token(s)
+    if mentioned_consignee_tokens:
+        def row_has_consignee(cell):
+            if pd.isna(cell):
+                return False
+            parts = [x.strip().upper() for x in re.split(r',\s*', str(cell)) if x.strip()]
+            return any(c in parts for c in mentioned_consignee_tokens)
+        cons_mask = base_df['consignee_code_multiple'].apply(row_has_consignee)
+        base_df = base_df[cons_mask].copy()
+        if base_df.empty:
+            return f"No containers found for consignee(s) {sorted(list(mentioned_consignee_tokens))} in the dataset."
+ 
+    # ---------------------------
+    # === Location/port filtering (existing logic) ===
+    # ---------------------------
+    port_cols = [c for c in ["discharge_port", "vehicle_arrival_lcn", "final_destination", "place_of_delivery"] if c in base_df.columns]
+    location_mask = pd.Series(False, index=base_df.index, dtype=bool)
     location_found = False
     location_name = None
  
-    # 1) Extract candidate uppercase tokens from query that look like port codes (3-6 alnum)
-    #    Then try to confirm them against actual codes inside the data (including codes inside parentheses).
-    candidate_tokens = re.findall(r'\b[A-Z0-9]{3,6}\b', query.upper())
-    # skip obvious words that can appear in queries
+    # candidate tokens (port codes)
+    candidate_tokens = re.findall(r'\b[A-Z0-9]{3,6}\b', query_upper)
     skip_tokens = {"NEXT", "DAYS", "IN", "AT", "ON", "THE", "AND", "TO", "FROM", "ARRIVE", "ARRIVING"}
     candidate_tokens = [t for t in candidate_tokens if t not in skip_tokens and not t.isdigit()]
  
@@ -277,23 +429,19 @@ def get_hot_upcoming_arrivals(query: str) -> str:
         if pd.isna(port_string):
             return False
         s = str(port_string).upper()
-        # 1) check explicit parenthesis codes: e.g., "LOS ANGELES, CA(USLAX)"
         if re.search(r'\(' + re.escape(token) + r'\)', s):
             return True
-        # 2) check standalone token presence as whole word
         if re.search(r'\b' + re.escape(token) + r'\b', s):
             return True
-        # 3) try to extract any parenthetical codes and match them
         extracted = re.findall(r'\(([A-Z0-9]{3,6})\)', s)
         if extracted and token in extracted:
             return True
         return False
  
-    # Try query tokens first (most likely to be explicit port codes like USLAX)
     for tok in candidate_tokens:
-        tok_mask = pd.Series(False, index=hot_df.index, dtype=bool)
+        tok_mask = pd.Series(False, index=base_df.index, dtype=bool)
         for col in port_cols:
-            tok_mask |= hot_df[col].apply(lambda s, t=tok: port_row_contains_code(s, t))
+            tok_mask |= base_df[col].apply(lambda s, t=tok: port_row_contains_code(s, t))
         if tok_mask.any():
             location_mask = tok_mask
             location_found = True
@@ -304,50 +452,38 @@ def get_hot_upcoming_arrivals(query: str) -> str:
                 pass
             break
  
-    # 2) If not found yet, search the query for a parenthesised code (e.g., user might have typed "(USLAX)")
     if not location_found:
-        paren_match = re.search(r'\(([A-Z0-9]{3,6})\)', query.upper())
+        paren_match = re.search(r'\(([A-Z0-9]{3,6})\)', query_upper)
         if paren_match:
             tok = paren_match.group(1)
-            tok_mask = pd.Series(False, index=hot_df.index, dtype=bool)
+            tok_mask = pd.Series(False, index=base_df.index, dtype=bool)
             for col in port_cols:
-                tok_mask |= hot_df[col].apply(lambda s, t=tok: port_row_contains_code(s, t))
+                tok_mask |= base_df[col].apply(lambda s, t=tok: port_row_contains_code(s, t))
             if tok_mask.any():
                 location_mask = tok_mask
                 location_found = True
                 location_name = tok
-                try:
-                    logger.info(f"[get_hot_upcoming_arrivals] Filtering by parenthetical code in query: {tok}, matches={tok_mask.sum()}")
-                except Exception:
-                    pass
  
-    # 3) If still not found from query tokens, attempt city/name matching (e.g., "Los Angeles", "Long Beach")
     if not location_found:
-        # look for "at|in|to <city>" or known port city keywords
+        # city name extraction like "in Los Angeles" etc.
         city_patterns = [
-            r'(?:at|in|to)\s+([A-Za-z\s\.\-]{3,})(?:[,\s]|$)',  # "at LOS ANGELES"
-            r'\b(LOS ANGELES|LONG BEACH|NEW YORK|HONG KONG|VANCOUVER|MELBOURNE|TOKYO|BUSAN|SHANGHAI|BARCELONA|SOUTHAMPTON|OAKLAND|SAVANNAH)\b'
+            r'(?:at|in|to)\s+([A-Za-z\s\.\-]{3,})(?:[,\s]|$)',
+            r'\b(LOS ANGELES|LONG BEACH|SINGAPORE|ROTTERDAM|HONG KONG|SHANGHAI|BUSAN|TOKYO|OAKLAND|SAVANNAH)\b'
         ]
         for pattern in city_patterns:
             city_match = re.search(pattern, query, re.IGNORECASE)
             if city_match:
                 city = city_match.group(1).strip().upper()
                 location_name = city
-                try:
-                    logger.info(f"[get_hot_upcoming_arrivals] Filtering by city name: {city}")
-                except Exception:
-                    pass
-                city_mask = pd.Series(False, index=hot_df.index, dtype=bool)
+                city_mask = pd.Series(False, index=base_df.index, dtype=bool)
                 for col in port_cols:
                     def match_city(port_string, city=city):
                         if pd.isna(port_string):
                             return False
                         s = str(port_string).upper()
-                        # remove parentheses content to match main city part (e.g., "LOS ANGELES, CA(USLAX)" -> "LOS ANGELES, CA")
                         cleaned = re.sub(r'\([^)]*\)', '', s).strip()
                         return city in cleaned
-                    city_mask |= hot_df[col].apply(match_city)
-                # partial fallback: if city has multiple words and no exact matches, try first word
+                    city_mask |= base_df[col].apply(match_city)
                 if not city_mask.any() and ' ' in city:
                     first_word = city.split()[0]
                     if len(first_word) >= 3:
@@ -358,62 +494,55 @@ def get_hot_upcoming_arrivals(query: str) -> str:
                                 s = str(port_string).upper()
                                 cleaned = re.sub(r'\([^)]*\)', '', s).strip()
                                 return fw in cleaned
-                            city_mask |= hot_df[col].apply(match_partial)
+                            city_mask |= base_df[col].apply(match_partial)
                 if city_mask.any():
                     location_mask = city_mask
                     location_found = True
                     break
  
-    # Apply location filter (if any)
     if location_name:
         if location_mask.any():
-            hot_df = hot_df[location_mask].copy()
-            try:
-                logger.info(f"[get_hot_upcoming_arrivals] After location filtering: {len(hot_df)} rows")
-            except Exception:
-                pass
-            if hot_df.empty:
-                return f"No hot containers arriving at {location_name} in the next {n_days} days for your authorized consignees."
+            base_df = base_df[location_mask].copy()
+            if base_df.empty:
+                return f"No containers arriving at {location_name} in the next {n_days} days for your authorized consignees."
         else:
-            # location specified but nothing matched
-            try:
-                logger.warning(f"[get_hot_upcoming_arrivals] Location {location_name} specified but no matches found")
-            except Exception:
-                pass
-            return f"No hot containers arriving at {location_name} in the next {n_days} days for your authorized consignees."
+            # location mentioned but no matches
+            return f"No containers arriving at {location_name} in the next {n_days} days for your authorized consignees."
  
-    # determine per-row ETA using revised_eta then eta_dp
-    date_priority = [c for c in ['revised_eta', 'eta_dp'] if c in hot_df.columns]
+    # ---------------------------
+    # === ETA selection / date filtering ===
+    # ---------------------------
+    date_priority = [c for c in ['revised_eta', 'eta_dp'] if c in base_df.columns]
     if not date_priority:
         return "No ETA columns (revised_eta / eta_dp) found in the data to compute upcoming arrivals."
  
     parse_cols = date_priority.copy()
-    if 'ata_dp' in hot_df.columns:
+    if 'ata_dp' in base_df.columns:
         parse_cols.append('ata_dp')
-    hot_df = ensure_datetime(hot_df, parse_cols)
+    base_df = ensure_datetime(base_df, parse_cols)
  
-    if 'revised_eta' in hot_df.columns and 'eta_dp' in hot_df.columns:
-        hot_df['eta_for_filter'] = hot_df['revised_eta'].where(hot_df['revised_eta'].notna(), hot_df['eta_dp'])
-    elif 'revised_eta' in hot_df.columns:
-        hot_df['eta_for_filter'] = hot_df['revised_eta']
+    if 'revised_eta' in base_df.columns and 'eta_dp' in base_df.columns:
+        base_df['eta_for_filter'] = base_df['revised_eta'].where(base_df['revised_eta'].notna(), base_df['eta_dp'])
+    elif 'revised_eta' in base_df.columns:
+        base_df['eta_for_filter'] = base_df['revised_eta']
     else:
-        hot_df['eta_for_filter'] = hot_df['eta_dp']
+        base_df['eta_for_filter'] = base_df['eta_dp']
  
     # filter: eta_for_filter between today..end_date and ata_dp is null (not arrived)
-    date_mask = (hot_df['eta_for_filter'] >= today) & (hot_df['eta_for_filter'] <= end_date)
-    if 'ata_dp' in hot_df.columns:
-        date_mask &= hot_df['ata_dp'].isna()
+    date_mask = (base_df['eta_for_filter'] >= today) & (base_df['eta_for_filter'] <= end_date)
+    if 'ata_dp' in base_df.columns:
+        date_mask &= base_df['ata_dp'].isna()
  
-    result = hot_df[date_mask].copy()
+    result = base_df[date_mask].copy()
     if result.empty:
         location_str = f" at {location_name}" if location_name else ""
-        return f"No hot containers arriving{location_str} between {today.strftime('%Y-%m-%d')} and {end_date.strftime('%Y-%m-%d')}."
+        return f"No containers arriving{location_str} between {today.strftime('%Y-%m-%d')} and {end_date.strftime('%Y-%m-%d')}."
  
     # prepare output columns and format dates
-    out_cols = ['container_number', 'po_number_multiple', 'discharge_port', 'revised_eta', 'eta_dp', 'eta_for_filter']
+    out_cols = ['container_number', 'po_number_multiple', 'discharge_port', 'revised_eta', 'eta_dp', 'eta_for_filter', 'consignee_code_multiple']
     out_cols = [c for c in out_cols if c in result.columns]
  
-    out_df = result[out_cols].sort_values('eta_for_filter').head(50).copy()
+    out_df = result[out_cols].sort_values('eta_for_filter').head(200).copy()
  
     for d in ['revised_eta', 'eta_dp', 'eta_for_filter']:
         if d in out_df.columns and pd.api.types.is_datetime64_any_dtype(out_df[d]):
@@ -4394,6 +4523,7 @@ TOOLS = [
         description="Find containers arriving at a specific final destination/distribution center (FD/DC) within a timeframe. Handles queries like 'containers arriving at FD Nashville in next 3 days' or 'list containers to DC Phoenix next week'."
     )
 ]
+
 
 
 
