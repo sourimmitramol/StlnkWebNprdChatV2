@@ -1051,24 +1051,11 @@ def get_container_milestones(input_str: str) -> str:
     return result
 
 
-def safe_date(v):
-    """
-    Safely convert a value to date in DD-MON-YYYY format.
-    Returns None if value is invalid or empty.
-    """
-    import pandas as pd
-
-    if pd.isna(v) or not v:
+def safe_date(val):
+    """Return only YYYY-MM-DD or None if NaT/NaN/None/empty."""
+    if pd.isna(val):  # catches NaN and NaT
         return None
-    try:
-        # Parse the date
-        dt = pd.to_datetime(v, errors="coerce")
-        if pd.isna(dt):
-            return None
-        # Format as DD-MON-YYYY (e.g., 03-FEB-2025)
-        return dt.strftime("%d-%b-%Y").upper()
-    except Exception:
-        return str(v)
+    return str(val).split()[0]	
 
 
 
@@ -4360,6 +4347,7 @@ TOOLS = [
         description="Find containers arriving at a specific final destination/distribution center (FD/DC) within a timeframe. Handles queries like 'containers arriving at FD Nashville in next 3 days' or 'list containers to DC Phoenix next week'."
     )
 ]
+
 
 
 
