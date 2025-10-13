@@ -954,6 +954,112 @@ def get_current_location(query: str) -> str:
         return f"Container {container_no} is on the water, en route to {row.get('discharge_port', 'discharge port')}"
     else:
         return f"Container {container_no} status: Preparing for shipment at {row.get('load_port', 'load port')}"
+
+
+
+# ------------------------------------------------------------------
+#  PO Milestones
+# ------------------------------------------------------------------
+
+def get_pos_milestone(input_str: str) -> str:
+    """
+    Retrieve all milestone dates for a specific PO (from po_number_multiple), sorted chronologically.
+    - Automatically detects PO numbers even if 'PO' prefix is omitted.
+    - Accepts numeric or alphanumeric PO tokens (length 6–11) containing at least one digit.
+    - Matches against comma-separated po_number_multiple values using robust normalization.
+    Output: Same formatted milestone summary as get_container_milestones, but for PO.
+    """
+ 
+    text = str(input_str).upper()
+ 
+    # --- 1️⃣ Try using existing extractor if available ---
+    try:
+        po_no = extract_po_number(input_str)
+    except Exception:
+        po_no = None
+ 
+    # --- 2️⃣ If not found, look for 6–11 alphanumeric tokens (with at least one digit) ---
+    if not po_no:
+        m = re.search(r'\b(?=[A-Z0-9]*\d)[A-Z0-9]{6,11}\b', text)
+        po_no = m.group(0) if m else None
+ 
+    if not po_no:
+        return "Please specify a valid PO number (6–11 characters, containing digits)."
+ 
+    # --- 3️⃣ Normalize for matching (prefix-insensitive) ---
+    def _normalize_po_token(s):
+        if not s:
+            return ""
+        s = re.sub(r'[^A-Z0-9]', '', str(s).upper())  # keep alphanumeric only
+        if s.startswith('PO'):
+            s = s[2:]
+        return s.lstrip('0')
+ 
+    po_norm = _normalize_po_token(po_no)
+    df = _df()
+ 
+    # --- 4️⃣ Pick the PO column ---
+    po_col = None
+    for c in ["po_number_multiple", "po_number"]:
+        if c in df.columns:
+            po_col = c
+            break
+    if not po_col:
+        return "PO column not found in the dataset."
+ 
+    # --- 5️⃣ Helper for robust matching ---
+    def _po_in_cell(cell, target_norm):
+        if pd.isna(cell):
+            return False
+        parts = [p.strip() for p in re.split(r'[,;/\s]+', str(cell)) if p.strip()]
+        norms = {_normalize_po_token(p) for p in parts}
+        if target_norm in norms:
+            return True
+        # also allow substring match if numeric overlap (e.g., 12345 inside PO12345)
+        for p in parts:
+            if re.sub(r'\D', '', target_norm) in re.sub(r'\D', '', p):
+                return True
+        return False
+ 
+    # --- 6️⃣ Apply mask and select ---
+    mask = df[po_col].apply(lambda cell: _po_in_cell(cell, po_norm))
+    rows = df[mask].copy()
+ 
+    if rows.empty:
+        return f"No data found for PO {po_no}."
+ 
+    row = rows.iloc[0]
+ 
+    # --- 7️⃣ Build milestone map (same as container milestones) ---
+    row_milestone_map = [
+        ("<strong>Departed From</strong>", row.get("load_port"), safe_date(row.get("atd_lp"))),
+        ("<strong>Arrived at Final Load Port</strong>", row.get("final_load_port"), safe_date(row.get("ata_flp"))),
+        ("<strong>Departed from Final Load Port</strong>", row.get("final_load_port"), safe_date(row.get("atd_flp"))),
+        ("<strong>Expected at Discharge Port</strong>", row.get("discharge_port"), safe_date(row.get("derived_ata_dp"))),
+        ("<strong>Reached at Discharge Port</strong>", row.get("discharge_port"), safe_date(row.get("ata_dp"))),
+        ("<strong>Reached at Last CY</strong>", row.get("last_cy_location"), safe_date(row.get("equipment_arrived_at_last_cy"))),
+        ("<strong>Out Gate at Last CY</strong>", row.get("out_gate_at_last_cy_lcn"), safe_date(row.get("out_gate_at_last_cy"))),
+        ("<strong>Delivered at</strong>", row.get("delivery_date_to_consignee_lcn"), safe_date(row.get("delivery_date_to_consignee"))),
+        ("<strong>Empty Container Returned to</strong>", row.get("empty_container_return_lcn"), safe_date(row.get("empty_container_return_date"))),
+    ]
+ 
+    c_df = pd.DataFrame(row_milestone_map)
+    f_df = c_df.dropna(subset=[2])
+ 
+    if f_df.empty:
+        return f"No milestones found for PO {po_no}."
+ 
+    l_line = f_df.iloc[-1]
+    res = (
+        f"The PO <po>{po_no}</po> {l_line.get(0)} {l_line.get(1)} on {l_line.get(2)}\n\n"
+        f"<MILESTONE> {f_df.to_string(index=False, header=False)}."
+    )
+    return res
+
+
+
+
+
 # ------------------------------------------------------------------
 # 1️⃣ Container Milestones
 # ------------------------------------------------------------------
@@ -4353,12 +4459,18 @@ TOOLS = [
         func=handle_non_shipping_queries,
         description="This is for  generic queries. Like 'how are you' or 'hello' or 'hey' or 'who are you' etc."
     ),
+	Tool(
+        name="Get PO Milestones",
+        func=get_pos_milestone,
+        description="Retrieve all milestone dates for a specific PO."
+    ),
     Tool(
         name="Get Containers By Final Destination",
         func=get_containers_by_final_destination,
         description="Find containers arriving at a specific final destination/distribution center (FD/DC) within a timeframe. Handles queries like 'containers arriving at FD Nashville in next 3 days' or 'list containers to DC Phoenix next week'."
     )
 ]
+
 
 
 
