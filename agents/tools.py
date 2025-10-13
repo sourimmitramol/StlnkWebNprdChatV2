@@ -959,74 +959,127 @@ def get_current_location(query: str) -> str:
 # ------------------------------------------------------------------
 def get_container_milestones(input_str: str) -> str:
     """
-    Retrieve all milestone dates for a specific container, sorted chronologically.
-    Input: Provide a valid container number (partial or full).
-    Output: List of milestone events and their dates for the container.
-    If no container is found, prompts for a valid container number.
+    Retrieve all milestone events for a given container, PO, or OBL number.
+    Search order:
+      1. container_number
+      2. po_number_multiple
+      3. ocean_bl_no_multiple
+    Output:
+      Returns a descriptive text block exactly in your desired format.
     """
-    container_no = extract_container_number(input_str)
-    if not container_no:
-        return "Please specify a valid container number."
+    import pandas as pd
 
-    df = _df()
-    df["container_number"] = df["container_number"].astype(str)
+    query = str(input_str).strip()
+    if not query:
+        return "Please provide a container number, PO number, or OBL number."
 
-    # Exact match after normalising
-    clean = clean_container_number(container_no)
-    rows = df[df["container_number"].str.replace(" ", "").str.upper() == clean]
+    df = _df().copy()
 
-    # Fallback to contains-match
-    if rows.empty:
-        #rows = df[df["container_number"].str.contains(container_no, case=False, na=False)]
-        rows = df[
-            df["po_number_multiple"].str.contains(container_no, case=False, na=False) |
-            df["ocean_bl_no_multiple"].str.contains(container_no, case=False, na=False)
-            ]
+    # Normalize required columns
+    for col in ["container_number", "po_number_multiple", "ocean_bl_no_multiple"]:
+        if col in df.columns:
+            df[col] = df[col].astype(str).fillna("").str.strip()
 
-    if rows.empty:
-        return f"No data found for container {container_no}."
+    container_no = None
+    header_text = ""
 
-    row = rows.iloc[0]
+    # -----------------------------
+    # 1️⃣ Try direct container match
+    # -----------------------------
+    match_container = df[df["container_number"].str.replace(" ", "").str.upper() == query.replace(" ", "").upper()]
+    if not match_container.empty:
+        container_no = match_container.iloc[0]["container_number"]
+        header_text = ""  # direct container query, no header
+        row = match_container.iloc[0]
+    else:
+        # -----------------------------
+        # 2️⃣ Try PO match
+        # -----------------------------
+        match_po = df[df["po_number_multiple"].str.contains(query, case=False, na=False)]
+        if not match_po.empty:
+            container_no = match_po.iloc[0]["container_number"]
+            header_text = f"The Container of PO <po>{query}</po> is <con>{container_no}</con> . Status of this PO is as below.\n"
+            row = match_po.iloc[0]
+        else:
+            # -----------------------------
+            # 3️⃣ Try OBL match
+            # -----------------------------
+            match_obl = df[df["ocean_bl_no_multiple"].str.contains(query, case=False, na=False)]
+            if not match_obl.empty:
+                container_no = match_obl.iloc[0]["container_number"]
+                header_text = f"The Container of OBL <obl>{query}</obl> is <con>{container_no}</con> . Status of this OBL is as below.\n"
+                row = match_obl.iloc[0]
+            else:
+                return f"No record found for {query}."
 
-    # -------------------------------------------------
-    # Build the milestone list (only keep non-null dates)
-    # -------------------------------------------------
-    
-    row_milestone_map = [
-            ("<strong>Departed From</strong>", row.get("load_port"), safe_date(row.get("atd_lp"))),
-            ("<strong>Arrived at Final Load Port</strong>", row.get("final_load_port"), safe_date(row.get("ata_flp"))),
-            ("<strong>Departed from Final Load Port</strong>", row.get("final_load_port"), safe_date(row.get("atd_flp"))),
-            ("<strong>Expected at Discharge Port</strong>", row.get("discharge_port"), safe_date(row.get("derived_ata_dp"))),
-            ("<strong>Reached at Discharge Port</strong>", row.get("discharge_port"), safe_date(row.get("ata_dp"))),
-            ("<strong>Reached at Last CY</strong>", row.get("last_cy_location"), safe_date(row.get("equipment_arrived_at_last_cy"))),
-            ("<strong>Out Gate at Last CY</strong>", row.get("out_gate_at_last_cy_lcn"), safe_date(row.get("out_gate_at_last_cy"))),
-            ("<strong>Delivered at</strong>", row.get("delivery_date_to_consignee_lcn"), safe_date(row.get("delivery_date_to_consignee"))),
-            ("<strong>Empty Container Returned to</strong>", row.get("empty_container_return_lcn"), safe_date(row.get("empty_container_return_date"))),
-        ]
-    
+    # -------------------------------------
+    # Build milestone list for the container
+    # -------------------------------------
+    def safe_date(v):
+        if pd.isna(v) or not v:
+            return None
+        try:
+            return pd.to_datetime(v).strftime("%Y-%m-%d")
+        except Exception:
+            return str(v)
 
-    c_df = pd.DataFrame(row_milestone_map)
-    # print(c_df)
+    milestones = [
+        ("<strong>Departed From</strong>", row.get("load_port"), safe_date(row.get("atd_lp"))),
+        ("<strong>Arrived at Final Load Port</strong>", row.get("final_load_port"), safe_date(row.get("ata_flp"))),
+        ("<strong>Departed from Final Load Port</strong>", row.get("final_load_port"), safe_date(row.get("atd_flp"))),
+        ("<strong>Expected at Discharge Port</strong>", row.get("discharge_port"), safe_date(row.get("derived_ata_dp") or row.get("eta_dp"))),
+        ("<strong>Reached at Discharge Port</strong>", row.get("discharge_port"), safe_date(row.get("ata_dp"))),
+        ("<strong>Reached at Last CY</strong>", row.get("last_cy_location"), safe_date(row.get("equipment_arrived_at_last_cy"))),
+        ("<strong>Out Gate at Last CY</strong>", row.get("out_gate_at_last_cy_lcn"), safe_date(row.get("out_gate_at_last_cy"))),
+        ("<strong>Delivered at</strong>", row.get("delivery_location_to_consignee"), safe_date(row.get("delivery_date_to_consignee"))),
+        ("<strong>Empty Container Returned to</strong>", row.get("empty_container_return_lcn"), safe_date(row.get("empty_container_return_date"))),
+    ]
 
-    f_df = c_df.dropna(subset=2)
-    # print(f_df)
+    milestones_df = pd.DataFrame(milestones, columns=["event", "location", "date"])
+    milestones_df = milestones_df.dropna(subset=["date"])
 
-    f_line = f_df.iloc[0]
-    l_line = f_df.iloc[-1]
-    # print(l_line)
+    if milestones_df.empty:
+        return f"No milestones found for container {container_no}."
 
-    # print("Bot Answer:_____")
-    res = f"The Container <con>{container_no}</con> {l_line.get(0)} {l_line.get(1)} on {l_line.get(2)}\n\n <MILESTONE> {f_df.to_string(index=False, header=False)}."
-    # print(res)
+    # Sort chronologically
+    milestones_df = milestones_df.sort_values("date")
 
-    # return "\n".join(status_lines)
-    return res
+    # Get the latest milestone
+    last = milestones_df.iloc[-1]
+    latest_text = f"The Container <con>{container_no}</con> {last['event']} {last['location']} on {last['date']}"
 
-def safe_date(val):
-    """Return only YYYY-MM-DD or None if NaT/NaN/None/empty."""
-    if pd.isna(val):  # catches NaN and NaT
+    # Convert milestone dataframe to string
+    milestone_text = milestones_df.to_string(index=False, header=False)
+
+    # Final formatted output
+    result = (
+        f"{header_text}"
+        f"{latest_text}\n\n"
+        f" <MILESTONE> {milestone_text}."
+    )
+
+    return result
+
+
+def safe_date(v):
+    """
+    Safely convert a value to date in DD-MON-YYYY format.
+    Returns None if value is invalid or empty.
+    """
+    import pandas as pd
+
+    if pd.isna(v) or not v:
         return None
-    return str(val).split()[0]
+    try:
+        # Parse the date
+        dt = pd.to_datetime(v, errors="coerce")
+        if pd.isna(dt):
+            return None
+        # Format as DD-MON-YYYY (e.g., 03-FEB-2025)
+        return dt.strftime("%d-%b-%Y").upper()
+    except Exception:
+        return str(v)
+
 
 
 def get_top_values_for_column(query: str) -> str:
@@ -4317,6 +4370,7 @@ TOOLS = [
         description="Find containers arriving at a specific final destination/distribution center (FD/DC) within a timeframe. Handles queries like 'containers arriving at FD Nashville in next 3 days' or 'list containers to DC Phoenix next week'."
     )
 ]
+
 
 
 
