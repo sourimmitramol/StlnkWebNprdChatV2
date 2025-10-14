@@ -1743,7 +1743,7 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
     # Output formatting
     # -----------------------
     cols = ["container_number", "eta_dp", "ata_dp", "delay_days",
-            "consignee_code_multiple", "discharge_port", "hot_container_flag"]
+            "consignee_code_multiple", "discharge_port"]
     
     cols = [c for c in cols if c in delayed_df.columns]
 
@@ -1934,8 +1934,7 @@ def get_hot_containers(question: str = None, consignee_code: str = None, **kwarg
             where = f" at {code or name}" if (code or name) else ""
             return f"No hot containers are delayed for your authorized consignees{where}."
 
-        cols = ["container_number", "eta_dp", "ata_dp", "delay_days", "discharge_port",
-                "hot_container_flag", "consignee_code_multiple"]
+        cols = ["container_number", "eta_dp", "ata_dp", "delay_days", "discharge_port", "consignee_code_multiple"]
         #if "vehicle_arrival_lcn" in delayed.columns:
         #    cols.append("vehicle_arrival_lcn")
         cols = [c for c in cols if c in delayed.columns]
@@ -1951,8 +1950,7 @@ def get_hot_containers(question: str = None, consignee_code: str = None, **kwarg
     # C) Fallback - simple hot list
     # -----------------------
     display_cols = ['container_number', 'consignee_code_multiple']
-    display_cols += [c for c in ['discharge_port', 'eta_dp', 'revised_eta',
-                                 'hot_container_flag'] if c in hot_df.columns]
+    display_cols += [c for c in ['discharge_port', 'eta_dp', 'revised_eta'] if c in hot_df.columns]
     display_cols = [c for c in display_cols if c in hot_df.columns]
 
     if 'eta_dp' in hot_df.columns:
@@ -3017,7 +3015,7 @@ def get_delayed_pos(question: str = None, consignee_code: str = None, **kwargs) 
     # Output formatting
     # -----------------------
     cols = [po_col, "container_number", "eta_dp", "ata_dp", "delay_days",
-            "consignee_code_multiple", "discharge_port", "hot_container_flag"]
+            "consignee_code_multiple", "discharge_port"]
     cols = [c for c in cols if c in delayed.columns]
 
     out = delayed[cols].sort_values("delay_days", ascending=False).head(100).copy()
@@ -4671,6 +4669,7 @@ TOOLS = [
     #    description="Find containers arriving at a specific final destination/distribution center (FD/DC) within a timeframe. Handles queries like 'containers arriving at FD Nashville in next 3 days' or 'list containers to DC Phoenix next week'."
     #)
 ]
+
 
 
 
