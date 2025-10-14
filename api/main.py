@@ -93,7 +93,9 @@ def check_container_authorization(df, container_numbers: List[str], consignee_co
 @app.post("/ask")
 def ask(body: QueryWithConsigneeBody):
     q = body.question.strip()
-    consignee_codes = [c.strip() for c in body.consignee_code.split(",") if c.strip()]
+    #consignee_codes = [c.strip() for c in body.consignee_code.split(",") if c.strip()]
+    consignee_codes = list(dict.fromkeys(c.strip() for c in body.consignee_code.split(",") if c.strip()))
+
     print(consignee_codes)
     if not q:
         raise HTTPException(status_code=400, detail="Empty question")
@@ -316,6 +318,7 @@ def ask(body: QueryWithConsigneeBody):
         except Exception as fallback_exc:
             logger.error(f"Router fallback also failed: {fallback_exc}")
             raise HTTPException(status_code=500, detail=f"Agent failed: {exc}")
+
 
 
 
