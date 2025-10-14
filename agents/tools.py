@@ -1819,7 +1819,7 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
     # Output formatting
     # -----------------------
     cols = ["container_number", "eta_dp", "ata_dp", "delay_days",
-            "consignee_code_multiple", "discharge_port", "hot_container_flag"]
+            "consignee_code_multiple", "discharge_port"]
     
     cols = [c for c in cols if c in delayed_df.columns]
 
@@ -2008,8 +2008,7 @@ def get_hot_containers(question: str = None, consignee_code: str = None, **kwarg
             where = f" at {code or name}" if (code or name) else ""
             return f"No hot containers are delayed for your authorized consignees{where}."
 
-        cols = ["container_number", "eta_dp", "ata_dp", "delay_days", "discharge_port",
-                "hot_container_flag", "consignee_code_multiple"]
+        cols = ["container_number", "eta_dp", "ata_dp", "delay_days", "discharge_port", "consignee_code_multiple"]
         #if "vehicle_arrival_lcn" in delayed.columns:
         #    cols.append("vehicle_arrival_lcn")
         cols = [c for c in cols if c in delayed.columns]
@@ -4547,6 +4546,7 @@ TOOLS = [
         description="Find containers arriving at a specific final destination/distribution center (FD/DC) within a timeframe. Handles queries like 'containers arriving at FD Nashville in next 3 days' or 'list containers to DC Phoenix next week'."
     )
 ]
+
 
 
 
