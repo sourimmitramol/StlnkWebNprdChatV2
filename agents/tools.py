@@ -4665,12 +4665,13 @@ TOOLS = [
         func=get_pos_milestone,
         description="Retrieve all milestone dates for a specific PO."
     ),
-    Tool(
-        name="Get Containers By Final Destination",
-        func=get_containers_by_final_destination,
-        description="Find containers arriving at a specific final destination/distribution center (FD/DC) within a timeframe. Handles queries like 'containers arriving at FD Nashville in next 3 days' or 'list containers to DC Phoenix next week'."
-    )
+    #Tool(
+    #    name="Get Containers By Final Destination",
+    #    func=get_containers_by_final_destination,
+    #    description="Find containers arriving at a specific final destination/distribution center (FD/DC) within a timeframe. Handles queries like 'containers arriving at FD Nashville in next 3 days' or 'list containers to DC Phoenix next week'."
+    #)
 ]
+
 
 
 
