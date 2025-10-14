@@ -2105,7 +2105,7 @@ def get_upcoming_arrivals(query: str) -> str:
     future = today + pd.Timedelta(days=days)
 
     # -----------------------------
-    # 3️⃣ Identify filters
+    # 3️⃣ Identify filters (safe)
     # -----------------------------
     q_lower = query.lower()
 
@@ -2113,15 +2113,21 @@ def get_upcoming_arrivals(query: str) -> str:
     port_name = None
     consignee_filter = None
 
-    # Extract possible location filter (port code or name)
-    if "at" in q_lower or "in" in q_lower:
-        words = re.findall(r"\b[A-Z0-9]{3,6}\b", query.upper())
-        if words:
-            port_code = words[-1]
-        else:
-            m = re.search(r"(?:at|in)\s+([A-Za-z\s,]+)", query, re.IGNORECASE)
-            if m:
-                port_name = m.group(1).strip().upper()
+    # Detect location safely — avoid matching “in next 15 days” as a port
+    if re.search(r"\bat\s+|\bin\s+", q_lower):
+        if not re.search(r"\bin\s+(next|upcoming|\d+\s+days?)", q_lower):
+            words = re.findall(r"\b[A-Z0-9]{3,6}\b", query.upper())
+            if words:
+                port_code = words[-1]
+            else:
+                m = re.search(r"(?:at|in)\s+([A-Za-z\s,]+)", query, re.IGNORECASE)
+                if m:
+                    candidate = m.group(1).strip().upper()
+                    # Ignore non-location time words
+                    if not any(w in candidate for w in ["DAY", "DAYS", "WEEK", "WEEKS", "MONTH", "MONTHS", "YEAR", "YEARS"]):
+                        port_name = candidate
+                    else:
+                        port_name = None
 
     # Extract consignee filter (e.g., “for WILSON SPORTING GOODS”)
     if "for" in q_lower:
@@ -2130,7 +2136,7 @@ def get_upcoming_arrivals(query: str) -> str:
             consignee_filter = m.group(1).strip().upper()
 
     # -----------------------------
-    # 4️⃣ Apply ETA filter (within X days)
+    # 4️⃣ Apply ETA window filter
     # -----------------------------
     upcoming = df[
         (df["eta_effective"].notna())
@@ -2182,13 +2188,14 @@ def get_upcoming_arrivals(query: str) -> str:
     # -----------------------------
     # 7️⃣ Format output
     # -----------------------------
-    cols = ["container_number","po_number_multiple", "discharge_port", "eta_dp","revised_eta", "consignee_code_multiple"]
+    cols = ["container_number","po_number_multiple", "discharge_port", "eta_fd","revised_eta", "consignee_code_multiple"]
     cols = [c for c in cols if c in upcoming.columns]
     upcoming = upcoming[cols].sort_values("eta_effective")
 
     upcoming["eta_effective"] = upcoming["eta_effective"].dt.strftime("%Y-%m-%d")
 
     return upcoming.to_dict(orient="records")
+
 
 # ...existing code...
 
@@ -4543,6 +4550,7 @@ TOOLS = [
         description="Find containers arriving at a specific final destination/distribution center (FD/DC) within a timeframe. Handles queries like 'containers arriving at FD Nashville in next 3 days' or 'list containers to DC Phoenix next week'."
     )
 ]
+
 
 
 
