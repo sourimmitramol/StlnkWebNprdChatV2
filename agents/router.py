@@ -207,10 +207,10 @@ def route_query(query: str, consignee_codes: list = None) -> str:
         
         
         # ========== PRIORITY 11-2: Container by final destination queries ==========
-        if (("container" in q or "containers" in q) and
-           (("final destination" in q) or ("fd " in q + " ") or ("dc " in q + " ") or ("distribution center" in q))):
-            from agents.tools import get_containers_by_final_destination
-            return get_containers_by_final_destination(query)
+        #if (("container" in q or "containers" in q) and
+        #   (("final destination" in q) or ("fd " in q + " ") or ("dc " in q + " ") or ("distribution center" in q))):
+        #    from agents.tools import get_containers_by_final_destination
+        #    return get_containers_by_final_destination(query)
 
         
         # Default fallback
@@ -226,6 +226,7 @@ def route_query(query: str, consignee_codes: list = None) -> str:
         if consignee_codes and hasattr(threading.current_thread(), 'consignee_codes'):
             delattr(threading.current_thread(), 'consignee_codes')
             logger.debug("Cleaned up consignee codes from thread context")
+
 
 
 
