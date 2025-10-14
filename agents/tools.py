@@ -1727,7 +1727,7 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
 
         # 3) look for preposition + location anywhere: at|in|to|from|on <NAME>
         #    choose the longest match (helps when multiple prepositions appear).
-        m2_list = re.findall(r"(?:\b(?:AT|IN|TO|FROM|ON|FOR)\s+([A-Z][A-Z0-9\s\.,'\-]{2,}))", q_up)
+        m2_list = re.findall(r"(?:\b(?:AT|IN|TO|FROM|ON)\s+([A-Z][A-Z0-9\s\.,'\-]{2,}))", q_up)
         if m2_list:
             cand = max(m2_list, key=len).strip()
             # remove trailing known noise like "3 DAYS", "ARRIVING", "LATE" etc.
@@ -4546,6 +4546,7 @@ TOOLS = [
         description="Find containers arriving at a specific final destination/distribution center (FD/DC) within a timeframe. Handles queries like 'containers arriving at FD Nashville in next 3 days' or 'list containers to DC Phoenix next week'."
     )
 ]
+
 
 
 
