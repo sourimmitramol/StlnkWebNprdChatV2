@@ -2151,7 +2151,7 @@ def get_upcoming_arrivals(query: str) -> str:
     # -----------------------------
     # 5️⃣ Apply location filter (port)
     # -----------------------------
-    port_cols = [c for c in ["discharge_port", "vehicle_arrival_lcn", "final_destination", "place_of_delivery"] if c in df.columns]
+    port_cols = [c for c in ["discharge_port"] if c in df.columns]
 
     if port_code:
         mask = pd.Series(False, index=upcoming.index)
@@ -2188,11 +2188,9 @@ def get_upcoming_arrivals(query: str) -> str:
     # -----------------------------
     # 7️⃣ Format output
     # -----------------------------
-    cols = ["container_number","po_number_multiple", "discharge_port", "eta_fd","revised_eta", "consignee_code_multiple"]
+    cols = ["container_number","po_number_multiple", "discharge_port", "eta_fd","revised_eta","consignee_code_multiple"]
     cols = [c for c in cols if c in upcoming.columns]
-    upcoming = upcoming[cols].sort_values("eta_effective")
-
-    upcoming["eta_effective"] = upcoming["eta_effective"].dt.strftime("%Y-%m-%d")
+    upcoming = upcoming[cols].sort_values("revised_eta")
 
     return upcoming.to_dict(orient="records")
 
@@ -4550,6 +4548,7 @@ TOOLS = [
         description="Find containers arriving at a specific final destination/distribution center (FD/DC) within a timeframe. Handles queries like 'containers arriving at FD Nashville in next 3 days' or 'list containers to DC Phoenix next week'."
     )
 ]
+
 
 
 
