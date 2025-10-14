@@ -2050,126 +2050,146 @@ def get_hot_containers(question: str = None, consignee_code: str = None, **kwarg
 def get_upcoming_arrivals(query: str) -> str:
     """
     List containers scheduled to arrive within the next X days.
-    - Parses several natural forms for "next N days".
-    - Uses eta column (eta_dp preferred) and excludes rows with ata_dp (already arrived).
-    - Respects consignee filtering via _df().
-    Returns list of dict records (up to 50 rows) or a short message if none found.
+    Supports filtering by:
+      - Location (port name or code)
+      - Consignee name
+    ETA logic:
+      - Prefer revised_eta if available, else use eta_dp.
+    Returns list[dict] output.
     """
-    # parse days
+    import re
+    import pandas as pd
+
+    # -----------------------------
+    # 1️⃣ Extract days (default = 7)
+    # -----------------------------
     patterns = [
-        r"(?:next|upcoming|in)\s+(\d+)\s+days?",  # "next 2 days", "in 2 days"
-        r"(\d+)\s+days?",                         # "2 days"
-        r"arriving.*?(\d+)\s+days?",              # "arriving in 2 days"
-        r"will.*?arrive.*?(\d+)\s+days?",         # "will arrive in 2 days"
+        r"(?:next|upcoming|in)\s+(\d+)\s+days?",
+        r"(\d+)\s+days?",
+        r"arriving.*?(\d+)\s+days?",
+        r"will.*?arrive.*?(\d+)\s+days?",
     ]
     days = None
-    for p in patterns:
-        m = re.search(p, query, re.IGNORECASE)
+    for pattern in patterns:
+        m = re.search(pattern, query, re.IGNORECASE)
         if m:
             days = int(m.group(1))
             break
     if days is None:
         days = 7
- 
-    df = _df()  # respects consignee filtering
- 
-    # apply transport mode filter if present (normalize column and match)
-    modes = extract_transport_modes(query)
-    if modes and 'transport_mode' in df.columns:
-        df = df[df['transport_mode'].astype(str).str.lower().apply(lambda s: any(m in s for m in modes))]
- 
-    # --- PORT FILTERING (by discharge_port) ---
-    # If query mentions a port code (e.g., USLAX) or city (e.g., Los Angeles), filter df by discharge_port
-    port_code = None
-    port_city = None
- 
-    # 1) parenthetical code or explicit code token (USLAX)
-    paren = re.search(r'\(([A-Z0-9]{2,6})\)', query, re.IGNORECASE)
-    if paren:
-        port_code = paren.group(1).upper()
+
+    df = _df().copy()
+    if df.empty:
+        return f"No shipment data available."
+
+    # -----------------------------
+    # 2️⃣ Ensure ETA logic (revised_eta preferred)
+    # -----------------------------
+    if "revised_eta" in df.columns and "eta_dp" in df.columns:
+        df["eta_effective"] = df["revised_eta"].fillna(df["eta_dp"])
+    elif "revised_eta" in df.columns:
+        df["eta_effective"] = df["revised_eta"]
+    elif "eta_dp" in df.columns:
+        df["eta_effective"] = df["eta_dp"]
     else:
-        # find 3-6 char uppercase-ish tokens that look like port codes (skip common words)
-        tokens = re.findall(r'\b[A-Z0-9]{3,6}\b', query.upper())
-        skip_tokens = {"NEXT", "DAYS", "IN", "AT", "ON", "THE", "AND", "TO", "FROM", "ARRIVE", "ARRIVING"}
-        tokens = [t for t in tokens if t not in skip_tokens and not t.isdigit()]
-        if tokens:
-            # prefer last token (often the port code), but any token is fine
-            port_code = tokens[-1]
- 
-    # 2) if no code, try city name like "in Los Angeles"
-    if not port_code:
-        mcity = re.search(r'(?:at|in|to)\s+([A-Za-z\s\.\-]{3,})(?:[,\s]|$)', query, re.IGNORECASE)
-        if mcity:
-            port_city = mcity.group(1).strip().upper()
-        else:
-            # fallback: check for known city names present in query
-            known_cities = ["LOS ANGELES", "LONG BEACH", "SINGAPORE", "NEWARK", "ROTTERDAM", "HONG KONG"]
-            for kc in known_cities:
-                if kc in query.upper():
-                    port_city = kc
-                    break
- 
-    # apply discharge_port filtering if we detected a port code or city
-    if port_code or port_city:
-        if 'discharge_port' in df.columns:
-            def port_row_matches(s):
-                if pd.isna(s):
-                    return False
-                txt = str(s).upper()
-                if port_code and re.search(r'\(' + re.escape(port_code) + r'\)', txt):
-                    return True
-                if port_code and re.search(r'\b' + re.escape(port_code) + r'\b', txt):
-                    return True
-                if port_city:
-                    # remove parenthetical parts and match main name
-                    cleaned = re.sub(r'\([^)]*\)', '', txt).strip()
-                    if port_city in cleaned:
-                        return True
-                    # try first word fallback
-                    first = port_city.split()[0]
-                    if first and first in cleaned:
-                        return True
-                return False
-            df = df[df['discharge_port'].apply(port_row_matches)]
-        else:
-            # if discharge_port missing, no results will match; fall through to ETA logic which will return none
-            pass
- 
-    # Choose ETA-like column
-    eta_col = next((c for c in ["revised_eta", "eta_dp", "eta", "eta_fd", "estimated_time_arrival"] if c in df.columns), None)
-    if not eta_col:
         return "ETA column not found in the data."
- 
-    # Ensure relevant date columns are datetime on the filtered df
-    parse_cols = [eta_col]
-    if "ata_dp" in df.columns:
-        parse_cols.append("ata_dp")
-    df = ensure_datetime(df, parse_cols)
- 
+
+    # Ensure datetime conversion
+    df["eta_effective"] = pd.to_datetime(df["eta_effective"], errors="coerce")
+    if "ata_dp" not in df.columns:
+        df["ata_dp"] = pd.NaT
+    else:
+        df["ata_dp"] = pd.to_datetime(df["ata_dp"], errors="coerce")
+
     today = pd.Timestamp.today().normalize()
     future = today + pd.Timedelta(days=days)
- 
-    # Build mask safely on the already-filtered df
-    mask = (df[eta_col].notna()) & (df[eta_col] >= today) & (df[eta_col] <= future)
-    if "ata_dp" in df.columns:
-        mask &= df["ata_dp"].isna()  # exclude already-arrived
- 
-    upcoming = df[mask].copy()
+
+    # -----------------------------
+    # 3️⃣ Identify filters
+    # -----------------------------
+    q_lower = query.lower()
+
+    port_code = None
+    port_name = None
+    consignee_filter = None
+
+    # Extract possible location filter (port code or name)
+    if "at" in q_lower or "in" in q_lower:
+        words = re.findall(r"\b[A-Z0-9]{3,6}\b", query.upper())
+        if words:
+            port_code = words[-1]
+        else:
+            m = re.search(r"(?:at|in)\s+([A-Za-z\s,]+)", query, re.IGNORECASE)
+            if m:
+                port_name = m.group(1).strip().upper()
+
+    # Extract consignee filter (e.g., “for WILSON SPORTING GOODS”)
+    if "for" in q_lower:
+        m = re.search(r"for\s+([A-Za-z0-9\s\.\-&]+)", query, re.IGNORECASE)
+        if m:
+            consignee_filter = m.group(1).strip().upper()
+
+    # -----------------------------
+    # 4️⃣ Apply ETA filter (within X days)
+    # -----------------------------
+    upcoming = df[
+        (df["eta_effective"].notna())
+        & (df["eta_effective"] >= today)
+        & (df["eta_effective"] <= future)
+        & (df["ata_dp"].isna())  # not yet arrived
+    ].copy()
+
     if upcoming.empty:
-        return f"No containers scheduled to arrive in the next {days} days for your authorized consignees."
- 
-    # Prepare output
-    cols = ["container_number", "discharge_port","eta_dp", eta_col]
-    if "consignee_code_multiple" in upcoming.columns:
-        cols.append("consignee_code_multiple")
+        return f"No containers scheduled to arrive in the next {days} days."
+
+    # -----------------------------
+    # 5️⃣ Apply location filter (port)
+    # -----------------------------
+    port_cols = [c for c in ["discharge_port", "vehicle_arrival_lcn", "final_destination", "place_of_delivery"] if c in df.columns]
+
+    if port_code:
+        mask = pd.Series(False, index=upcoming.index)
+        for col in port_cols:
+            mask |= upcoming[col].astype(str).str.upper().str.contains(f"({port_code})", na=False)
+        upcoming = upcoming[mask]
+    elif port_name:
+        tokens = [t for t in port_name.split() if len(t) > 2]
+        mask = pd.Series(False, index=upcoming.index)
+        for col in port_cols:
+            col_vals = upcoming[col].astype(str).str.upper()
+            cond = pd.Series(True, index=upcoming.index)
+            for token in tokens:
+                cond &= col_vals.str.contains(token, na=False)
+            mask |= cond
+        upcoming = upcoming[mask]
+
+    # -----------------------------
+    # 6️⃣ Apply consignee filter
+    # -----------------------------
+    if consignee_filter and "consignee_code_multiple" in upcoming.columns:
+        upcoming = upcoming[
+            upcoming["consignee_code_multiple"].astype(str).str.upper().str.contains(consignee_filter, na=False)
+        ]
+
+    if upcoming.empty:
+        where = ""
+        if consignee_filter:
+            where += f" for consignee {consignee_filter.title()}"
+        if port_code or port_name:
+            where += f" at {port_code or port_name.title()}"
+        return f"No containers scheduled to arrive in the next {days} days{where}."
+
+    # -----------------------------
+    # 7️⃣ Format output
+    # -----------------------------
+    cols = ["container_number","po_number_multiple", "discharge_port", "eta_dp","revised_eta", "consignee_code_multiple"]
     cols = [c for c in cols if c in upcoming.columns]
- 
-    upcoming = upcoming[cols].head(50).copy()
-    # format dates
-    if eta_col in upcoming.columns and pd.api.types.is_datetime64_any_dtype(upcoming[eta_col]):
-        upcoming[eta_col] = upcoming[eta_col].dt.strftime("%Y-%m-%d")
- 
+    upcoming = upcoming[cols].sort_values("eta_effective")
+
+    upcoming["eta_effective"] = upcoming["eta_effective"].dt.strftime("%Y-%m-%d")
+
     return upcoming.to_dict(orient="records")
+
 # ...existing code...
 
 def get_container_etd(query: str) -> str:
@@ -4523,6 +4543,7 @@ TOOLS = [
         description="Find containers arriving at a specific final destination/distribution center (FD/DC) within a timeframe. Handles queries like 'containers arriving at FD Nashville in next 3 days' or 'list containers to DC Phoenix next week'."
     )
 ]
+
 
 
 
