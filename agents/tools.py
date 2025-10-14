@@ -4417,11 +4417,11 @@ TOOLS = [
         func=get_delayed_pos,
         description="Find PO's that are delayed based on delivery/empty-container status and ETA logic."
     ),
-    Tool(
-        name="Get Containers Arriving Soon",
-        func=get_containers_arriving_soon,
-        description="List containers arriving soon (ETA window, ATA is null)."
-    ),
+    #Tool(
+    #    name="Get Containers Arriving Soon",
+    #    func=get_containers_arriving_soon,
+    #    description="List containers arriving soon (ETA window, ATA is null)."
+    #),
     Tool(
         name="Get Top Values For Column",
         func=get_top_values_for_column,
@@ -4547,6 +4547,7 @@ TOOLS = [
         description="Find containers arriving at a specific final destination/distribution center (FD/DC) within a timeframe. Handles queries like 'containers arriving at FD Nashville in next 3 days' or 'list containers to DC Phoenix next week'."
     )
 ]
+
 
 
 
