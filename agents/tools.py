@@ -4744,11 +4744,11 @@ TOOLS = [
         description="Identify the best-matching column name for the ocean BL field in the dataset (e.g. ocean_bl_no_multiple or variants)."
     ),
 
-    Tool(
-        name="Get Containers For BL",
-        func=get_containers_for_bl,
-        description="Find container(s) and basic status for an ocean BL (matches ocean_bl_no_multiple). Use queries like 'is MOLWMNL2400017 reached to discharge port?' or 'which container has bill of lading MOLWMNL2400017?'."
-    ),
+    #Tool(
+    #    name="Get Containers For BL",
+    #    func=get_containers_for_bl,
+    #    description="Find container(s) and basic status for an ocean BL (matches ocean_bl_no_multiple). Use queries like 'is MOLWMNL2400017 reached to discharge port?' or 'which container has bill of lading MOLWMNL2400017?'."
+    #),
     Tool(
         name="Get Carrier For BL",
         func=get_carrier_for_bl,
@@ -4775,6 +4775,7 @@ TOOLS = [
         description="Find containers arriving at a specific final destination/distribution center (FD/DC) within a timeframe. Handles queries like 'containers arriving at FD Nashville in next 3 days' or 'list containers to DC Phoenix next week'."
     )
 ]
+
 
 
 
