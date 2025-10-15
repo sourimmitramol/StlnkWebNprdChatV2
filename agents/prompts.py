@@ -179,7 +179,7 @@ Column mappings and synonyms:
 - po_number_multiple: "po number", "purchase order", "po", "po#", "order number"
 - booking_number_multiple: "booking number", "booking no", "booking#", "bkg no"
 - fcr_number_multiple: "fcr number", "fcr no", "fcr#", "forwarder cargo receipt"
-- ocean_bl_no_multiple: "ocean bl no", "bill of lading", "bl no", "bl#", "ocean bl"
+- ocean_bl_no_multiple: "ocean bl no", "bill of lading", "bl no", "bl#", "ocean bl", "obl"
 - load_port: "load port", "lp", "LP", "Load_port", "origin port", "port of loading"
 - final_load_port: "final load port", "final lp", "final origin port"
 - discharge_port: "discharge port", "dp", "DP", "Discharge_port", "destination port", "port of discharge"
@@ -643,4 +643,5 @@ def map_intent_phrase(text: str) -> Optional[str]:
         if key in t:
             return intent
     return None
+
 
