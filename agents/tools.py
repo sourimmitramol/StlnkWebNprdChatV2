@@ -422,7 +422,7 @@ def get_hot_upcoming_arrivals(query: str) -> str:
  
     # candidate tokens (port codes)
     candidate_tokens = re.findall(r'\b[A-Z0-9]{3,6}\b', query_upper)
-    skip_tokens = {"NEXT", "DAYS", "IN", "AT", "ON", "THE", "AND", "TO", "FROM", "ARRIVE", "ARRIVING"}
+    skip_tokens = {"NEXT", "DAYS", "IN", "AT", "ON", "THE", "AND", "TO", "FROM", "ARRIVE", "ARRIVING", "HOT", "CONTAINERS", "CONTAINER", "PLEASE", "CAN", "YOU", "LET", "ME", "KNOW"}
     candidate_tokens = [t for t in candidate_tokens if t not in skip_tokens and not t.isdigit()]
  
     def port_row_contains_code(port_string, token):
@@ -2296,39 +2296,77 @@ def get_arrivals_by_port(query: str) -> str:
     - Exclude rows that already have ata_dp (already arrived).
     - Return up to 50 matching rows (dict records) with formatted dates.
     """
-    
+   
     df = _df()
-
-    filtered = df[mask].copy()
-
-    # apply transport mode filter if present
-    modes = extract_transport_modes(query)
-    if modes and 'transport_mode' in filtered.columns:
-        filtered = filtered[filtered['transport_mode'].astype(str).str.lower().apply(lambda s: any(m in s for m in modes))]
-
+ 
     # ---------- 1) Parse timeframe ----------
     default_days = 7
     days = None
-    for pat in [
-        r"(?:next|upcoming|within|in)\s+(\d{1,3})\s+days?",
-        r"arriving.*?(\d{1,3})\s+days?",
-        r"(\d{1,3})\s+days?"
-    ]:
-        m = re.search(pat, query, re.IGNORECASE)
+    specific_date = None
+   
+    # Check for specific date patterns first (e.g., "within 17th Oct'25", "by October 17, 2025")
+    date_patterns = [
+        r'(?:within|by|before|on|until)\s+(\d{1,2})(?:st|nd|rd|th)?\s+(\w+)[,\s]*[\']?(\d{2,4})',  # "within 17th Oct'25"
+        r'(?:within|by|before|on|until)\s+(\w+)\s+(\d{1,2})(?:st|nd|rd|th)?[,\s]+(\d{4})',  # "by October 17, 2025"
+    ]
+   
+    for pattern in date_patterns:
+        m = re.search(pattern, query, re.IGNORECASE)
         if m:
-            days = int(m.group(1))
-            break
+            try:
+                if pattern == date_patterns[0]:  # Day Month Year format
+                    day, month, year = m.groups()
+                else:  # Month Day Year format
+                    month, day, year = m.groups()
+               
+                # Parse year (handle 2-digit years)
+                year = int(year)
+                if year < 100:
+                    year += 2000
+               
+                # Parse month
+                month_map = {
+                    'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
+                    'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12,
+                    'january': 1, 'february': 2, 'march': 3, 'april': 4,
+                    'june': 6, 'july': 7, 'august': 8, 'september': 9,
+                    'october': 10, 'november': 11, 'december': 12
+                }
+                month_num = month_map.get(str(month).lower()[:3])
+                if month_num:
+                    specific_date = pd.Timestamp(year=year, month=month_num, day=int(day)).normalize()
+                    break
+            except Exception:
+                pass
+   
+    # If no specific date found, try to parse "next N days"
+    if not specific_date:
+        for pat in [
+            r"(?:next|upcoming|within|in)\s+(\d{1,3})\s+days?",
+            r"arriving.*?(\d{1,3})\s+days?",
+            r"(\d{1,3})\s+days?"
+        ]:
+            m = re.search(pat, query, re.IGNORECASE)
+            if m:
+                days = int(m.group(1))
+                break
+   
     n_days = days if days is not None else default_days
-
+ 
     today = pd.Timestamp.today().normalize()
-    end_date = today + pd.Timedelta(days=n_days)
-
-    # <-- ADDED: log parsed timeframe for debugging
+   
+    # Set end_date based on specific date or days window
+    if specific_date:
+        end_date = specific_date
+    else:
+        end_date = today + pd.Timedelta(days=n_days)
+ 
+    # Log parsed timeframe for debugging
     try:
-        logger.info(f"[get_arrivals_by_port] query={query!r} parsed_n_days={n_days} today={today.strftime('%Y-%m-%d')} end_date={end_date.strftime('%Y-%m-%d')}")
+        logger.info(f"[get_arrivals_by_port] query={query!r} specific_date={specific_date} parsed_n_days={n_days} today={today.strftime('%Y-%m-%d')} end_date={end_date.strftime('%Y-%m-%d')}")
     except Exception:
-        print(f"[get_arrivals_by_port] parsed_n_days={n_days} today={today} end_date={end_date}")
-
+        print(f"[get_arrivals_by_port] specific_date={specific_date} parsed_n_days={n_days} today={today} end_date={end_date}")
+ 
     # ---------- 2) Extract port name or code ----------
     port_name_query = None
     port_code_query = None
@@ -2350,16 +2388,16 @@ def get_arrivals_by_port(query: str) -> str:
             else:
                 tokens = re.findall(r'[A-Za-z0-9\-\.\']{3,}', query)
                 port_name_query = tokens[-1] if tokens else ""
-
+ 
     if port_name_query:
         port_name_query = port_name_query.upper()
-
+ 
     # ---------- 3) Which port columns to check ----------
     preferred_cols = ['discharge_port', 'final_load_port']
     existing_port_cols = [c for c in preferred_cols if c in df.columns]
     if not existing_port_cols:
         return "No port-related columns found in the data."
-
+ 
     # ---------- 4) Build match mask ----------
     mask = pd.Series(False, index=df.index)
     if port_code_query:
@@ -2383,22 +2421,28 @@ def get_arrivals_by_port(query: str) -> str:
                 for w in words:
                     for col in existing_port_cols:
                         mask |= df[col].astype(str).str.upper().str.contains(re.escape(w), na=False)
-
+ 
     filtered = df[mask].copy()
+   
     if filtered.empty:
         descriptor = port_code_query or port_name_query or "<unspecified>"
         return f"No containers found matching '{descriptor}' in the chosen port columns."
-
+ 
+    # apply transport mode filter if present
+    modes = extract_transport_modes(query)
+    if modes and 'transport_mode' in filtered.columns:
+        filtered = filtered[filtered['transport_mode'].astype(str).str.lower().apply(lambda s: any(m in s for m in modes))]
+ 
     # ---------- 5) Dates: per-row ETA selection ----------
     date_priority = [c for c in ['revised_eta', 'eta_dp'] if c in filtered.columns]
     if not date_priority:
         return "No ETA/arrival date columns found (expected 'revised_eta' or 'eta_dp')."
-
+ 
     parse_cols = date_priority.copy()
     if 'ata_dp' in filtered.columns:
         parse_cols.append('ata_dp')
     filtered = ensure_datetime(filtered, parse_cols)
-
+ 
     # Create per-row preferred ETA (revised_eta > eta_dp)
     if 'revised_eta' in filtered.columns and 'eta_dp' in filtered.columns:
         filtered['eta_for_filter'] = filtered['revised_eta'].where(filtered['revised_eta'].notna(), filtered['eta_dp'])
@@ -2406,19 +2450,19 @@ def get_arrivals_by_port(query: str) -> str:
         filtered['eta_for_filter'] = filtered['revised_eta']
     else:
         filtered['eta_for_filter'] = filtered['eta_dp']
-
+ 
     # Inclusive window and exclude already-arrived
     date_mask = (filtered['eta_for_filter'] >= today) & (filtered['eta_for_filter'] <= end_date)
     if 'ata_dp' in filtered.columns:
         date_mask &= filtered['ata_dp'].isna()
-
+ 
     arrivals = filtered[date_mask].copy()
     if arrivals.empty:
         return (
             f"No containers with ETA between {today.strftime('%Y-%m-%d')} and {end_date.strftime('%Y-%m-%d')} "
             f"for the requested port ('{port_code_query or port_name_query}')."
         )
-
+ 
     # ---------- 6) Build display ----------
     display_cols = ['container_number', 'discharge_port', 'revised_eta', 'eta_dp']
     # include the matching port column for context
@@ -2437,23 +2481,23 @@ def get_arrivals_by_port(query: str) -> str:
                 if sample.notna().any():
                     display_cols.append(pc)
                     break
-
+ 
     # Always include eta_for_filter for sorting, then drop before returning
     display_cols = [c for c in (display_cols + ['eta_for_filter']) if c in arrivals.columns]
-
+ 
     result_df = arrivals[display_cols].sort_values('eta_for_filter').head(50).copy()
-
+ 
     # Format date columns
     for dcol in ['revised_eta', 'eta_dp', 'eta_for_filter']:
         if dcol in result_df.columns and pd.api.types.is_datetime64_any_dtype(result_df[dcol]):
             result_df[dcol] = result_df[dcol].dt.strftime('%Y-%m-%d')
-
+ 
     # Drop internal helper column from final output
     if 'eta_for_filter' in result_df.columns:
         result_df = result_df.drop(columns=['eta_for_filter'])
-
+ 
     result_data = result_df.where(pd.notnull(result_df), None)
-    
+   
     return result_data.to_dict(orient="records")
 # ...existing code...
 
@@ -4280,6 +4324,7 @@ def get_containers_by_final_destination(query: str) -> str:
             days = int(m.group(1))
             break
     n_days = days if days is not None else default_days
+    logger.info(f"\n days: {n_days}")
  
     today = pd.Timestamp.today().normalize()
     end_date = today + pd.Timedelta(days=n_days)
@@ -4292,16 +4337,16 @@ def get_containers_by_final_destination(query: str) -> str:
    
     df = _df()  # respects consignee filtering
  
-    # Check if final_destination column exists
-    if 'final_destination' not in df.columns:
-        return "No final_destination column found in the dataset."
+    # # Check if final_destination column exists
+    # if 'final_destination' not in df.columns:
+    #     return "No final_destination column found in the dataset."
    
     # Extract destination from query using various patterns
     location_patterns = [
         r'(?:at|to|in)\s+(?:fd|dc|final\s+destination|distribution\s+center)\s+([A-Za-z\s\.]{3,}?)(?:[,\s]|$)',  # "fd Nashville", "dc Phoenix"
         r'(?:fd|dc|final\s+destination|distribution\s+center)\s+(?:at|to|in)\s+([A-Za-z\s\.]{3,}?)(?:[,\s]|$)',  # "fd at Nashville"
         r'(?:at|to|in)\s+([A-Za-z\s\.]{3,}?)(?:\s+fd|\s+dc|\s+final\s+destination|\s+distribution\s+center)(?:[,\s]|$)',  # "at Nashville fd"
-        r'(?:at|to|in)\s+([A-Za-z\s\.]{3,}?)(?:[,\s]|$)'  # fallback: "at Nashville"
+        # r'(?:at|to|in)\s+([A-Za-z\s\.]{3,}?)(?:[,\s]|$)'  # fallback: "at Nashville"
     ]
    
     destination_name = None
@@ -4311,14 +4356,15 @@ def get_containers_by_final_destination(query: str) -> str:
             destination_name = match.group(1).strip()
             break
    
-    if not destination_name:
-        return "Please specify a final destination or distribution center."
+    logger.info(f"Location = {destination_name}")
+    filtered_df = df.copy()
+    if destination_name:
+        # return "Please specify a final destination or distribution center."
+        # Filter by destination
+        destination_mask = df['final_destination'].astype(str).str.upper().str.contains(destination_name.upper(), na=False)
+        filtered_df = df[destination_mask].copy()
    
-    # Filter by destination
-    destination_mask = df['final_destination'].astype(str).str.upper().str.contains(destination_name.upper(), na=False)
-    filtered_df = df[destination_mask].copy()
-   
-    if filtered_df.empty:
+    if destination_name and filtered_df.empty:
         return f"No containers found with final destination containing '{destination_name}' for your authorized consignees."
    
     # determine per-row ETA using revised_eta then eta_dp
@@ -4566,6 +4612,7 @@ TOOLS = [
         description="Find containers arriving at a specific final destination/distribution center (FD/DC) within a timeframe. Handles queries like 'containers arriving at FD Nashville in next 3 days' or 'list containers to DC Phoenix next week'."
     )
 ]
+
 
 
 
