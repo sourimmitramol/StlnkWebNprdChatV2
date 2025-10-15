@@ -4737,17 +4737,18 @@ TOOLS = [
         func=handle_non_shipping_queries,
         description="This is for  generic queries. Like 'how are you' or 'hello' or 'hey' or 'who are you' etc."
     ),
-	Tool(
-        name="Get PO Milestones",
-        func=get_pos_milestone,
-        description="Retrieve all milestone dates for a specific PO."
-    ),
+	#Tool(
+    #    name="Get PO Milestones",
+    #    func=get_pos_milestone,
+    #    description="Retrieve all milestone dates for a specific PO."
+    #),
     #Tool(
     #    name="Get Containers By Final Destination",
     #    func=get_containers_by_final_destination,
     #    description="Find containers arriving at a specific final destination/distribution center (FD/DC) within a timeframe. Handles queries like 'containers arriving at FD Nashville in next 3 days' or 'list containers to DC Phoenix next week'."
     #)
 ]
+
 
 
 
