@@ -4259,6 +4259,7 @@ def get_containers_by_final_destination(query: str) -> str:
             days = int(m.group(1))
             break
     n_days = days if days is not None else default_days
+    logger.info(f"\n days: {n_days}")
  
     today = pd.Timestamp.today().normalize()
     end_date = today + pd.Timedelta(days=n_days)
@@ -4271,16 +4272,16 @@ def get_containers_by_final_destination(query: str) -> str:
    
     df = _df()  # respects consignee filtering
  
-    # Check if final_destination column exists
-    if 'final_destination' not in df.columns:
-        return "No final_destination column found in the dataset."
+    # # Check if final_destination column exists
+    # if 'final_destination' not in df.columns:
+    #     return "No final_destination column found in the dataset."
    
     # Extract destination from query using various patterns
     location_patterns = [
         r'(?:at|to|in)\s+(?:fd|dc|final\s+destination|distribution\s+center)\s+([A-Za-z\s\.]{3,}?)(?:[,\s]|$)',  # "fd Nashville", "dc Phoenix"
         r'(?:fd|dc|final\s+destination|distribution\s+center)\s+(?:at|to|in)\s+([A-Za-z\s\.]{3,}?)(?:[,\s]|$)',  # "fd at Nashville"
         r'(?:at|to|in)\s+([A-Za-z\s\.]{3,}?)(?:\s+fd|\s+dc|\s+final\s+destination|\s+distribution\s+center)(?:[,\s]|$)',  # "at Nashville fd"
-        r'(?:at|to|in)\s+([A-Za-z\s\.]{3,}?)(?:[,\s]|$)'  # fallback: "at Nashville"
+        # r'(?:at|to|in)\s+([A-Za-z\s\.]{3,}?)(?:[,\s]|$)'  # fallback: "at Nashville"
     ]
    
     destination_name = None
@@ -4290,14 +4291,15 @@ def get_containers_by_final_destination(query: str) -> str:
             destination_name = match.group(1).strip()
             break
    
-    if not destination_name:
-        return "Please specify a final destination or distribution center."
+    logger.info(f"Location = {destination_name}")
+    filtered_df = df.copy()
+    if destination_name:
+        # return "Please specify a final destination or distribution center."
+        # Filter by destination
+        destination_mask = df['final_destination'].astype(str).str.upper().str.contains(destination_name.upper(), na=False)
+        filtered_df = df[destination_mask].copy()
    
-    # Filter by destination
-    destination_mask = df['final_destination'].astype(str).str.upper().str.contains(destination_name.upper(), na=False)
-    filtered_df = df[destination_mask].copy()
-   
-    if filtered_df.empty:
+    if destination_name and filtered_df.empty:
         return f"No containers found with final destination containing '{destination_name}' for your authorized consignees."
    
     # determine per-row ETA using revised_eta then eta_dp
@@ -4742,12 +4744,13 @@ TOOLS = [
     #    func=get_pos_milestone,
     #    description="Retrieve all milestone dates for a specific PO."
     #),
-    #Tool(
-    #    name="Get Containers By Final Destination",
-    #    func=get_containers_by_final_destination,
-    #    description="Find containers arriving at a specific final destination/distribution center (FD/DC) within a timeframe. Handles queries like 'containers arriving at FD Nashville in next 3 days' or 'list containers to DC Phoenix next week'."
-    #)
+    Tool(
+        name="Get Containers By Final Destination",
+        func=get_containers_by_final_destination,
+        description="Find containers arriving at a specific final destination/distribution center (FD/DC) within a timeframe. Handles queries like 'containers arriving at FD Nashville in next 3 days' or 'list containers to DC Phoenix next week'."
+    )
 ]
+
 
 
 
