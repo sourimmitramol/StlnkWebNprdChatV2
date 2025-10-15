@@ -1266,7 +1266,7 @@ def get_container_milestones(input_str: str) -> str:
                     azure_deployment=settings.AZURE_OPENAI_DEPLOYMENT,
                     api_version=settings.AZURE_OPENAI_API_VERSION,
                     temperature=0,
-                    max_tokens=10,
+                    max_tokens=300,
                 )
                 messages = [
                     SystemMessage(
@@ -4748,6 +4748,7 @@ TOOLS = [
     #    description="Find containers arriving at a specific final destination/distribution center (FD/DC) within a timeframe. Handles queries like 'containers arriving at FD Nashville in next 3 days' or 'list containers to DC Phoenix next week'."
     #)
 ]
+
 
 
 
