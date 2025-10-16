@@ -1056,15 +1056,278 @@ def get_supplier_last_days(query: str) -> str:
     
 
 def get_containers_by_supplier(query: str) -> str:
-    """Entry point used by router; dispatch to in-transit or last-days."""
-    ql = query.lower()
-    if 'transit' in ql:
-        return get_supplier_in_transit(query)
-    # treat "last/past N days" as arrived listing
-    if re.search(r'(?:last|past)\s+\d{1,3}\s+days?', ql):
-        return get_supplier_last_days(query)
-    # default to in-transit if user didn’t specify
-    return get_supplier_in_transit(query)
+    """
+    List containers scheduled to arrive within the next X days.
+    - Parses many natural forms for "next N days".
+    - Uses per-row ETA priority: revised_eta (if present) else eta_dp.
+    - Excludes rows where ata_dp is present (already arrived).
+    - Respects consignee filtering via _df().
+    - Strictly filters by discharge_port when a port code/city is provided.
+    Returns list of dict records (up to 50 rows) or a short message if none found.
+    """
+    import re
+    import pandas as pd
+ 
+    query = (query or "").strip()
+ 
+    # 1) Parse days
+    days = None
+    for p in [
+        r"(?:next|upcoming|in|within|coming)\s+(\d{1,4})\s+days?",
+        r"(\d{1,4})\s+days?",
+        r"arriving.*?(\d{1,4})\s+days?",
+        r"will.*?arrive.*?(\d{1,4})\s+days?",
+        r"within\s+the\s+next\s+(\d{1,4})\s+days?",
+    ]:
+        m = re.search(p, query, re.IGNORECASE)
+        if m:
+            try:
+                days = int(m.group(1))
+                break
+            except Exception:
+                pass
+    if days is None and re.search(r'\b(arriv(?:e|ing)|coming soon|coming|upcoming|soon|expected)\b', query, re.IGNORECASE):
+        days = 7
+    if days is None:
+        days = 7
+ 
+    # 2) Load df (consignee-scoped) and optional transport-mode filter
+    df = _df()
+    try:
+        modes = extract_transport_modes(query)
+    except Exception:
+        modes = None
+    if modes and 'transport_mode' in df.columns:
+        df = df[df['transport_mode'].astype(str).str.lower().apply(lambda s: any(m in s for m in modes))]
+ 
+    # 3) Location detection (STRICT on discharge_port)
+    port_code = None
+    port_city = None
+    q_up = query.upper()
+ 
+    # Extract all known port codes from discharge_port
+    known_codes = set()
+    if 'discharge_port' in df.columns:
+        try:
+            sample_text = " ".join(df['discharge_port'].dropna().astype(str).str.upper().tolist())
+            known_codes = set(re.findall(r'\(([A-Z0-9]{2,6})\)', sample_text))
+        except Exception:
+            known_codes = set()
+ 
+    # 3a) Code inside parentheses in query
+    m = re.search(r'\(([A-Z0-9]{2,6})\)', q_up)
+    if m:
+        port_code = m.group(1).strip().upper()
+ 
+    # 3c) City name after at|in|to - CHECK THIS FIRST before bare codes
+    if not port_code:
+        city_patterns = [
+            r'\b(?:AT|IN|TO|FOR|FROM|AT\s+THE)\s+([A-Z][A-Z\s\.\'-]{4,}?)(?:\s+IN\s+THE\s+NEXT|\s+NEXT|\s+WITHIN|\s+COMING|\s+OVER|\s*,|\s*$)',
+            r'\b(LOS\s+ANGELES|LONG\s+BEACH|NEW\s+YORK|CHICAGO|SEATTLE|OAKLAND|SAVANNAH|HOUSTON|MIAMI)\b'
+        ]
+        for pattern in city_patterns:
+            mc = re.search(pattern, q_up, re.IGNORECASE)
+            if mc:
+                cand = mc.group(1).strip()
+                cand = re.sub(r'(?:IN\s+NEXT\s+\d+\s+DAYS?|NEXT\s+\d+\s+DAYS?|WITHIN\s+\d+\s+DAYS?)\b.*$', '', cand, flags=re.IGNORECASE).strip()
+                cand = re.sub(r'[\.,;:\-]+$', '', cand).strip()
+                if cand and len(cand) > 3:
+                    port_city = cand.upper()
+                    break
+ 
+    # 3b) Bare code token ONLY if no city was found - validate against known codes
+    if not port_code and not port_city:
+        caps = re.findall(r'\b([A-Z0-9]{3,6})\b', q_up)
+        skip = {"NEXT", "DAYS", "IN", "AT", "TO", "ON", "BY", "COMING", "WITHIN", "WILL", "ARRIVE", "ARRIVING", "THE", "FOR", "FROM", "CAN", "YOU"}
+        caps = [t for t in caps if t not in skip and not t.isdigit() and len(t) >= 4]
+        for tok in reversed(caps):
+            if tok in known_codes:
+                port_code = tok
+                break
+ 
+    # Apply strict discharge_port filter
+    if (port_code or port_city) and 'discharge_port' in df.columns:
+        dp = df['discharge_port'].astype(str)
+        dp_up = dp.str.upper()
+ 
+        if port_code:
+            code_mask = dp_up.str.contains(rf"\({re.escape(port_code)}\)", na=False)
+            df = df[code_mask].copy()
+            if df.empty:
+                return f"No containers scheduled to arrive at {port_code} in the next {days} days for your authorized consignees."
+        elif port_city:
+            dp_clean = dp_up.str.replace(r"\([^\)]+\)", "", regex=True).str.strip()
+            if port_city == "LOS ANGELES":
+                city_mask = dp_clean.str.contains(r"\bLOS\s+ANGELES\b", regex=True, na=False) & ~dp_clean.str.contains(r"\bLONG\s+BEACH\b", regex=True, na=False)
+            else:
+                city_mask = dp_clean.str.contains(r"\b" + re.escape(port_city) + r"\b", regex=True, na=False)
+            df = df[city_mask].copy()
+            if df.empty:
+                return f"No containers scheduled to arrive at {port_city} in the next {days} days for your authorized consignees."
+ 
+    # ---------------------------
+    # === Consignee matching (strict filter when user names a consignee) ===
+    # ---------------------------
+    mentioned_consignee_tokens = set()
+    if 'consignee_code_multiple' in df.columns:
+        try:
+            # Build token lists and auxiliary maps
+            all_consignees = set()
+            token_to_name = {}
+            token_to_code = {}
+ 
+            for raw in df['consignee_code_multiple'].dropna().astype(str).tolist():
+                for part in re.split(r',\s*', raw):
+                    p = part.strip()
+                    if not p:
+                        continue
+                    tok = p.upper()
+                    all_consignees.add(tok)
+                    m_code = re.search(r'\(([A-Z0-9\- ]+)\)\s*$', tok)
+                    code = m_code.group(1).strip() if m_code else None
+                    name_part = re.sub(r'\([^\)]*\)', '', tok).strip()
+                    token_to_name[tok] = name_part
+                    token_to_code[tok] = code
+ 
+            sorted_consignees = sorted(all_consignees, key=lambda x: -len(x))
+ 
+            # 1) verbatim token in query (old behavior)
+            for cand in sorted_consignees:
+                if re.search(r'\b' + re.escape(cand) + r'\b', q_up):
+                    mentioned_consignee_tokens.add(cand)
+ 
+            # 2) numeric code match if token has "(code)"
+            numeric_tokens = [t for t in sorted_consignees if token_to_code.get(t) and re.fullmatch(r'\d+', token_to_code[t])]
+            if numeric_tokens:
+                num_q_tokens = re.findall(r'\b0*\d+\b', q_up)
+                for qnum in num_q_tokens:
+                    for tok in numeric_tokens:
+                        code = token_to_code.get(tok)
+                        if not code:
+                            continue
+                        if qnum == code or qnum.lstrip('0') == code.lstrip('0'):
+                            mentioned_consignee_tokens.add(tok)
+ 
+            # 3) name matching: exact phrase OR conservative multi-word heuristic
+            q_clean = re.sub(r'[^A-Z0-9\s]', ' ', q_up)
+            q_words = [w for w in re.split(r'\s+', q_clean) if len(w) >= 3]
+ 
+            for tok in sorted_consignees:
+                name_part = token_to_name.get(tok, "")
+                if not name_part:
+                    continue
+                # exact phrase match
+                if re.search(r'\b' + re.escape(name_part) + r'\b', q_up):
+                    mentioned_consignee_tokens.add(tok)
+                    continue
+                # word-count heuristic
+                matches = sum(1 for w in q_words if w in name_part)
+                if matches >= 2 or any((w in name_part and len(w) >= 4) for w in q_words):
+                    mentioned_consignee_tokens.add(tok)
+ 
+            # 4) "for <name>" fallback
+            m_for = re.search(r'\bFOR\s+([A-Z0-9\&\.\-\s]{3,})', q_up)
+            if m_for:
+                target = m_for.group(1).strip()
+                for tok in sorted_consignees:
+                    name_part = token_to_name.get(tok, "")
+                    if target in name_part or target == tok:
+                        mentioned_consignee_tokens.add(tok)
+ 
+        except Exception:
+            mentioned_consignee_tokens = set()
+ 
+    # If user explicitly referenced a consignee, enforce a strict token/code-only filter
+    if mentioned_consignee_tokens:
+        # Build strict keys to match against cell parts (exact matches only)
+        strict_keys = set()
+        for tok in mentioned_consignee_tokens:
+            strict_keys.add(tok)  # full token e.g., "EDDIE BAUER LLC(0045831)"
+            code = token_to_code.get(tok)
+            name = token_to_name.get(tok)
+            if code:
+                strict_keys.add(code)               # "0045831"
+                strict_keys.add(code.lstrip('0'))   # "45831" (if user omitted leading zeros)
+            if name:
+                strict_keys.add(name)               # also allow exact name token if dataset sometimes stores name-only
+ 
+        # Normalize keys to uppercase & stripped
+        strict_keys = {k.upper().strip() for k in strict_keys if k}
+ 
+        def row_has_consignee(cell):
+            if pd.isna(cell):
+                return False
+            parts = [x.strip().upper() for x in re.split(r',\s*', str(cell)) if x.strip()]
+            # Keep only exact matches against strict_keys (this prevents returning other consignees)
+            for p in parts:
+                # direct exact match
+                if p in strict_keys:
+                    return True
+                # sometimes parts might be stored as "NAME(CODE)" and strict_keys include code or name separately,
+                # so check whether the code in parentheses matches a strict key
+                m = re.search(r'\(([A-Z0-9\- ]+)\)\s*$', p)
+                if m:
+                    code_in_cell = m.group(1).strip().upper()
+                    if code_in_cell in strict_keys or code_in_cell.lstrip('0') in strict_keys:
+                        return True
+                # also check name part equality
+                name_part = re.sub(r'\([^\)]*\)', '', p).strip().upper()
+                if name_part and name_part in strict_keys:
+                    return True
+            return False
+ 
+        cons_mask = df['consignee_code_multiple'].apply(row_has_consignee)
+        df = df[cons_mask].copy()
+        if df.empty:
+            return f"No containers found for consignee(s) {sorted(list(mentioned_consignee_tokens))} in the dataset."
+ 
+    # 4) ETA selection (revised_eta > eta_dp)
+    date_priority = [c for c in ['revised_eta', 'eta_dp'] if c in df.columns]
+    if not date_priority:
+        return "No ETA columns (revised_eta / eta_dp) found in the data to compute upcoming arrivals."
+ 
+    parse_cols = date_priority.copy()
+    if 'ata_dp' in df.columns:
+        parse_cols.append('ata_dp')
+    df = ensure_datetime(df, parse_cols)
+ 
+    if 'revised_eta' in df.columns and 'eta_dp' in df.columns:
+        df['eta_for_filter'] = df['revised_eta'].where(df['revised_eta'].notna(), df['eta_dp'])
+    elif 'revised_eta' in df.columns:
+        df['eta_for_filter'] = df['revised_eta']
+    else:
+        df['eta_for_filter'] = df['eta_dp']
+ 
+    # 5) Date window and exclude already-arrived
+    today = pd.Timestamp.today().normalize()
+    end_date = today + pd.Timedelta(days=days)
+    date_mask = df['eta_for_filter'].notna() & (df['eta_for_filter'] >= today) & (df['eta_for_filter'] <= end_date)
+    if 'ata_dp' in df.columns:
+        date_mask &= df['ata_dp'].isna()
+    upcoming = df[date_mask].copy()
+ 
+    if upcoming.empty:
+        loc = ""
+        if port_code:
+            loc = f" at {port_code}"
+        elif port_city:
+            loc = f" at {port_city}"
+        return f"No containers scheduled to arrive{loc} between {today.strftime('%Y-%m-%d')} and {end_date.strftime('%Y-%m-%d')} for your authorized consignees."
+ 
+    # 6) Output
+    cols = ["container_number", "discharge_port", "revised_eta", "eta_dp", "eta_for_filter"]
+    if "consignee_code_multiple" in upcoming.columns:
+        cols.append("consignee_code_multiple")
+    cols = [c for c in cols if c in upcoming.columns]
+    out_df = upcoming[cols].sort_values('eta_for_filter').head(50).copy()
+ 
+    for d in ['revised_eta', 'eta_dp', 'eta_for_filter']:
+        if d in out_df.columns and pd.api.types.is_datetime64_any_dtype(out_df[d]):
+            out_df[d] = out_df[d].dt.strftime('%Y-%m-%d')
+    if 'eta_for_filter' in out_df.columns:
+        out_df = out_df.drop(columns=['eta_for_filter'])
+ 
+    return out_df.where(pd.notnull(out_df), None).to_dict(orient='records')
 
 
 
@@ -4612,6 +4875,7 @@ TOOLS = [
         description="Find containers arriving at a specific final destination/distribution center (FD/DC) within a timeframe. Handles queries like 'containers arriving at FD Nashville in next 3 days' or 'list containers to DC Phoenix next week'."
     )
 ]
+
 
 
 
