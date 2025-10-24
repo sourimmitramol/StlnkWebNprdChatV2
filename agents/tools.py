@@ -2977,7 +2977,8 @@ def get_upcoming_pos(query: str, consignee_code: str = None) -> str:
     """
     List PO's scheduled to ship in the next X days (ETA window, not yet arrived).
     - query: natural language query (may include days, location, PO token, consignee name, etc.)
-    - consignee_code: optional exact consignee code to force filtering by consignee code (e.g. "0000866")
+    - consignee_code: optional exact consignee code or comma-separated codes to force filtering
+      by consignee code (e.g. "0000866" or "0045831,0043881")
     Returns:
       - list[dict] rows with PO / ETA / destination / consignee, OR
       - short string message (e.g. "No upcoming POs..." or "Yes — PO ... arrives on ...")
@@ -3003,7 +3004,7 @@ def get_upcoming_pos(query: str, consignee_code: str = None) -> str:
     df = _df()
  
     # ----------------------
-    # DATE selection using revised_eta / eta_dp (minimal changes):
+    # DATE selection using revised_eta / eta_dp
     # ----------------------
     date_priority = [c for c in ['revised_eta', 'eta_dp'] if c in df.columns]
     if not date_priority:
@@ -3047,58 +3048,153 @@ def get_upcoming_pos(query: str, consignee_code: str = None) -> str:
         return s.lstrip('0')
  
     # ----------------------
-    # 1) if caller provided consignee_code (exact code), filter by that code only
+    # 1) if caller provided consignee_code (exact code(s)), filter by those code(s)
+    #    Accepts comma-separated list and matches tokens or parenthetical codes (with/without leading zeros)
     if consignee_code:
         cc = str(consignee_code).strip().upper()
-        # match whole token inside consignee_code_multiple (split on commas)
+        cc_list = [c.strip().upper() for c in cc.split(',') if c.strip()]
+        cc_set = set(cc_list)
         if 'consignee_code_multiple' in candidate_df.columns:
             def row_has_code(cell):
                 if pd.isna(cell):
                     return False
-                parts = [p.strip().upper() for p in re.split(r',\s*', str(cell)) if p.strip()]
-                return cc in parts
+                parts = {p.strip().upper() for p in re.split(r',\s*', str(cell)) if p.strip()}
+                for part in parts:
+                    # direct exact match (some datasets may store code-only tokens)
+                    if part in cc_set:
+                        return True
+                    # check parenthetical code in tokens like "NAME(0045831)"
+                    m = re.search(r'\(([A-Z0-9\- ]+)\)\s*$', part)
+                    if m:
+                        code = m.group(1).strip().upper()
+                        # match with or without leading zeros; also check normalized variants
+                        if code in cc_set or code.lstrip('0') in cc_set or code in {c.lstrip('0') for c in cc_set}:
+                            return True
+                return False
             candidate_df = candidate_df[candidate_df['consignee_code_multiple'].apply(row_has_code)].copy()
             if candidate_df.empty:
-                return f"No upcoming POs for consignee code {cc} in the next {days} days."
+                return f"No upcoming POs for consignee code(s) {', '.join(cc_list)} in the next {days} days."
         else:
             return "Dataset does not contain 'consignee_code_multiple' to filter by consignee code."
  
-    # 2) detect if query mentions a consignee name (e.g., "WILSON SPORTING GOODS EUROPE")
-    #    If yes, filter rows that include that name inside consignee_code_multiple.
+    # ----------------------
+    # 2) detect if query mentions a consignee name (improved & minimal)
+    #    If yes, map name -> dataset token(s) (e.g., "EDDIE BAUER LLC" -> "EDDIE BAUER LLC(0045831)")
+    #    and then apply a strict filter so we only return rows for that dataset token/code.
     if 'consignee_code_multiple' in candidate_df.columns:
-        # build list of unique parts for matching (uppercased)
         try:
+            # Build token sets and auxiliary maps (token -> name_part, token -> code_in_paren)
             all_cons_parts = set()
+            token_to_name = {}
+            token_to_code = {}
+ 
             for raw in candidate_df['consignee_code_multiple'].dropna().astype(str).tolist():
                 for part in re.split(r',\s*', raw):
                     p = part.strip()
-                    if p:
-                        all_cons_parts.add(p.upper())
-            # prefer longest matches to avoid substrings
+                    if not p:
+                        continue
+                    tok = p.upper()
+                    all_cons_parts.add(tok)
+                    m_code = re.search(r'\(([A-Z0-9\- ]+)\)\s*$', tok)
+                    code = m_code.group(1).strip() if m_code else None
+                    name_part = re.sub(r'\([^\)]*\)', '', tok).strip()
+                    token_to_name[tok] = name_part
+                    token_to_code[tok] = code
+ 
+            # prefer longest matches to avoid substring collisions
             sorted_cons = sorted(all_cons_parts, key=lambda x: -len(x))
-            matched_cons = set()
+            mentioned_consignee_tokens = set()
+ 
+            # 2a) verbatim token in query (old behavior)
             for cand in sorted_cons:
-                # match as whole phrase in query
                 if re.search(r'\b' + re.escape(cand) + r'\b', query_upper):
-                    matched_cons.add(cand)
-            if matched_cons:
-                def row_has_cons(cell):
+                    mentioned_consignee_tokens.add(cand)
+ 
+            # 2b) numeric code matches inside parentheses if present (preserve leading zeros; tolerate omitted zeros)
+            numeric_tokens = [t for t in sorted_cons if token_to_code.get(t) and re.fullmatch(r'\d+', token_to_code[t])]
+            if numeric_tokens:
+                num_q_tokens = re.findall(r'\b0*\d+\b', query_upper)
+                for qnum in num_q_tokens:
+                    for tok in numeric_tokens:
+                        code = token_to_code.get(tok)
+                        if not code:
+                            continue
+                        if qnum == code or qnum.lstrip('0') == code.lstrip('0'):
+                            mentioned_consignee_tokens.add(tok)
+ 
+            # 2c) Loose but conservative name matching:
+            #      - exact phrase match of the name_part, or
+            #      - multi-word/long-word heuristic (>=2 words match OR a single long distinctive word)
+            q_clean = re.sub(r'[^A-Z0-9\s]', ' ', query_upper)
+            q_words = [w for w in re.split(r'\s+', q_clean) if len(w) >= 3]
+ 
+            for tok in sorted_cons:
+                name_part = token_to_name.get(tok, "")
+                if not name_part:
+                    continue
+                # exact phrase match
+                if re.search(r'\b' + re.escape(name_part) + r'\b', query_upper):
+                    mentioned_consignee_tokens.add(tok)
+                    continue
+                # word-count heuristic
+                matches = sum(1 for w in q_words if w in name_part)
+                if matches >= 2 or any((w in name_part and len(w) >= 4) for w in q_words):
+                    mentioned_consignee_tokens.add(tok)
+ 
+            # 2d) "for <name>" fallback
+            m_for = re.search(r'\bFOR\s+([A-Z0-9\&\.\-\s]{3,})', query_upper)
+            if m_for:
+                target = m_for.group(1).strip()
+                for tok in sorted_cons:
+                    name_part = token_to_name.get(tok, "")
+                    if target in name_part or target == tok:
+                        mentioned_consignee_tokens.add(tok)
+ 
+            # If user explicitly referenced a consignee, enforce strict token/code-only filtering
+            if mentioned_consignee_tokens:
+                strict_keys = set()
+                for tok in mentioned_consignee_tokens:
+                    strict_keys.add(tok)  # exact dataset token
+                    code = token_to_code.get(tok)
+                    name = token_to_name.get(tok)
+                    if code:
+                        strict_keys.add(code)               # "0045831"
+                        strict_keys.add(code.lstrip('0'))   # "45831"
+                    if name:
+                        strict_keys.add(name)               # "EDDIE BAUER LLC" (if stored as name-only)
+                strict_keys = {k.upper().strip() for k in strict_keys if k}
+ 
+                def row_has_cons_strict(cell):
                     if pd.isna(cell):
                         return False
                     parts = [p.strip().upper() for p in re.split(r',\s*', str(cell)) if p.strip()]
-                    # If candidate stored "0000866|WILSON SPORTING GOODS EUROPE" this still works because we match substring
                     for p in parts:
-                        for mcons in matched_cons:
-                            if mcons == p or mcons in p:
+                        # direct exact match
+                        if p in strict_keys:
+                            return True
+                        # check code inside parentheses in the cell token
+                        m = re.search(r'\(([A-Z0-9\- ]+)\)\s*$', p)
+                        if m:
+                            code_in_cell = m.group(1).strip().upper()
+                            if code_in_cell in strict_keys or code_in_cell.lstrip('0') in strict_keys:
                                 return True
+                        # check name-part equality
+                        name_part = re.sub(r'\([^\)]*\)', '', p).strip().upper()
+                        if name_part and name_part in strict_keys:
+                            return True
                     return False
-                candidate_df = candidate_df[candidate_df['consignee_code_multiple'].apply(row_has_cons)].copy()
+ 
+                candidate_df = candidate_df[candidate_df['consignee_code_multiple'].apply(row_has_cons_strict)].copy()
                 if candidate_df.empty:
-                    return f"No upcoming POs for consignee {', '.join(sorted(matched_cons))} in next {days} days."
+                    return f"No upcoming POs for consignee {', '.join(sorted(mentioned_consignee_tokens))} in next {days} days."
+ 
         except Exception:
+            # fail-safe: do not alter candidate_df if this block errors
             pass
  
+    # ----------------------
     # 3) detect port/location tokens in query (USLAX, (USLAX), Los Angeles, Singapore, etc.)
+    # ----------------------
     port_cols = [c for c in ["discharge_port", "vehicle_arrival_lcn", "final_destination", "place_of_delivery"] if c in candidate_df.columns]
     if port_cols:
         location_mask = pd.Series(False, index=candidate_df.index, dtype=bool)
@@ -3123,7 +3219,7 @@ def get_upcoming_pos(query: str, consignee_code: str = None) -> str:
                 return True
             return False
  
-        # try tokens first
+        # try code tokens first
         for tok in candidate_tokens:
             tok_mask = pd.Series(False, index=candidate_df.index)
             for col in port_cols:
@@ -3192,7 +3288,9 @@ def get_upcoming_pos(query: str, consignee_code: str = None) -> str:
     if candidate_df.empty:
         return f"No upcoming POs in the next {days} days."
  
-    # 4) PO-specific queries: detect if the user asked about a particular PO token (e.g. "is 5302816722 arriving...").
+    # ----------------------
+    # 4) PO-specific queries: detect if the user asked about a particular PO token
+    # ----------------------
     po_tokens = re.findall(r'\b(?:PO[-]?)?(\d{5,})\b', query_upper)  # capture long digit tokens
     if not po_tokens:
         alt_tokens = re.findall(r'\b[A-Z]*[-#]?\d{5,}[A-Z]*\b', query_upper)
@@ -4875,6 +4973,7 @@ TOOLS = [
         description="Find containers arriving at a specific final destination/distribution center (FD/DC) within a timeframe. Handles queries like 'containers arriving at FD Nashville in next 3 days' or 'list containers to DC Phoenix next week'."
     )
 ]
+
 
 
 
