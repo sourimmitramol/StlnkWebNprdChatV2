@@ -14,7 +14,7 @@ def extract_container_number(text: str) -> Optional[str]:
     """
     patterns = [
         r'container\s*([A-Z0-9]+)',          # with the word “container”
-        r'([A-Z]{4}\d{7})',                  # just the raw 4‑letters + 7‑digits
+        r'([A-Z]{4,6}\d{7,20})',                  # just the raw 4‑letters + 7‑digits
         r'\b(\d{7,20})\b'                    # purely numerical (7-20 digits, adjust as needed)
     ]
     for pat in patterns:
