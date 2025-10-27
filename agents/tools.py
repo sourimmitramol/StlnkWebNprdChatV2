@@ -1946,6 +1946,7 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
     import pandas as pd
 
     query = (question or "")
+    # Assume _df() and ensure_datetime() are defined elsewhere and available
     df = _df()
     df = ensure_datetime(df, ["eta_dp", "ata_dp"])
 
@@ -2089,17 +2090,17 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
     # Delay filter parsing (strict numeric & range detection)
     # -----------------------
     range_match = re.search(r"(\d{1,4})\s*[-–—]\s*(\d{1,4})\s*days?\b", q, re.IGNORECASE)
-	strictly_less_match = re.search(r"\b(?:less\s+than|under|below|<)\s*(\d{1,4})\s*days?\b", q, re.IGNORECASE)
-	up_to_match = re.search(r"\b(?:up\s*to|within|no\s*more\s*than|<=)\s*(\d{1,4})\s*days?\b", q, re.IGNORECASE)
-	more_than_match = re.search(r"\b(?:more\s+than|over|>)\s*(\d{1,4})\s*days?\b", q, re.IGNORECASE)
-	plus_sign_match = re.search(r"\b(\d{1,4})\s*\+\s*days?\b", q, re.IGNORECASE)
-	at_least_explicit = re.search(r"\b(?:at\s+least|>=|minimum)\s*(\d{1,4})\s*days?\b", q, re.IGNORECASE)
-	or_more_match = re.search(r"\b(\d{1,4})\s*days?\s*(?:or\s+more|and\s+more|or\s+above)\b", q, re.IGNORECASE)
-	exact_phrase_match = re.search(r"\b(?:delayed|late|overdue|behind)\s+by\s+(\d{1,4})\s+days?\b", q, re.IGNORECASE)
+    strictly_less_match = re.search(r"\b(?:less\s+than|under|below|<)\s*(\d{1,4})\s*days?\b", q, re.IGNORECASE)
+    up_to_match = re.search(r"\b(?:up\s*to|within|no\s*more\s*than|<=)\s*(\d{1,4})\s*days?\b", q, re.IGNORECASE)
+    more_than_match = re.search(r"\b(?:more\s+than|over|>)\s*(\d{1,4})\s*days?\b", q, re.IGNORECASE)
+    plus_sign_match = re.search(r"\b(\d{1,4})\s*\+\s*days?\b", q, re.IGNORECASE)
+    at_least_explicit = re.search(r"\b(?:at\s+least|>=|minimum)\s*(\d{1,4})\s*days?\b", q, re.IGNORECASE)
+    or_more_match = re.search(r"\b(\d{1,4})\s*days?\s*(?:or\s+more|and\s+more|or\s+above)\b", q, re.IGNORECASE)
+    exact_phrase_match = re.search(r"\b(?:delayed|late|overdue|behind)\s+by\s+(\d{1,4})\s+days?\b", q, re.IGNORECASE)
 
-	# plain_days_match must be evaluated LAST (fallback) to avoid catching numbers
-	# that are part of a more specific expression like "more than 5 days".
-	plain_days_match = re.search(r"\b(\d{1,4})\s+days?\b(?:\s*(?:late|delayed|overdue|behind))?", q, re.IGNORECASE)
+    # plain_days_match must be evaluated LAST (fallback) to avoid catching numbers
+    # that are part of a more specific expression like "more than 5 days".
+    plain_days_match = re.search(r"\b(\d{1,4})\s+days?\b(?:\s*(?:late|delayed|overdue|behind))?", q, re.IGNORECASE)
 
     # Apply logic
     if range_match:
@@ -2141,7 +2142,7 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
     # -----------------------
     cols = ["container_number", "eta_dp", "ata_dp", "delay_days",
             "consignee_code_multiple", "discharge_port"]
-    
+
     cols = [c for c in cols if c in delayed_df.columns]
 
     out = delayed_df[cols].sort_values("delay_days", ascending=False).copy()
@@ -5237,6 +5238,7 @@ TOOLS = [
         description="Find containers arriving at a specific final destination/distribution center (FD/DC) within a timeframe. Handles queries like 'containers arriving at FD Nashville in next 3 days' or 'list containers to DC Phoenix next week'."
     )
 ]
+
 
 
 
