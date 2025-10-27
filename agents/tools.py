@@ -818,26 +818,80 @@ def get_hot_upcoming_arrivals(query: str) -> str:
 
 
 
-def check_transit_status(query: str) -> str:
+def check_transit_status(query: str, consignee_code: str = None, **kwargs) -> str:
     """Question 14: Check if cargo/PO is currently in transit"""
+   
+    # Check if query is about transit time
+    if isinstance(query, str) and "taking more than" in query.lower() and "days of transit" in query.lower():
+        # Extract the number of days
+        days_match = re.search(r"more than (\d+) days", query.lower())
+        days = int(days_match.group(1)) if days_match else 10
+       
+        df = _df()  # Get dataframe with consignee filtering
+       
+        # Apply additional consignee filter if provided
+        if consignee_code and "consignee_code_multiple" in df.columns:
+            codes = [c.strip() for c in str(consignee_code).split(",") if c.strip()]
+            mask = pd.Series(False, index=df.index)
+            for c in codes:
+                mask |= df["consignee_code_multiple"].astype(str).str.contains(re.escape(c), na=False)
+            df = df[mask].copy()
+       
+        # Ensure datetime for all required columns
+        df = ensure_datetime(df, ["eta_fd", "etd_lp", "atd_lp"])
+       
+        # Filter containers with eta_fd and either etd_lp or atd_lp
+        valid_df = df[df["eta_fd"].notna() & ((df["etd_lp"].notna()) | (df["atd_lp"].notna()))].copy()
+       
+        # Calculate transit days using conditional logic:
+        # If atd_lp is not null, use eta_fd - atd_lp
+        # Otherwise, use eta_fd - etd_lp
+        valid_df["transit_days"] = valid_df.apply(
+            lambda row: (row["eta_fd"] - row["atd_lp"]).days if pd.notna(row["atd_lp"])
+            else (row["eta_fd"] - row["etd_lp"]).days,
+            axis=1
+        )
+       
+        # Filter for transit_days >= days
+        result_df = valid_df[valid_df["transit_days"] >= days].copy()
+       
+        # Prepare output
+        if result_df.empty:
+            return f"No containers found taking {days} or more days of transit time."
+       
+        cols = ["container_number", "etd_lp", "atd_lp", "eta_fd", "transit_days",
+                "consignee_code_multiple", "discharge_port", "po_number_multiple"]
+        cols = [c for c in cols if c in result_df.columns]
+       
+        out_df = result_df[cols].sort_values("transit_days", ascending=False).head(100).copy()
+       
+        # Format dates
+        for col in ["etd_lp", "atd_lp", "eta_fd"]:
+            if col in out_df.columns and pd.api.types.is_datetime64_any_dtype(out_df[col]):
+                out_df[col] = out_df[col].dt.strftime("%Y-%m-%d")
+       
+        # Return as dictionary
+        return out_df.where(pd.notnull(out_df), None).to_dict(orient="records")
+   
+    # Original PO transit check logic
     po_no = extract_po_number(query)
     if not po_no:
         return "Please specify a valid PO number."
-    
+   
     df = _df()  # Automatically filters by consignee
     po_col = "po_number_multiple" if "po_number_multiple" in df.columns else "po_number"
     rows = df[df[po_col].astype(str).str.contains(po_no, case=False, na=False)]
-    
+   
     if rows.empty:
         return f"No data found for PO {po_no} or you are not authorized to access this PO."
-    
+   
     row = rows.iloc[0]
-    
+   
     # Check if reached final destination or container returned
     fd_reached = pd.notnull(row.get('delivery_date_to_consignee'))
     container_returned = pd.notnull(row.get('empty_container_return_date'))
     departure_confirmed = pd.notnull(row.get('atd_lp'))
-    
+   
     if fd_reached or container_returned:
         return f"PO {po_no} has completed its journey."
     elif departure_confirmed:
@@ -2386,7 +2440,7 @@ def get_upcoming_arrivals(query: str) -> str:
         # Look for city patterns like "at LOS ANGELES" or "in LOS ANGELES"
         city_patterns = [
             r'\b(?:AT|IN|TO)\s+([A-Z][A-Z0-9\s\.\'-]{2,})', # "at LOS ANGELES"
-            r'\b(LOS\s+ANGELES|LONG\s+BEACH|NEW\s+YORK|CHICAGO|SEATTLE)\b' # Common port names
+            r'\b(LOS\s+ANGELES|LONG\s+BEACH|NEW\s+YORK|CHICAGO|SEATTLE|NASHVILLE)\b' # Common port names
         ]
        
         for pattern in city_patterns:
@@ -2400,7 +2454,7 @@ def get_upcoming_arrivals(query: str) -> str:
                     port_city = cand.upper()
                     break
  
-    # Apply strict discharge_port filter
+    # Apply strict discharge_port filter - ONLY use discharge_port column
     if (port_code or port_city) and 'discharge_port' in df.columns:
         dp = df['discharge_port'].astype(str)
         dp_up = dp.str.upper()
@@ -2410,7 +2464,7 @@ def get_upcoming_arrivals(query: str) -> str:
             code_mask = dp_up.str.contains(rf"\({re.escape(port_code)}\)", na=False)
             df = df[code_mask].copy()
             if df.empty:
-                return f"No containers scheduled to arrive at {port_code} in the next {days} days for your authorized consignees."
+                return f"No containers scheduled to come between {pd.Timestamp.today().normalize().strftime('%Y-%m-%d')} and {(pd.Timestamp.today().normalize() + pd.Timedelta(days=days)).strftime('%Y-%m-%d')} at {port_code}"
         elif port_city:
             # Extract city names without the port code part
             dp_clean = dp_up.str.replace(r"\([^\)]+\)", "", regex=True).str.strip()
@@ -2425,7 +2479,7 @@ def get_upcoming_arrivals(query: str) -> str:
            
             df = df[city_mask].copy()
             if df.empty:
-                return f"No containers scheduled to arrive at {port_city} in the next {days} days for your authorized consignees."
+                return f"No containers scheduled to come between {pd.Timestamp.today().normalize().strftime('%Y-%m-%d')} and {(pd.Timestamp.today().normalize() + pd.Timedelta(days=days)).strftime('%Y-%m-%d')} at {port_city}"
  
     # 4) ETA selection (revised_eta > eta_dp)
     date_priority = [c for c in ['revised_eta', 'eta_dp'] if c in df.columns]
@@ -2458,7 +2512,7 @@ def get_upcoming_arrivals(query: str) -> str:
             loc = f" at {port_code}"
         elif port_city:
             loc = f" at {port_city}"
-        return f"No containers scheduled to arrive{loc} between {today.strftime('%Y-%m-%d')} and {end_date.strftime('%Y-%m-%d')} for your authorized consignees."
+        return f"No containers scheduled to come between {today.strftime('%Y-%m-%d')} and {end_date.strftime('%Y-%m-%d')}{loc}"
  
     # 6) Output
     cols = ["container_number", "discharge_port", "revised_eta", "eta_dp", "eta_for_filter"]
@@ -4876,7 +4930,7 @@ TOOLS = [
     Tool(
         name="Check Transit Status",
         func=check_transit_status,
-        description="Check if a PO/cargo is currently in transit"
+        description="Check if a PO/cargo is currently in transit or find containers with transit times exceeding specific thresholds. Handles questions like 'which containers are taking more than X days of transit time?'"
     ),
     Tool(
         name="Get Containers By Carrier",
@@ -4973,6 +5027,7 @@ TOOLS = [
         description="Find containers arriving at a specific final destination/distribution center (FD/DC) within a timeframe. Handles queries like 'containers arriving at FD Nashville in next 3 days' or 'list containers to DC Phoenix next week'."
     )
 ]
+
 
 
 
