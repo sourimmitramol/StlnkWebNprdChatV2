@@ -5133,7 +5133,7 @@ TOOLS = [
     Tool(
         name="Check Transit Status",
         func=check_transit_status,
-        description="Check if a PO/cargo is currently in transit"
+        description="Check if a PO/cargo is currently in transit or find containers with transit times exceeding specific thresholds. Handles questions like 'which containers are taking more than X days of transit time?'"
     ),
     Tool(
         name="Get Containers By Carrier",
@@ -5235,6 +5235,7 @@ TOOLS = [
         description="Find containers arriving at a specific final destination/distribution center (FD/DC) within a timeframe. Handles queries like 'containers arriving at FD Nashville in next 3 days' or 'list containers to DC Phoenix next week'."
     )
 ]
+
 
 
 
