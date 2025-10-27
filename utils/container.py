@@ -57,7 +57,9 @@ def extract_ocean_bl_number(text: str) -> Optional[str]:
     """
     patterns = [
         r'ocean bl\s*([A-Z0-9]+)',            # with the phrase "ocean bl"
-        r'bill of lading\s*([A-Z0-9]+)'      # with the phrase "bill of lading"
+        r'bill of lading\s*([A-Z0-9]+)',      # with the phrase "bill of lading"
+        r'([A-Z]{4,}\d{6,})',                 # alphanumeric pattern (4+ letters + 6+ digits)
+        r'\b([0-9]{6,})\b'                    # purely numerical (6+ digits)
     ]
     for pat in patterns:
         m = re.search(pat, text, flags=re.IGNORECASE)
