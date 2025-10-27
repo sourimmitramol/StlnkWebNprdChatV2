@@ -15,7 +15,7 @@ def extract_container_number(text: str) -> Optional[str]:
     patterns = [
         r'container\s*([A-Z0-9]+)',          # with the word “container”
         r'([A-Z]{4}\d{7})',                  # just the raw 4‑letters + 7‑digits
-        r'\b(\d{7,12})\b'                    # purely numerical (7-12 digits, adjust as needed)
+        r'\b(\d{7,20})\b'                    # purely numerical (7-20 digits, adjust as needed)
     ]
     for pat in patterns:
         m = re.search(pat, text, flags=re.IGNORECASE)
