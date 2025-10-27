@@ -1944,6 +1944,7 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
     import pandas as pd
 
     query = (question or "")
+    # Assume _df() and ensure_datetime() are defined elsewhere and available
     df = _df()
     df = ensure_datetime(df, ["eta_dp", "ata_dp"])
 
@@ -2083,19 +2084,21 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
             return f"No delayed containers at {where} for your authorized consignees."
 
     q = query.lower()
-
     # -----------------------
     # Delay filter parsing (strict numeric & range detection)
     # -----------------------
-    range_match = re.search(r"(\d+)\s*[-–—]\s*(\d+)\s*days?", q)
-    strictly_less_match = re.search(r"(?:less\s+than|under|below|<)\s*(\d+)\s*days?", q)
-    up_to_match = re.search(r"(?:up\s*to|within|no\s*more\s*than|<=)\s*(\d+)\s*days?", q)
-    more_than_match = re.search(r"(?:more\s+than|over|>\s*)(\d+)\s*days?", q)
-    plus_sign_match = re.search(r"\b(\d+)\s*\+\s*days?\b", q)
-    at_least_explicit = re.search(r"(?:at\s+least|>=|minimum)\s*(\d+)\s*days?", q)
-    or_more_match = re.search(r"\b(\d+)\s+days?\s*(?:or\s+more|and\s+more|or\s+above)\b", q)
-    exact_phrase_match = re.search(r"(?:delayed|late|overdue|behind)\s+by\s+(\d+)\s+days?", q)
-    plain_days_match = re.search(r"\b(\d+)\s+days?\b(?:\s*(?:late|delayed|overdue|behind))?", q)
+    range_match = re.search(r"(\d{1,4})\s*[-–—]\s*(\d{1,4})\s*days?\b", q, re.IGNORECASE)
+    strictly_less_match = re.search(r"\b(?:less\s+than|under|below|<)\s*(\d{1,4})\s*days?\b", q, re.IGNORECASE)
+    up_to_match = re.search(r"\b(?:up\s*to|within|no\s*more\s*than|<=)\s*(\d{1,4})\s*days?\b", q, re.IGNORECASE)
+    more_than_match = re.search(r"\b(?:more\s+than|over|>)\s*(\d{1,4})\s*days?\b", q, re.IGNORECASE)
+    plus_sign_match = re.search(r"\b(\d{1,4})\s*\+\s*days?\b", q, re.IGNORECASE)
+    at_least_explicit = re.search(r"\b(?:at\s+least|>=|minimum)\s*(\d{1,4})\s*days?\b", q, re.IGNORECASE)
+    or_more_match = re.search(r"\b(\d{1,4})\s*days?\s*(?:or\s+more|and\s+more|or\s+above)\b", q, re.IGNORECASE)
+    exact_phrase_match = re.search(r"\b(?:delayed|late|overdue|behind)\s+by\s+(\d{1,4})\s+days?\b", q, re.IGNORECASE)
+
+    # plain_days_match must be evaluated LAST (fallback) to avoid catching numbers
+    # that are part of a more specific expression like "more than 5 days".
+    plain_days_match = re.search(r"\b(\d{1,4})\s+days?\b(?:\s*(?:late|delayed|overdue|behind))?", q, re.IGNORECASE)
 
     # Apply logic
     if range_match:
@@ -2137,7 +2140,7 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
     # -----------------------
     cols = ["container_number", "eta_dp", "ata_dp", "delay_days",
             "consignee_code_multiple", "discharge_port"]
-    
+
     cols = [c for c in cols if c in delayed_df.columns]
 
     out = delayed_df[cols].sort_values("delay_days", ascending=False).copy()
@@ -2149,6 +2152,348 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
 
 
 # ...existing code...
+
+
+def get_delayed_bls(question: str = None, consignee_code: str = None, **kwargs) -> str:
+    """
+    Find delayed shipments by ocean BL (ocean_bl_no_multiple).
+    Behaviour mirrors get_delayed_pos:
+      - Supports numeric filters (exact, range, <, >, X+)
+      - Supports consignee_code filtering (comma-separated) and consignee name detection
+      - Supports location filtering (port code/name/fuzzy)
+      - Accepts BL tokens in the query (alphanumeric 4–20 chars, comma-separated in dataset)
+      - If no days mentioned, defaults to 'delayed by at least 7 days'
+    Returns list[dict] with columns like:
+      ocean_bl_no_multiple, container_number, eta_dp, revised_eta, ata_dp, delay_days, consignee_code_multiple, discharge_port
+    NOTE: For arrived rows, delay is computed as:
+      - ata_dp - revised_eta (if revised_eta column exists and value present)
+      - otherwise ata_dp - eta_dp
+    For not-yet-arrived rows delay is computed as today - eta_dp (unchanged).
+    """
+    import re
+    import pandas as pd
+    try:
+        from rapidfuzz import fuzz, process
+    except Exception:
+        fuzz = process = None
+ 
+    query = (question or "")
+    df = _df()
+ 
+    # store requested consignee codes (uppercased) for later validation at BL-aggregation time
+    requested_codes = []
+    if consignee_code:
+        requested_codes = [c.strip().upper() for c in str(consignee_code).split(",") if c.strip()]
+ 
+    # find BL column robustly
+    try:
+        bl_col = _find_ocean_bl_col(df) or ("ocean_bl_no_multiple" if "ocean_bl_no_multiple" in df.columns else None)
+    except Exception:
+        bl_col = "ocean_bl_no_multiple" if "ocean_bl_no_multiple" in df.columns else None
+ 
+    if not bl_col or bl_col not in df.columns:
+        return "Ocean BL column (ocean_bl_no_multiple) not found in dataset."
+ 
+    # date columns used to compute delay -- include revised_eta variants
+    date_cols = ["eta_dp", "ata_dp", "predictive_eta_fd", "revised_eta", "revised_eta_fd", "eta_fd"]
+    df = ensure_datetime(df, [c for c in date_cols if c in df.columns])
+ 
+    # detect which revised column exists (prefer revised_eta)
+    revised_col = None
+    for cand in ("revised_eta", "revised_eta_fd"):
+        if cand in df.columns:
+            revised_col = cand
+            break
+ 
+    # -----------------------
+    # Apply consignee filter if provided (row-level scoping)
+    # -----------------------
+    if requested_codes and "consignee_code_multiple" in df.columns:
+        mask = pd.Series(False, index=df.index)
+        for c in requested_codes:
+            mask |= df["consignee_code_multiple"].astype(str).str.upper().str.contains(re.escape(c), na=False)
+        df = df[mask].copy()
+    if df.empty:
+        return "No BL records found for provided consignee codes."
+ 
+    # -----------------------
+    # Detect consignee name in question and filter (best-effort)
+    # -----------------------
+    consignee_name_filter = None
+    if "consignee_code_multiple" in df.columns:
+        all_names = df["consignee_code_multiple"].dropna().astype(str).unique().tolist()
+        q_up = query.upper()
+        for name in all_names:
+            clean_name = re.sub(r"\([^)]*\)", "", name).strip().upper()
+            if clean_name and clean_name in q_up:
+                consignee_name_filter = clean_name
+                break
+        if consignee_name_filter:
+            df = df[df["consignee_code_multiple"].astype(str).str.upper().str.contains(consignee_name_filter)]
+            if df.empty:
+                return f"No BL records found for consignee '{consignee_name_filter}'."
+ 
+    # -----------------------
+    # Compute delay_days:
+    #  - For rows with ata_dp: use revised_eta if present for that row else fallback to eta_dp
+    #  - For rows without ata_dp but with eta: use today - eta (overdue)
+    # -----------------------
+    today = pd.Timestamp.now().normalize()
+ 
+    # select primary ETA candidate column (eta_dp preferred)
+    eta_col = None
+    if "eta_dp" in df.columns:
+        eta_col = "eta_dp"
+    elif "eta_fd" in df.columns:
+        eta_col = "eta_fd"
+ 
+    ata_col = "ata_dp" if "ata_dp" in df.columns else ("predictive_eta_fd" if ("predictive_eta_fd" in df.columns and "eta_fd" in df.columns) else None)
+ 
+    # default zero if no eta at all
+    if eta_col is None:
+        df["delay_days"] = pd.Series(0, index=df.index)
+    else:
+        df["delay_days"] = pd.NA
+        # arrived rows: compute using revised_eta (row-level) when available else eta_col
+        if ata_col and ata_col in df.columns:
+            mask_arrived = df[ata_col].notna() & (df[eta_col].notna() | (revised_col is not None and df[revised_col].notna()))
+            if mask_arrived.any():
+                if revised_col:
+                    baseline = df[revised_col].where(df[revised_col].notna(), df[eta_col])
+                else:
+                    baseline = df[eta_col]
+                df.loc[mask_arrived, "delay_days"] = (df.loc[mask_arrived, ata_col] - baseline.loc[mask_arrived]).dt.days
+        # not-yet-arrived rows: overdue relative to today
+        mask_not_arrived = (~df[eta_col].isna()) & (~(df[ata_col].notna() if (ata_col and ata_col in df.columns) else False))
+        df.loc[mask_not_arrived, "delay_days"] = (today - df.loc[mask_not_arrived, eta_col]).dt.days
+ 
+        # finalize
+        df["delay_days"] = df["delay_days"].fillna(0).astype(int)
+ 
+    arrived = df.copy()
+ 
+    # -----------------------
+    # BL token detection (if user referenced a BL directly)
+    # -----------------------
+    q_up = query.upper()
+    query_bl_tokens = set(re.findall(r'\b[A-Z0-9]{4,20}\b', q_up))
+    matched_bl_norms = set()
+    matched_originals = set()
+    if query_bl_tokens:
+        norm_to_originals = {}
+        for raw in arrived[bl_col].dropna().astype(str).tolist():
+            for part in re.split(r',\s*', raw):
+                p = part.strip()
+                if not p:
+                    continue
+                try:
+                    norm = _normalize_bl_token(p)
+                except Exception:
+                    norm = re.sub(r'[^A-Z0-9]', '', p.upper())
+                if not norm:
+                    continue
+                norm_to_originals.setdefault(norm, set()).add(p.upper())
+        for tok in query_bl_tokens:
+            tok_norm = re.sub(r'[^A-Z0-9]', '', tok.upper())
+            if tok_norm in norm_to_originals:
+                matched_bl_norms.add(tok_norm)
+                matched_originals.update(norm_to_originals.get(tok_norm, set()))
+            else:
+                if process and len(tok) >= 4:
+                    all_orig = list({o for s in norm_to_originals.values() for o in s})
+                    if all_orig:
+                        best = process.extractOne(tok, all_orig, scorer=fuzz.token_set_ratio, score_cutoff=85)
+                        if best:
+                            cand = re.sub(r'[^A-Z0-9]', '', best[0].upper())
+                            if cand in norm_to_originals:
+                                matched_bl_norms.add(cand)
+                                matched_originals.update(norm_to_originals.get(cand, set()))
+    if matched_bl_norms:
+        def row_has_norm_bl(cell):
+            if pd.isna(cell):
+                return False
+            parts = [p.strip() for p in re.split(r',\s*', str(cell)) if p.strip()]
+            for p in parts:
+                try:
+                    n = _normalize_bl_token(p)
+                except Exception:
+                    n = re.sub(r'[^A-Z0-9]', '', p.upper())
+                if n in matched_bl_norms:
+                    return True
+            return False
+        arrived = arrived[arrived[bl_col].apply(row_has_norm_bl)].copy()
+        if arrived.empty:
+            return f"No delayed BLs matching {sorted(list(matched_originals or matched_bl_norms))} for your authorized consignees."
+ 
+    # -----------------------
+    # Location filter (code, name, or fuzzy)
+    # -----------------------
+    port_cols = [c for c in ["discharge_port", "final_destination", "place_of_delivery", "load_port"] if c in arrived.columns]
+ 
+    def _extract_loc_code_and_name_for_bl(q: str):
+        q_up = (q or "").upper()
+        m = re.search(r"\(([A-Z0-9]{3,6})\)", q_up)
+        if m:
+            return m.group(1), None
+        cand_codes = set(re.findall(r"\b[A-Z0-9]{3,6}\b", q_up))
+        if port_cols and cand_codes:
+            known_codes = set()
+            for c in port_cols:
+                vals = arrived[c].dropna().astype(str).str.upper()
+                known_codes |= set(re.findall(r"\(([A-Z0-9]{3,6})\)", " ".join(vals.tolist())))
+            for code in cand_codes:
+                if code in known_codes:
+                    return code, None
+        m2_list = re.findall(r"(?:\b(?:ON|AT|IN|TO|FROM)\s+([A-Z][A-Z0-9\s\.,'\-]{2,}))", q_up)
+        if m2_list:
+            cand = max(m2_list, key=len).strip()
+            cand = re.sub(r"(?:\d+\s*DAYS?|DELAY|LATE|BEHIND|ETA|BY).*", "", cand).strip()
+            if cand:
+                return None, cand
+        if port_cols and process:
+            all_ports = set()
+            for c in port_cols:
+                vals = arrived[c].dropna().astype(str)
+                vals = vals.str.replace(r"\([^)]*\)", "", regex=True).str.strip().str.upper().tolist()
+                all_ports.update(vals)
+            if all_ports:
+                best = process.extractOne(q_up, list(all_ports), scorer=fuzz.token_set_ratio, score_cutoff=85)
+                if best:
+                    return None, best[0]
+        return None, None
+ 
+    code, name = _extract_loc_code_and_name_for_bl(query)
+    if code or name:
+        loc_mask = pd.Series(False, index=arrived.index)
+        if code:
+            for c in port_cols:
+                loc_mask |= arrived[c].astype(str).str.upper().str.contains(rf"\({re.escape(code)}\)", na=False)
+        else:
+            tokens = [t for t in re.split(r"\W+", (name or "")) if len(t) >= 3]
+            for c in port_cols:
+                col_vals = arrived[c].astype(str).str.upper()
+                cond = pd.Series(True, index=arrived.index)
+                for t in tokens:
+                    cond &= col_vals.str.contains(re.escape(t), na=False)
+                loc_mask |= cond
+        arrived = arrived[loc_mask].copy()
+        if arrived.empty:
+            where = f"{code or name}"
+            return f"No delayed BLs found at {where} for your authorized consignees."
+ 
+    # -----------------------
+    # Delay day filters (order: range, <, >, X+, >=, ==, default >=7)
+    # -----------------------
+    q = query.lower()
+    range_match = re.search(r"(\d+)\s*[-–—]\s*(\d+)\s*days?", q)
+    less_than = re.search(r"(?:less\s+than|under|below|<)\s*(\d+)\s*days?", q)
+    more_than = re.search(r"(?:more\s+than|over|above|>\s*)(\d+)\s*days?", q)
+    plus_sign = re.search(r"\b(\d+)\s*\+\s*days?\b", q)
+    at_least = re.search(r"(?:at\s+least|>=|minimum)\s*(\d+)\s*days?", q)
+    exact = re.search(r"(?:exactly|by|of|in)\s+(\d+)\s+days?", q)
+ 
+    if range_match:
+        d1, d2 = int(range_match.group(1)), int(range_match.group(2))
+        low, high = min(d1, d2), max(d1, d2)
+        delayed = arrived[(arrived["delay_days"] >= low) & (arrived["delay_days"] <= high)]
+    elif less_than:
+        d = int(less_than.group(1))
+        delayed = arrived[(arrived["delay_days"] > 0) & (arrived["delay_days"] < d)]
+    elif more_than:
+        d = int(more_than.group(1))
+        delayed = arrived[arrived["delay_days"] > d]  # strictly greater than
+    elif plus_sign:
+        d = int(plus_sign.group(1))
+        delayed = arrived[arrived["delay_days"] >= d]
+    elif at_least:
+        d = int(at_least.group(1))
+        delayed = arrived[arrived["delay_days"] >= d]
+    elif exact:
+        d = int(exact.group(1))
+        delayed = arrived[arrived["delay_days"] == d]
+    else:
+        delayed = arrived[arrived["delay_days"] >= 7]
+ 
+    if delayed.empty:
+        where = f" at {code or name}" if (code or name) else ""
+        return f"No delayed BLs found for your authorized consignees{where}."
+ 
+    # -----------------------
+    # Output formatting & aggregation per BL
+    # Ensure aggregated BL groups include requested consignee(s) if supplied
+    # -----------------------
+    # include revised_col in out_cols if available
+    out_cols = [bl_col, "container_number", "eta_dp", "ata_dp", "delay_days",
+                "consignee_code_multiple", "discharge_port"]
+    if revised_col and revised_col in delayed.columns:
+        # put revised column right after eta_dp for readability
+        idx = out_cols.index("eta_dp") + 1
+        out_cols.insert(idx, revised_col)
+    out_cols = [c for c in out_cols if c in delayed.columns]
+ 
+    if bl_col in delayed.columns:
+        agg = delayed[out_cols].copy()
+        # build agg dict dynamically to include revised_col when present
+        agg_dict = {
+            "container_number": lambda s: ", ".join(sorted(set(s.dropna().astype(str)))),
+            "delay_days": "max",
+            "eta_dp": "first",
+            "ata_dp": "first",
+            "consignee_code_multiple": lambda s: ", ".join(sorted(set([str(x).strip() for x in s.dropna().astype(str)]))),
+            "discharge_port": "first"
+        }
+        if revised_col and revised_col in agg.columns:
+            agg_dict[revised_col] = "first"
+ 
+        agg_group = agg.groupby(bl_col).agg(agg_dict).reset_index()
+ 
+        # If user asked for specific consignee codes, keep only BL groups that contain any of them
+        if requested_codes and "consignee_code_multiple" in agg_group.columns:
+            def group_has_requested_codes(s):
+                s_up = (s or "").upper()
+                for rc in requested_codes:
+                    if re.search(re.escape(rc), s_up):
+                        return True
+                return False
+            agg_group = agg_group[agg_group["consignee_code_multiple"].apply(group_has_requested_codes)].copy()
+            if agg_group.empty:
+                return f"No delayed BLs found for consignee code(s) {', '.join(requested_codes)}."
+ 
+        # format date columns including revised_col
+        for dcol in ["eta_dp", revised_col, "ata_dp"]:
+            if dcol and dcol in agg_group.columns and pd.api.types.is_datetime64_any_dtype(agg_group[dcol]):
+                agg_group[dcol] = agg_group[dcol].dt.strftime("%Y-%m-%d")
+ 
+        # SORT by delay_days descending
+        if "delay_days" in agg_group.columns:
+            agg_group = agg_group.sort_values("delay_days", ascending=False).reset_index(drop=True)
+ 
+        return agg_group.where(pd.notnull(agg_group), None).to_dict(orient="records")
+ 
+    # fallback: row-level results (also sorted)
+    out = delayed[out_cols].sort_values("delay_days", ascending=False).head(200).copy()
+ 
+    # defensive final filter: if requested_codes present ensure rows contain them
+    if requested_codes and "consignee_code_multiple" in out.columns:
+        def row_has_code(cell):
+            if pd.isna(cell):
+                return False
+            s = str(cell).upper()
+            for rc in requested_codes:
+                if re.search(re.escape(rc), s):
+                    return True
+            return False
+        out = out[out["consignee_code_multiple"].apply(row_has_code)].copy()
+        if out.empty:
+            return f"No delayed BLs found for consignee code(s) {', '.join(requested_codes)}."
+ 
+    for dcol in ["eta_dp", revised_col, "ata_dp"]:
+        if dcol and dcol in out.columns and pd.api.types.is_datetime64_any_dtype(out[dcol]):
+            out[dcol] = out[dcol].dt.strftime("%Y-%m-%d")
+ 
+    return out.where(pd.notnull(out), None).to_dict(orient="records")
+
+
 
 
 def get_hot_containers(question: str = None, consignee_code: str = None, **kwargs) -> str:
@@ -2296,11 +2641,11 @@ def get_hot_containers(question: str = None, consignee_code: str = None, **kwarg
 
         arrived["delay_days"] = (arrived["ata_dp"] - arrived["eta_dp"]).dt.days.fillna(0).astype(int)
 
-        range_match = re.search(r"(\d+)\s*[-–—]\s*(\d+)\s*days?", ql)
-        less_than = re.search(r"(?:less\s+than|under|below|<)\s*(\d+)\s*days?", ql)
-        more_than = re.search(r"(?:more\s+than|over|>\s*)(\d+)\s*days?", ql)
-        plus_sign = re.search(r"\b(\d+)\s*\+\s*days?\b", ql)
-        exact = re.search(r"(?:by|of|in)\s+(\d+)\s+days?", ql)
+        range_match = re.search(r"(\d{1,4})\s*[-–—]\s*(\d{1,4})\s*days?\b", ql, re.IGNORECASE)
+        less_than = re.search(r"\b(?:less\s+than|under|below|<)\s*(\d{1,4})\s*days?\b", ql, re.IGNORECASE)
+        more_than = re.search(r"\b(?:more\s+than|over|>)\s*(\d{1,4})\s*days?\b", ql, re.IGNORECASE)
+        plus_sign = re.search(r"\b(\d{1,4})\s*\+\s*days?\b", ql, re.IGNORECASE)
+        exact = re.search(r"\b(?:delayed|late|overdue|behind)\s+by\s+(\d{1,4})\s+days?\b", ql, re.IGNORECASE)
 
         if range_match:
             d1, d2 = int(range_match.group(1)), int(range_match.group(2))
@@ -4976,6 +5321,11 @@ TOOLS = [
            "For example: 'Show my hot containers' or 'List all priority shipments'."),
     ),
     Tool(
+        name="Get Delayed BLs",
+        func=get_delayed_bls,
+        description="Find ocean BLs (ocean_bl_no_multiple) that are delayed. Supports BL tokens in query, consignee filter, location filters and numeric delay filters (e.g., 'delayed by 5 days')."
+    ),
+    Tool(
         name="Get Carrier For PO",
         func=get_carrier_for_po,
         description="Find the final_carrier_name for a PO (matches po_number_multiple / po_number). Use queries like 'who is carrier for PO 5500009022' or '5500009022'."
@@ -5027,6 +5377,7 @@ TOOLS = [
         description="Find containers arriving at a specific final destination/distribution center (FD/DC) within a timeframe. Handles queries like 'containers arriving at FD Nashville in next 3 days' or 'list containers to DC Phoenix next week'."
     )
 ]
+
 
 
 
