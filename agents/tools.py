@@ -2089,15 +2089,41 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
     # -----------------------
     # Delay filter parsing (strict numeric & range detection)
     # -----------------------
-    range_match = re.search(r"(\d+)\s*[-–—]\s*(\d+)\s*days?", q)
-    strictly_less_match = re.search(r"(?:less\s+than|under|below|<)\s*(\d+)\s*days?", q)
-    up_to_match = re.search(r"(?:up\s*to|within|no\s*more\s*than|<=)\s*(\d+)\s*days?", q)
-    more_than_match = re.search(r"(?:more\s+than|over|>\s*)(\d+)\s*days?", q)
-    plus_sign_match = re.search(r"\b(\d+)\s*\+\s*days?\b", q)
-    at_least_explicit = re.search(r"(?:at\s+least|>=|minimum)\s*(\d+)\s*days?", q)
-    or_more_match = re.search(r"\b(\d+)\s+days?\s*(?:or\s+more|and\s+more|or\s+above)\b", q)
-    exact_phrase_match = re.search(r"(?:delayed|late|overdue|behind)\s+by\s+(\d+)\s+days?", q)
-    plain_days_match = re.search(r"\b(\d+)\s+days?\b(?:\s*(?:late|delayed|overdue|behind))?", q)
+    range_match = re.search(r"(\d{1,4})\s*[-–—]\s*(\d{1,4})\s*days?\b", q, re.IGNORECASE)
+
+	strictly_less_match = re.search(
+		r"\b(?:less\s+than|under|below|<)\s*(\d{1,4})\s*days?\b", q, re.IGNORECASE
+	)
+
+	up_to_match = re.search(
+		r"\b(?:up\s*to|within|no\s*more\s*than|<=)\s*(\d{1,4})\s*days?\b", q, re.IGNORECASE
+	)
+
+	more_than_match = re.search(
+		r"\b(?:more\s+than|over|>)\s*(\d{1,4})\s*days?\b", q, re.IGNORECASE
+	)
+
+	plus_sign_match = re.search(
+		r"\b(\d{1,4})\s*\+\s*days?\b", q, re.IGNORECASE
+	)
+
+	at_least_explicit = re.search(
+		r"\b(?:at\s+least|>=|minimum)\s*(\d{1,4})\s*days?\b", q, re.IGNORECASE
+	)
+
+	or_more_match = re.search(
+		r"\b(\d{1,4})\s*days?\s*(?:or\s+more|and\s+more|or\s+above)\b", q, re.IGNORECASE
+	)
+
+	exact_phrase_match = re.search(
+		r"\b(?:delayed|late|overdue|behind)\s+by\s+(\d{1,4})\s+days?\b", q, re.IGNORECASE
+	)
+
+	# plain_days_match must be evaluated LAST (fallback) to avoid catching numbers
+	# that are part of a more specific expression like "more than 5 days".
+	plain_days_match = re.search(
+		r"\b(\d{1,4})\s+days?\b(?:\s*(?:late|delayed|overdue|behind))?", q, re.IGNORECASE
+	)
 
     # Apply logic
     if range_match:
@@ -5235,6 +5261,7 @@ TOOLS = [
         description="Find containers arriving at a specific final destination/distribution center (FD/DC) within a timeframe. Handles queries like 'containers arriving at FD Nashville in next 3 days' or 'list containers to DC Phoenix next week'."
     )
 ]
+
 
 
 
