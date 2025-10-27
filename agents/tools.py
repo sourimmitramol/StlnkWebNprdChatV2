@@ -1512,149 +1512,60 @@ def get_pos_milestone(input_str: str) -> str:
 # ------------------------------------------------------------------
 def get_container_milestones(input_str: str) -> str:
     """
-    Retrieve milestone details for a container, PO, or OBL number.
-    Workflow:
-      1. Search in dataset (container → PO → OBL)
-      2. If not found, detect type via regex + OpenAI fallback
-      3. Re-search based on detected type
+    Retrieve all milestone events for a given container, PO, or OBL number.
+    Search order:
+      1. container_number
+      2. po_number_multiple
+      3. ocean_bl_no_multiple
+    Output:
+      Returns a descriptive text block exactly in your desired format.
     """
     import pandas as pd
-    import re
-    from langchain_community.chat_models import AzureChatOpenAI
-    from langchain.schema import SystemMessage, HumanMessage
-
+ 
     query = str(input_str).strip()
     if not query:
         return "Please provide a container number, PO number, or OBL number."
-
+ 
     df = _df().copy()
-
+ 
     # Normalize required columns
     for col in ["container_number", "po_number_multiple", "ocean_bl_no_multiple"]:
         if col in df.columns:
             df[col] = df[col].astype(str).fillna("").str.strip()
-
-    row = None
+ 
     container_no = None
     header_text = ""
-
-    # -------------------------------
-    # 🔹 Step 1: Direct search (fast)
-    # -------------------------------
-    # 1️⃣ Container
+ 
+    # -----------------------------
+    # 1️⃣ Try direct container match
+    # -----------------------------
     match_container = df[df["container_number"].str.replace(" ", "").str.upper() == query.replace(" ", "").upper()]
     if not match_container.empty:
+        container_no = match_container.iloc[0]["container_number"]
+        header_text = ""  # direct container query, no header
         row = match_container.iloc[0]
-        container_no = row["container_number"]
     else:
-        # 2️⃣ PO
+        # -----------------------------
+        # 2️⃣ Try PO match
+        # -----------------------------
         match_po = df[df["po_number_multiple"].str.contains(query, case=False, na=False)]
         if not match_po.empty:
-            row = match_po.iloc[0]
-            container_no = row["container_number"]
+            container_no = match_po.iloc[0]["container_number"]
             header_text = f"The Container <con>{container_no}</con> is associated with the PO <po>{query}</po> . Status is in below : \n\n"
+            row = match_po.iloc[0]
         else:
-            # 3️⃣ OBL (using robust tokenized matching)
-            def match_obl_number(df, query):
-                """Safely find OBL match by token normalization."""
-                query_norm = query.replace(" ", "").upper()
-                matched_rows = []
-                for _, row in df.iterrows():
-                    val = str(row.get("ocean_bl_no_multiple", "")).strip()
-                    if not val:
-                        continue
-                    # Split by comma, semicolon, slash, space, or pipe
-                    tokens = re.split(r"[,\s;/|]+", val.upper())
-                    tokens = [t.strip() for t in tokens if t.strip()]
-                    # Match exact or prefix variants
-                    if query_norm in tokens or any(t.startswith(query_norm) for t in tokens):
-                        matched_rows.append(row)
-                if matched_rows:
-                    return pd.DataFrame(matched_rows)
-                return pd.DataFrame()
-
-            match_obl = match_obl_number(df, query)
+            # -----------------------------
+            # 3️⃣ Try OBL match
+            # -----------------------------
+            match_obl = df[df["ocean_bl_no_multiple"].str.contains(query, case=False, na=False)]
             if not match_obl.empty:
+                container_no = match_obl.iloc[0]["container_number"]
+                header_text = f"The Container <con>{container_no}</con> is associated with the OBL <obl>{query}</obl> . Status is in below : \n\n"
                 row = match_obl.iloc[0]
-                container_no = row["container_number"]
-                header_text = (
-                    f"The Container <con>{container_no}</con> is associated with the OBL "
-                    f"<obl>{query}</obl> . Status is in below : \n\n"
-                )
-
-    # -------------------------------
-    # 🔹 Step 2: If not found → detect identifier type
-    # -------------------------------
-    if row is None:
-
-        def detect_identifier_type(value: str) -> str:
-            """Hybrid detection: regex first, OpenAI fallback."""
-            val = str(value).strip().upper()
-
-            # --- Regex / rule-based ---
-            if re.fullmatch(r"[A-Z]{4}\d{7}", val):  # container pattern
-                return "container"
-            elif re.fullmatch(r"\d{6,12}", val):  # numeric PO
-                return "po"
-            elif any(prefix in val for prefix in ["ONEY", "OOLU", "HLCU", "MSKU", "EMCU", "CAIU", "TGHU", "TEMU"]):
-                return "obl"
-
-            # --- OpenAI fallback ---
-            try:
-                llm = AzureChatOpenAI(
-                    azure_deployment=settings.AZURE_OPENAI_DEPLOYMENT,
-                    api_version=settings.AZURE_OPENAI_API_VERSION,
-                    temperature=0,
-                    max_tokens=10,
-                )
-                messages = [
-                    SystemMessage(
-                        content=(
-                            "You are a shipping expert. Classify this identifier as one of: "
-                            "'container', 'po', or 'obl'. Return only that word."
-                        )
-                    ),
-                    HumanMessage(content=f"Identifier: {val}"),
-                ]
-                response = llm.invoke(messages)
-                result = response.content.strip().lower()
-                if result not in ["container", "po", "obl"]:
-                    result = "unknown"
-                return result
-            except Exception:
-                return "unknown"
-
-        detected_type = detect_identifier_type(query)
-
-        if detected_type == "container":
-            match_container = df[df["container_number"].str.replace(" ", "").str.upper() == query.replace(" ", "").upper()]
-            if not match_container.empty:
-                row = match_container.iloc[0]
-                container_no = row["container_number"]
-
-        elif detected_type == "po":
-            match_po = df[df["po_number_multiple"].str.contains(query, case=False, na=False)]
-            if not match_po.empty:
-                row = match_po.iloc[0]
-                container_no = row["container_number"]
-                header_text = f"The Container <con>{container_no}</con> is associated with the PO <po>{query}</po> . Status is in below : \n\n"
-
-        elif detected_type == "obl":
-            match_obl = match_obl_number(df, query)
-            if not match_obl.empty:
-                row = match_obl.iloc[0]
-                container_no = row["container_number"]
-                header_text = (
-                    f"The Container <con>{container_no}</con> is associated with the OBL "
-                    f"<obl>{query}</obl> . Status is in below : \n\n"
-                )
-
-        if row is None:
-            return f"No record found for {query} (detected type: {detected_type})."
-
-    # -------------------------------
-    # 🔹 Step 3: Build milestone report
-    # -------------------------------
+            else:
+                return f"No record found for {query}."
+ 
+ 
     milestones = [
         ("<strong>Departed From</strong>", row.get("load_port"), safe_date(row.get("atd_lp"))),
         ("<strong>Arrived at Final Load Port</strong>", row.get("final_load_port"), safe_date(row.get("ata_flp"))),
@@ -1666,17 +1577,31 @@ def get_container_milestones(input_str: str) -> str:
         ("<strong>Delivered at</strong>", row.get("delivery_location_to_consignee"), safe_date(row.get("delivery_date_to_consignee"))),
         ("<strong>Empty Container Returned to</strong>", row.get("empty_container_return_lcn"), safe_date(row.get("empty_container_return_date"))),
     ]
-
-    milestones_df = pd.DataFrame(milestones, columns=["event", "location", "date"]).dropna(subset=["date"])
+ 
+    milestones_df = pd.DataFrame(milestones, columns=["event", "location", "date"])
+    milestones_df = milestones_df.dropna(subset=["date"])
+ 
     if milestones_df.empty:
         return f"No milestones found for container {container_no}."
-
+ 
+    # Sort chronologically
     milestones_df = milestones_df.sort_values("date")
-    latest = milestones_df.iloc[-1]
-    latest_text = f"The Container <con>{container_no}</con> {latest['event']} {latest['location']} on {latest['date']}"
-
+ 
+    # Get the latest milestone
+    last = milestones_df.iloc[-1]
+    latest_text = f"The Container <con>{container_no}</con> {last['event']} {last['location']} on {last['date']}"
+ 
+    # Convert milestone dataframe to string
     milestone_text = milestones_df.to_string(index=False, header=False)
-    return f"{header_text}{latest_text}\n\n<MILESTONE> {milestone_text}."
+ 
+    # Final formatted output
+    result = (
+        f"{header_text}"
+        f"{latest_text}\n\n"
+        f" <MILESTONE> {milestone_text}."
+    )
+ 
+    return result
 
 
 
@@ -5586,6 +5511,7 @@ TOOLS = [
         description="Find containers arriving at a specific final destination/distribution center (FD/DC) within a timeframe. Handles queries like 'containers arriving at FD Nashville in next 3 days' or 'list containers to DC Phoenix next week'."
     )
 ]
+
 
 
 
