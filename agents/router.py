@@ -93,9 +93,10 @@ def route_query(query: str, consignee_codes: list = None) -> str:
         q = query.lower()
         
         # Enhanced container/PO/OBL/Booking detection (do this early)
-        from utils.container import extract_container_number, extract_po_number
+        from utils.container import extract_container_number, extract_po_number, extract_ocean_bl_number
         container_no = extract_container_number(query)
         po_no = extract_po_number(query) 
+        obl_no = extract_ocean_bl_number(query)
 
         # Raju's statement starts from here...
         # ========== PRIORITY 0: SQL Queries for complex analytical questions ==========
@@ -155,7 +156,7 @@ def route_query(query: str, consignee_codes: list = None) -> str:
         
         # ========== PRIORITY 3: Handle carrier queries (NEW - SPECIFIC) ==========
         # Questions 15, 16, 17, 18: Carrier queries for PO/Container/OBL
-        if ("carrier" in q or "who is" in q) and (po_no or container_no or "obl" in q):
+        if ("carrier" in q or "who is" in q) and (po_no or container_no or obl_no in q):
             return get_container_carrier(query)
         
         # ========== PRIORITY 4: Hot containers routing ==========
@@ -199,7 +200,7 @@ def route_query(query: str, consignee_codes: list = None) -> str:
         
         # ========== PRIORITY 14: Question 7 - General field info (MOVED TO END) ==========
         # This is now more specific and won't interfere with carrier queries
-        if any([container_no, po_no]) and not any(keyword in q for keyword in [
+        if any([container_no, po_no, obl_no]) and not any(keyword in q for keyword in [
             "carrier", "status", "milestone", "arrived","track", "delay", "ship", "transit", 
             "supplier", "where", "location","event history", "journey"
         ]):
@@ -226,6 +227,7 @@ def route_query(query: str, consignee_codes: list = None) -> str:
         if consignee_codes and hasattr(threading.current_thread(), 'consignee_codes'):
             delattr(threading.current_thread(), 'consignee_codes')
             logger.debug("Cleaned up consignee codes from thread context")
+
 
 
 
