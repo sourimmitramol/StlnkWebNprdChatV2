@@ -1392,6 +1392,7 @@ def get_containers_by_supplier(query: str) -> str:
 # --- replace the later _normalize_po_token / _po_in_cell definitions with this robust version ---
 def _normalize_po_token(s: str) -> str:
     """Normalize a PO token for comparison: strip, upper, keep alphanumerics."""
+    import re
     if s is None:
         return ""
     s = str(s).strip().upper()
@@ -1400,22 +1401,30 @@ def _normalize_po_token(s: str) -> str:
 def _po_in_cell(cell: str, po_norm: str) -> bool:
     """
     Return True if normalized PO exists in a comma/sep-separated cell.
-    Robust to tokens like 'PO5302816722' vs '5302816722'.
+    Robust to tokens like 'PO5302816722' vs '5302816722' and multi-valued cells.
     """
+    import re
+    import pandas as pd
     if pd.isna(cell) or not po_norm:
         return False
     parts = re.split(r'[,;/\|\s]+', str(cell))
     q_digits = po_norm.isdigit()
     q_strip_po = po_norm[2:] if po_norm.startswith('PO') else po_norm
     for p in parts:
-        tk = _normalize_po_token(p)
-        if tk == po_norm:
+        if not p:
+            continue
+        pn = _normalize_po_token(p)
+        if not pn:
+            continue
+        # exact match
+        if pn == po_norm:
             return True
-        # If query is all digits, allow suffix match of dataset token
-        if q_digits and tk.endswith(po_norm):
-            return True
-        # If query has 'PO' prefix, allow match against numeric tail in dataset token
-        if po_norm.startswith('PO') and (tk == q_strip_po or tk.endswith(q_strip_po)):
+        # allow PO prefix/no prefix equivalence
+        if q_digits and pn.endswith(q_strip_po):
+            # accept PN like PO########## or just ##########
+            if pn == q_strip_po or pn == f"PO{q_strip_po}":
+                return True
+        if not q_digits and po_norm.startswith("PO") and pn == q_strip_po:
             return True
     return False
 
@@ -4704,52 +4713,147 @@ def get_carrier_for_po(query: str) -> str:
         return f"Carrier (final_carrier_name) not found for PO {po} (container {container})."
 
 
-def is_po_hot(query: str) -> str:
+def is_po_hot(query: str, as_records: bool = False) -> str:
     """
     Check whether a PO is marked hot via the container's hot flag.
     Returns a short sentence listing related containers and which are hot.
+    Strictly treat as container-only if a real container number exists (AAAA#########).
+ 
+    If as_records=True, returns list[dict] of matching rows with key columns instead of a sentence.
     """
+    import re
+    import pandas as pd
+ 
+    # 1) Only consider container path if a true container token is present
+    m_con = re.search(r"\b([A-Z]{4}\d{7})\b", str(query).upper())
+    if m_con:
+        container_no = m_con.group(1)
+        df = _df()
+        if 'container_number' not in df.columns:
+            return "Container number column not found in the dataset."
+        norm_con = container_no.replace(" ", "").upper()
+        try:
+            con_mask = df['container_number'].astype(str).str.replace(" ", "", regex=False).str.upper() == norm_con
+        except Exception:
+            con_mask = df['container_number'].astype(str).str.upper() == norm_con
+        matches = df[con_mask].copy()
+        if matches.empty:
+            return f"No data found for container {container_no}."
+        # Identify hot-flag column
+        hot_flag_cols = [c for c in df.columns if 'hot_container_flag' in c.lower()]
+        if not hot_flag_cols:
+            hot_flag_cols = [c for c in df.columns if 'hot_container' in c.lower()]
+        if not hot_flag_cols:
+            return "No hot-container flag column found in the dataset."
+        hot_col = hot_flag_cols[0]
+        def _is_hot_container(v):
+            if pd.isna(v):
+                return False
+            return str(v).strip().upper() in {"Y", "YES", "TRUE", "1", "HOT"}
+        matches = matches.assign(_is_hot=matches[hot_col].apply(_is_hot_container))
+ 
+        # Ensure eta_dp is parsed for formatting
+        if 'eta_dp' in matches.columns:
+            matches = ensure_datetime(matches, ['eta_dp'])
+ 
+        # Build detail records for hot rows
+        det_cols = [c for c in ['container_number', 'po_number_multiple', 'discharge_port', 'eta_dp', hot_col, '_is_hot', 'consignee_code_multiple'] if c in matches.columns]
+        hot_rows = matches[matches['_is_hot']].copy()
+        details = hot_rows[det_cols].copy() if not hot_rows.empty else matches[det_cols].copy()
+ 
+        # Ensure column presence and order (always include these keys)
+        desired_cols = ['container_number', 'po_number_multiple', 'discharge_port', 'eta_dp', hot_col, '_is_hot', 'consignee_code_multiple']
+        for c in desired_cols:
+            if c not in details.columns:
+                details[c] = None
+        details = details[[c for c in desired_cols if c in details.columns]]
+ 
+        if 'eta_dp' in details.columns and pd.api.types.is_datetime64_any_dtype(details['eta_dp']):
+            details['eta_dp'] = details['eta_dp'].dt.strftime('%Y-%m-%d')
+ 
+        # Optional dict output
+        if as_records:
+            return details.where(pd.notnull(details), None).to_dict(orient='records')
+ 
+        return (
+            f"Container {container_no} is HOT."
+            f" Details: {details.where(pd.notnull(details), None).to_dict(orient='records')}"
+            if matches["_is_hot"].any()
+            else f"Container {container_no} is not marked hot."
+        )
+ 
+    # 2) PO path (default)
+    from utils.container import extract_po_number
     po = extract_po_number(query)
     if not po:
-        m = re.search(r'\b([A-Z0-9]{6,12})\b', query.upper())
+        # fallback: capture a 6–12 length alphanumeric that is not a container
+        m = re.search(r'\b([A-Z0-9]{6,12})\b', str(query).upper())
         po = m.group(1) if m else None
     if not po:
         return "Please specify a PO number."
-
+ 
     po_norm = _normalize_po_token(po)
     df = _df()
     po_col = "po_number_multiple" if "po_number_multiple" in df.columns else ("po_number" if "po_number" in df.columns else None)
     if not po_col:
         return "PO column not found in the dataset."
-
+ 
+    # Robust multi-value PO matching
     mask = df[po_col].apply(lambda cell: _po_in_cell(cell, po_norm))
     matches = df[mask].copy()
     if matches.empty:
         return f"No data found for PO {po}."
-
+ 
     # Identify hot-flag column
     hot_flag_cols = [c for c in df.columns if 'hot_container_flag' in c.lower()]
     if not hot_flag_cols:
         hot_flag_cols = [c for c in df.columns if 'hot_container' in c.lower()]
-
     if not hot_flag_cols:
         return "No hot-container flag column found in the dataset."
-
     hot_col = hot_flag_cols[0]
-
+ 
     def _is_hot(v):
         if pd.isna(v):
             return False
         return str(v).strip().upper() in {"Y", "YES", "TRUE", "1", "HOT"}
-
-    matches = matches.assign(_is_hot = matches[hot_col].apply(_is_hot))
-    all_containers = sorted(matches["container_number"].dropna().astype(str).unique().tolist())
-    hot_containers = sorted(matches.loc[matches["_is_hot"], "container_number"].dropna().astype(str).unique().tolist())
-
+ 
+    matches = matches.assign(_is_hot=matches[hot_col].apply(_is_hot))
+ 
+    # Ensure eta_dp is parsed for formatting
+    if 'eta_dp' in matches.columns:
+        matches = ensure_datetime(matches, ['eta_dp'])
+ 
+    # Detail records for hot subset
+    det_cols = [c for c in [po_col, 'container_number', 'po_number_multiple', 'discharge_port', 'eta_dp', hot_col, '_is_hot', 'consignee_code_multiple'] if c in matches.columns]
+    hot_subset = matches[matches['_is_hot']].copy()
+    details = hot_subset[det_cols].copy() if not hot_subset.empty else matches[det_cols].copy()
+ 
+    # Ensure column presence and order (always include these keys)
+    desired_cols = ['container_number', 'po_number_multiple', 'discharge_port', 'eta_dp', hot_col, '_is_hot', 'consignee_code_multiple']
+    for c in desired_cols:
+        if c not in details.columns:
+            details[c] = None
+    details = details[[c for c in desired_cols if c in details.columns]]
+ 
+    if 'eta_dp' in details.columns and pd.api.types.is_datetime64_any_dtype(details['eta_dp']):
+        details['eta_dp'] = details['eta_dp'].dt.strftime('%Y-%m-%d')
+ 
+    # Optional dict output
+    if as_records:
+        return details.where(pd.notnull(details), None).to_dict(orient='records')
+ 
+    all_containers = sorted(matches["container_number"].dropna().astype(str).unique().tolist()) if "container_number" in matches.columns else []
+    hot_containers = sorted(matches.loc[matches["_is_hot"], "container_number"].dropna().astype(str).unique().tolist()) if "container_number" in matches.columns else []
+ 
     if hot_containers:
-        return f"PO {po} is HOT on container(s): {', '.join(hot_containers)}. Related containers: {', '.join(all_containers)}."
+        return (
+            f"PO {po} is HOT on container(s): {', '.join(hot_containers)}. "
+            f"Details: {details.where(pd.notnull(details), None).to_dict(orient='records')}."
+            f" Related containers: {', '.join(all_containers)}."
+        )
     else:
-        return f"PO {po} is not marked hot. Related containers: {', '.join(all_containers)}."
+        related = f" Related containers: {', '.join(all_containers)}." if all_containers else ""
+        return f"PO {po} is not marked hot.{related}"
 
 # ...existing code...
 
@@ -5377,6 +5481,7 @@ TOOLS = [
         description="Find containers arriving at a specific final destination/distribution center (FD/DC) within a timeframe. Handles queries like 'containers arriving at FD Nashville in next 3 days' or 'list containers to DC Phoenix next week'."
     )
 ]
+
 
 
 
