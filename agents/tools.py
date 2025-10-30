@@ -5201,6 +5201,94 @@ def get_containers_by_final_destination(query: str) -> str:
  
 ######################### fd related query ended here ##########################
 
+def get_eta_for_po(question: str = None, consignee_code: str = None, **kwargs) -> str:
+    """
+    Get ETA for a PO (handles 'PO6300134648', 'po 6300134648', or '6300134648').
+    - Matches against po_number_multiple (comma-separated) or po_number.
+    - Prefers revised_eta over eta_dp.
+    - Respects thread-local consignee filtering via _df(); optional explicit consignee_code filter supported.
+    Returns list[dict]: [po_number_multiple/po_number, container_number, discharge_port, revised_eta, eta_dp].
+    """
+   
+ 
+    q = (question or "").strip()
+    if not q:
+        return "Please specify a PO number."
+ 
+    # Extract PO tokens (helper + robust fallback)
+    try:
+        base_po = extract_po_number(q)
+    except Exception:
+        base_po = None
+ 
+    tokens = set()
+    if base_po:
+        tokens.add(base_po)
+    for t in re.findall(r'\b[A-Z]*[-#]?\d{6,}[A-Z]*\b', q.upper()):
+        tokens.add(re.sub(r'[^A-Z0-9]', '', t))
+    if not tokens:
+        return "Please specify a valid PO number."
+ 
+    po_norms = {_normalize_po_token(t) for t in tokens if t}
+    if not po_norms:
+        return "Please specify a valid PO number."
+ 
+    df = _df().copy()
+    if df.empty:
+        return "No PO records found for your authorized consignees."
+ 
+    # Optional explicit consignee filter
+    if consignee_code and "consignee_code_multiple" in df.columns:
+        codes = [c.strip().upper() for c in str(consignee_code).split(",") if c.strip()]
+        if codes:
+            pat = r"|".join([re.escape(c) for c in codes])
+            df = df[df["consignee_code_multiple"].astype(str).str.upper().str.contains(pat, na=False)].copy()
+            if df.empty:
+                return "No PO records found for provided consignee codes."
+ 
+    # Choose PO column
+    po_col = "po_number_multiple" if "po_number_multiple" in df.columns else ("po_number" if "po_number" in df.columns else None)
+    if not po_col:
+        return "PO column not found in the dataset."
+ 
+    # Match rows where any normalized token matches (handles comma-separated)
+    def row_has_any_po(cell: str) -> bool:
+        if pd.isna(cell):
+            return False
+        return any(_po_in_cell(cell, tok) for tok in po_norms)
+ 
+    mask = df[po_col].apply(row_has_any_po)
+    matches = df[mask].copy()
+    if matches.empty:
+        rep = next(iter(po_norms))
+        return f"No data found for PO {rep}."
+ 
+    # Parse dates, prefer revised_eta over eta_dp
+    date_cols = [c for c in ["revised_eta", "eta_dp", "ata_dp"] if c in matches.columns]
+    if date_cols:
+        matches = ensure_datetime(matches, date_cols)
+ 
+    # Sort by preferred ETA (revised_eta first, else eta_dp), nulls last
+    if "revised_eta" in matches.columns and "eta_dp" in matches.columns:
+        matches["_eta_for_sort"] = matches["revised_eta"].where(matches["revised_eta"].notna(), matches["eta_dp"])
+    elif "revised_eta" in matches.columns:
+        matches["_eta_for_sort"] = matches["revised_eta"]
+    elif "eta_dp" in matches.columns:
+        matches["_eta_for_sort"] = matches["eta_dp"]
+ 
+    cols = [po_col, "container_number", "discharge_port", "revised_eta", "eta_dp"]
+    cols = [c for c in cols if c in matches.columns]
+    out = matches[cols + (["_eta_for_sort"] if "_eta_for_sort" in matches.columns else [])].copy()
+    if "_eta_for_sort" in out.columns:
+        out = out.sort_values("_eta_for_sort", na_position="last").drop(columns=["_eta_for_sort"])
+ 
+    # Format dates
+    for d in ["revised_eta", "eta_dp"]:
+        if d in out.columns and pd.api.types.is_datetime64_any_dtype(out[d]):
+            out[d] = out[d].dt.strftime("%Y-%m-%d")
+ 
+    return out.head(100).where(pd.notnull(out), None).to_dict(orient="records")
+
 
 
 # ---- Modification done by raju:---- UPDATE SQL -------
@@ -5613,8 +5701,14 @@ TOOLS = [
         name="Get Containers By Final Destination",
         func=get_containers_by_final_destination,
         description="Find containers arriving at a specific final destination/distribution center (FD/DC) within a timeframe. Handles queries like 'containers arriving at FD Nashville in next 3 days' or 'list containers to DC Phoenix next week'."
+    ),
+	Tool(
+        name="Get ETA For PO",
+        func=get_eta_for_po,
+        description="Get ETA for a PO (prefers revised_eta over eta_dp)."
     )
 ]
+
 
 
 
