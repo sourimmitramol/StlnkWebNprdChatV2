@@ -2263,11 +2263,11 @@ def get_hot_containers(question: str = None, consignee_code: str = None, **kwarg
  
         arrived["delay_days"] = (arrived["ata_dp"] - arrived["eta_dp"]).dt.days.fillna(0).astype(int)
  
-        range_match = re.search(r"(\d+)\s*[-–—]\s*(\d+)\s*days?", ql)
-        lt_match = re.search(r"(?:less\s+than|under|below|<)\s*(\d+)\s*days?", ql)
-        gt_match = re.search(r"(?:more\s+than|over|>\s*)(\d+)\s*days?", ql)
-        plus_match = re.search(r"\b(\d+)\s*\+\s*days?\b", ql)
-        exact_match = re.search(r"(?:by|of|in|exactly)\s+(\d+)\s+days?", ql)
+        range_match = re.search(r"(\d{1,4})\s*[-–—]\s*(\d{1,4})\s*days?\b", ql, re.IGNORECASE)
+        lt_match = re.search(r"\b(?:less\s+than|under|below|<)\s*(\d{1,4})\s*days?\b", ql, re.IGNORECASE)
+        gt_match = re.search(r"\b(?:more\s+than|over|>)\s*(\d{1,4})\s*days?\b", ql, re.IGNORECASE)
+        plus_sign = re.search(r"\b(\d{1,4})\s*\+\s*days?\b", ql, re.IGNORECASE)
+        exact_match = re.search(r"\b(?:delayed|late|overdue|behind)\s+by\s+(\d{1,4})\s+days?\b", ql, re.IGNORECASE)
  
         if range_match:
             d1, d2 = int(range_match.group(1)), int(range_match.group(2))
@@ -5714,6 +5714,7 @@ TOOLS = [
         description="Find containers arriving at a specific final destination/distribution center (FD/DC) within a timeframe. Handles queries like 'containers arriving at FD Nashville in next 3 days' or 'list containers to DC Phoenix next week'."
     )
 ]
+
 
 
 
