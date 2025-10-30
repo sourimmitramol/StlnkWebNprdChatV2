@@ -30,6 +30,7 @@ from agents.tools import (
     check_po_month_arrival,
     get_weekly_status_changes,
     get_hot_containers,  # Add this missing import
+    get_eta_for_po,
     _df,  # Import the DataFrame function to test filtering
 )
 
@@ -95,6 +96,9 @@ def route_query(query: str, consignee_codes: list = None) -> str:
         from utils.container import extract_container_number, extract_po_number
         container_no = extract_container_number(query)
         po_no = extract_po_number(query) 
+
+        if "eta" in q and (po_no or re.search(r'\bpo\b', q)):
+            return get_eta_for_po(query)
         
         # ========== PRIORITY 1: Handle port/location queries ==========
         if any(phrase in q for phrase in ["list containers from", "containers from", "from port"]):
@@ -173,6 +177,7 @@ def route_query(query: str, consignee_codes: list = None) -> str:
         if consignee_codes and hasattr(threading.current_thread(), 'consignee_codes'):
             delattr(threading.current_thread(), 'consignee_codes')
             logger.debug("Cleaned up consignee codes from thread context")
+
 
 
 
