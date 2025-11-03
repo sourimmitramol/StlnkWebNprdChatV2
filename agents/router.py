@@ -94,9 +94,13 @@ def route_query(query: str, consignee_codes: list = None) -> str:
         q = query.lower()
         
         # Enhanced container/PO/OBL/Booking detection (do this early)
-        from utils.container import extract_container_number, extract_po_number
+        from utils.container import extract_container_number, extract_po_number,extract_ocean_bl_number
         container_no = extract_container_number(query)
         po_no = extract_po_number(query) 
+        try:
+            obl_no = extract_ocean_bl_number(query)
+        except Exception:
+            obl_no = None
 
         # ========== NEW: BL/OBL upcoming/delayed queries ==========
         # Route BL queries with time windows or delay keywords to get_upcoming_bls
@@ -196,6 +200,7 @@ def route_query(query: str, consignee_codes: list = None) -> str:
         if consignee_codes and hasattr(threading.current_thread(), 'consignee_codes'):
             delattr(threading.current_thread(), 'consignee_codes')
             logger.debug("Cleaned up consignee codes from thread context")
+
 
 
 
