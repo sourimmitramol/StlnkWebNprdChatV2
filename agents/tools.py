@@ -2306,39 +2306,57 @@ def get_hot_containers(question: str = None, consignee_code: str = None, **kwarg
 # ...existing code...
 def get_upcoming_arrivals(query: str) -> str:
     """
-    List containers scheduled to arrive within the next X days.
-    - Parses many natural forms for "next N days" (see examples).
+    List containers scheduled to arrive within the next X days or on specific dates.
+    - Parses many natural forms for "next N days", "today", "tomorrow", "day after tomorrow".
     - Uses per-row ETA priority: revised_eta (if present) else eta_dp.
     - Excludes rows where ata_dp is present (already arrived).
     - Respects consignee filtering via _df().
     - Strictly filters by discharge_port when a port code/city is provided (e.g., USLAX, Los Angeles).
     Returns list of dict records (up to 50 rows) or a short message if none found.
     """
-    import re
-    import pandas as pd
  
     query = (query or "").strip()
+    query_lower = query.lower()
  
-    # 1) Parse days
+    # 1) Parse specific dates or timeframe
+    today = pd.Timestamp.today().normalize()
+    start_date = today
+    end_date = None
     days = None
-    for p in [
-        r"(?:next|upcoming|in|within|coming)\s+(\d{1,4})\s+days?",
-        r"(\d{1,4})\s+days?",
-        r"arriving.*?(\d{1,4})\s+days?",
-        r"will.*?arrive.*?(\d{1,4})\s+days?",
-        r"within\s+the\s+next\s+(\d{1,4})\s+days?",
-    ]:
-        m = re.search(p, query, re.IGNORECASE)
-        if m:
-            try:
-                days = int(m.group(1))
-                break
-            except Exception:
-                pass
-    if days is None and re.search(r'\b(arriv(?:e|ing)|coming soon|coming|upcoming|soon|expected)\b', query, re.IGNORECASE):
-        days = 7
-    if days is None:
-        days = 7
+   
+    # Check for specific date keywords first
+    if re.search(r'\btoday\b', query_lower):
+        start_date = today
+        end_date = today
+    elif re.search(r'\btomorrow\b', query_lower):
+        start_date = today + pd.Timedelta(days=1)
+        end_date = start_date
+    elif re.search(r'\bday after tomorrow\b', query_lower):
+        start_date = today + pd.Timedelta(days=2)
+        end_date = start_date
+    else:
+        # Parse "next X days" patterns
+        for p in [
+            r"(?:next|upcoming|in|within|coming)\s+(\d{1,4})\s+days?",
+            r"(\d{1,4})\s+days?",
+            r"arriving.*?(\d{1,4})\s+days?",
+            r"will.*?arrive.*?(\d{1,4})\s+days?",
+            r"within\s+the\s+next\s+(\d{1,4})\s+days?",
+        ]:
+            m = re.search(p, query, re.IGNORECASE)
+            if m:
+                try:
+                    days = int(m.group(1))
+                    break
+                except Exception:
+                    pass
+        if days is None and re.search(r'\b(arriv(?:e|ing)|coming soon|coming|upcoming|soon|expected)\b', query, re.IGNORECASE):
+            days = 7
+        if days is None:
+            days = 7
+       
+        # Set end_date for range queries
+        end_date = today + pd.Timedelta(days=days)
  
     # 2) Load df (consignee-scoped) and optional transport-mode filter
     df = _df()
@@ -2370,7 +2388,7 @@ def get_upcoming_arrivals(query: str) -> str:
     else:
         # 3b) Bare code token; validate against known codes
         caps = re.findall(r'\b([A-Z0-9]{2,6})\b', q_up)
-        skip = {"NEXT", "DAYS", "IN", "AT", "TO", "ON", "BY", "COMING", "WITHIN", "WILL", "ARRIVE", "ARRIVING"}
+        skip = {"NEXT", "DAYS", "IN", "AT", "TO", "ON", "BY", "COMING", "WITHIN", "WILL", "ARRIVE", "ARRIVING", "TODAY", "TOMORROW"}
         caps = [t for t in caps if t not in skip and not t.isdigit()]
         for tok in reversed(caps):
             if tok in known_codes:
@@ -2379,49 +2397,42 @@ def get_upcoming_arrivals(query: str) -> str:
  
     # 3c) City name after at|in|to
     if not port_code:
-        # Look for city patterns like "at LOS ANGELES" or "in LOS ANGELES"
         city_patterns = [
-            r'\b(?:AT|IN|TO)\s+([A-Z][A-Z0-9\s\.\'-]{2,})', # "at LOS ANGELES"
-            r'\b(LOS\s+ANGELES|LONG\s+BEACH|NEW\s+YORK|CHICAGO|SEATTLE|NASHVILLE)\b' # Common port names
+            r'\b(?:AT|IN|TO)\s+([A-Z][A-Z0-9\s\.\'-]{2,})',
+            r'\b(LOS\s+ANGELES|LONG\s+BEACH|NEW\s+YORK|CHICAGO|SEATTLE|NASHVILLE)\b'
         ]
        
         for pattern in city_patterns:
             mc = re.search(pattern, q_up, re.IGNORECASE)
             if mc:
                 cand = mc.group(1).strip()
-                # Strip trailing qualifiers
-                cand = re.sub(r'(?:IN\s+NEXT\s+\d+\s+DAYS?|NEXT\s+\d+\s+DAYS?|WITHIN\s+\d+\s+DAYS?)\b.*$', '', cand, flags=re.IGNORECASE).strip()
+                cand = re.sub(r'(?:IN\s+NEXT\s+\d+\s+DAYS?|NEXT\s+\d+\s+DAYS?|WITHIN\s+\d+\s+DAYS?|TODAY|TOMORROW)\b.*$', '', cand, flags=re.IGNORECASE).strip()
                 cand = re.sub(r'[\.,;:\-]+$', '', cand).strip()
                 if cand:
                     port_city = cand.upper()
                     break
  
-    # Apply strict discharge_port filter - ONLY use discharge_port column
+    # Apply strict discharge_port filter
     if (port_code or port_city) and 'discharge_port' in df.columns:
         dp = df['discharge_port'].astype(str)
         dp_up = dp.str.upper()
  
         if port_code:
-            # EXACT match on port code in parentheses
             code_mask = dp_up.str.contains(rf"\({re.escape(port_code)}\)", na=False)
             df = df[code_mask].copy()
             if df.empty:
-                return f"No containers scheduled to come between {pd.Timestamp.today().normalize().strftime('%Y-%m-%d')} and {(pd.Timestamp.today().normalize() + pd.Timedelta(days=days)).strftime('%Y-%m-%d')} at {port_code}"
+                return f"No containers scheduled to arrive at {port_code} on {start_date.strftime('%Y-%m-%d')}" if start_date == end_date else f"No containers scheduled to arrive at {port_code} between {start_date.strftime('%Y-%m-%d')} and {end_date.strftime('%Y-%m-%d')}"
         elif port_city:
-            # Extract city names without the port code part
             dp_clean = dp_up.str.replace(r"\([^\)]+\)", "", regex=True).str.strip()
            
-            # STRICT CITY MATCHING - only exact matches for the full city name
             if port_city == "LOS ANGELES":
-                # Specifically for Los Angeles, ensure we're not matching Long Beach
                 city_mask = dp_clean.str.contains(r"\bLOS\s+ANGELES\b", regex=True, na=False) & ~dp_clean.str.contains(r"\bLONG\s+BEACH\b", regex=True, na=False)
             else:
-                # For other cities, use exact word boundary matching
                 city_mask = dp_clean.str.contains(r"\b" + re.escape(port_city) + r"\b", regex=True, na=False)
            
             df = df[city_mask].copy()
             if df.empty:
-                return f"No containers scheduled to come between {pd.Timestamp.today().normalize().strftime('%Y-%m-%d')} and {(pd.Timestamp.today().normalize() + pd.Timedelta(days=days)).strftime('%Y-%m-%d')} at {port_city}"
+                return f"No containers scheduled to arrive at {port_city} on {start_date.strftime('%Y-%m-%d')}" if start_date == end_date else f"No containers scheduled to arrive at {port_city} between {start_date.strftime('%Y-%m-%d')} and {end_date.strftime('%Y-%m-%d')}"
  
     # 4) ETA selection (revised_eta > eta_dp)
     date_priority = [c for c in ['revised_eta', 'eta_dp'] if c in df.columns]
@@ -2441,9 +2452,7 @@ def get_upcoming_arrivals(query: str) -> str:
         df['eta_for_filter'] = df['eta_dp']
  
     # 5) Date window and exclude already-arrived
-    today = pd.Timestamp.today().normalize()
-    end_date = today + pd.Timedelta(days=days)
-    date_mask = df['eta_for_filter'].notna() & (df['eta_for_filter'] >= today) & (df['eta_for_filter'] <= end_date)
+    date_mask = df['eta_for_filter'].notna() & (df['eta_for_filter'] >= start_date) & (df['eta_for_filter'] <= end_date)
     if 'ata_dp' in df.columns:
         date_mask &= df['ata_dp'].isna()
     upcoming = df[date_mask].copy()
@@ -2454,7 +2463,11 @@ def get_upcoming_arrivals(query: str) -> str:
             loc = f" at {port_code}"
         elif port_city:
             loc = f" at {port_city}"
-        return f"No containers scheduled to come between {today.strftime('%Y-%m-%d')} and {end_date.strftime('%Y-%m-%d')}{loc}"
+       
+        if start_date == end_date:
+            return f"No containers scheduled to arrive{loc} on {start_date.strftime('%Y-%m-%d')}"
+        else:
+            return f"No containers scheduled to arrive{loc} between {start_date.strftime('%Y-%m-%d')} and {end_date.strftime('%Y-%m-%d')}"
  
     # 6) Output
     cols = ["container_number", "discharge_port", "revised_eta", "eta_dp", "eta_for_filter"]
@@ -6112,6 +6125,7 @@ TOOLS = [
         description="Get ETA for a PO (prefers revised_eta over eta_dp)."
     )
 ]
+
 
 
 
