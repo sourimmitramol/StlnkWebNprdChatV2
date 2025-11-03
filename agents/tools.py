@@ -4267,6 +4267,408 @@ def get_container_carrier(input_str: str) -> str:
     return "\n".join(response_lines)
 
 
+def get_upcoming_bls(question: str = None, consignee_code: str = None, **kwargs) -> str:
+    """
+    List upcoming ocean BLs (ocean_bl_no_multiple) with ETA filtering.
+    - Extracts numeric/alphanumeric BL tokens (comma-separated, e.g., MAEU255513671, 61110045884, JKT25-00327/BSN).
+    - Supports delay queries ("delayed by X days", "late by more than Y days").
+    - Supports hot BL filtering via hot_container_flag column.
+    - Supports transport mode filtering (sea, air, etc.).
+    - Supports location filtering (port code or city name).
+    - Respects consignee_code (comma-separated) and consignee name detection.
+    Returns list[dict] with columns: ocean_bl_no_multiple, container_number, discharge_port, revised_eta, eta_dp, delay_days (if delayed), hot_container_flag, transport_mode.
+    """
+   
+ 
+    query = (question or "").strip()
+    query_upper = query.upper()
+ 
+    # Parse days (default 7)
+    days = None
+    for pat in [r"(?:next|coming|within|in)\s+(\d{1,4})\s+days?", r"(\d{1,4})\s+days?"]:
+        m = re.search(pat, query, re.IGNORECASE)
+        if m:
+            try:
+                days = int(m.group(1))
+                break
+            except Exception:
+                pass
+    days = days if days is not None else 7
+ 
+    df = _df()
+ 
+    # Find BL column robustly
+    bl_col = _find_ocean_bl_col(df)
+    if not bl_col:
+        return "Ocean BL column (ocean_bl_no_multiple) not found in dataset."
+ 
+    # ----------------------
+    # Apply consignee_code filter (supports comma-separated codes)
+    # ----------------------
+    if consignee_code and "consignee_code_multiple" in df.columns:
+        cc = str(consignee_code).strip().upper()
+        cc_list = [c.strip().upper() for c in cc.split(',') if c.strip()]
+        cc_set = set(cc_list)
+ 
+        def row_has_code(cell):
+            if pd.isna(cell):
+                return False
+            parts = {p.strip().upper() for p in re.split(r',\s*', str(cell)) if p.strip()}
+            for part in parts:
+                if part in cc_set:
+                    return True
+                m = re.search(r'\(([A-Z0-9\- ]+)\)\s*$', part)
+                if m:
+                    code = m.group(1).strip().upper()
+                    if code in cc_set or code.lstrip('0') in cc_set or code in {c.lstrip('0') for c in cc_set}:
+                        return True
+            return False
+       
+        df = df[df['consignee_code_multiple'].apply(row_has_code)].copy()
+        if df.empty:
+            return f"No BL records found for consignee code(s) {', '.join(cc_list)}."
+ 
+    # ----------------------
+    # Detect consignee name in query
+    # ----------------------
+    if 'consignee_code_multiple' in df.columns:
+        try:
+            all_cons_parts = set()
+            token_to_name = {}
+            token_to_code = {}
+ 
+            for raw in df['consignee_code_multiple'].dropna().astype(str).tolist():
+                for part in re.split(r',\s*', raw):
+                    p = part.strip()
+                    if not p:
+                        continue
+                    tok = p.upper()
+                    all_cons_parts.add(tok)
+                    m_code = re.search(r'\(([A-Z0-9\- ]+)\)\s*$', tok)
+                    code = m_code.group(1).strip() if m_code else None
+                    name_part = re.sub(r'\([^\)]*\)', '', tok).strip()
+                    token_to_name[tok] = name_part
+                    token_to_code[tok] = code
+ 
+            sorted_cons = sorted(all_cons_parts, key=lambda x: -len(x))
+            mentioned_consignee_tokens = set()
+ 
+            for cand in sorted_cons:
+                if re.search(r'\b' + re.escape(cand) + r'\b', query_upper):
+                    mentioned_consignee_tokens.add(cand)
+ 
+            numeric_tokens = [t for t in sorted_cons if token_to_code.get(t) and re.fullmatch(r'\d+', token_to_code[t])]
+            if numeric_tokens:
+                num_q_tokens = re.findall(r'\b0*\d+\b', query_upper)
+                for qnum in num_q_tokens:
+                    for tok in numeric_tokens:
+                        code = token_to_code.get(tok)
+                        if not code:
+                            continue
+                        if qnum == code or qnum.lstrip('0') == code.lstrip('0'):
+                            mentioned_consignee_tokens.add(tok)
+ 
+            q_clean = re.sub(r'[^A-Z0-9\s]', ' ', query_upper)
+            q_words = [w for w in re.split(r'\s+', q_clean) if len(w) >= 3]
+ 
+            for tok in sorted_cons:
+                name_part = token_to_name.get(tok, "")
+                if not name_part:
+                    continue
+                if re.search(r'\b' + re.escape(name_part) + r'\b', query_upper):
+                    mentioned_consignee_tokens.add(tok)
+                    continue
+                matches = sum(1 for w in q_words if w in name_part)
+                if matches >= 2 or any((w in name_part and len(w) >= 4) for w in q_words):
+                    mentioned_consignee_tokens.add(tok)
+ 
+            m_for = re.search(r'\bFOR\s+([A-Z0-9\&\.\-\s]{3,})', query_upper)
+            if m_for:
+                target = m_for.group(1).strip()
+                for tok in sorted_cons:
+                    name_part = token_to_name.get(tok, "")
+                    if target in name_part or target == tok:
+                        mentioned_consignee_tokens.add(tok)
+ 
+            if mentioned_consignee_tokens:
+                strict_keys = set()
+                for tok in mentioned_consignee_tokens:
+                    strict_keys.add(tok)
+                    code = token_to_code.get(tok)
+                    name = token_to_name.get(tok)
+                    if code:
+                        strict_keys.add(code)
+                        strict_keys.add(code.lstrip('0'))
+                    if name:
+                        strict_keys.add(name)
+                strict_keys = {k.upper().strip() for k in strict_keys if k}
+ 
+                def row_has_cons_strict(cell):
+                    if pd.isna(cell):
+                        return False
+                    parts = [p.strip().upper() for p in re.split(r',\s*', str(cell)) if p.strip()]
+                    for p in parts:
+                        if p in strict_keys:
+                            return True
+                        m = re.search(r'\(([A-Z0-9\- ]+)\)\s*$', p)
+                        if m:
+                            code_in_cell = m.group(1).strip().upper()
+                            if code_in_cell in strict_keys or code_in_cell.lstrip('0') in strict_keys:
+                                return True
+                        name_part = re.sub(r'\([^\)]*\)', '', p).strip().upper()
+                        if name_part and name_part in strict_keys:
+                            return True
+                    return False
+ 
+                df = df[df['consignee_code_multiple'].apply(row_has_cons_strict)].copy()
+                if df.empty:
+                    return f"No BL records for consignee {', '.join(sorted(mentioned_consignee_tokens))}."
+ 
+        except Exception:
+            pass
+ 
+    # ----------------------
+    # Hot container filtering
+    # ----------------------
+    is_hot_query = bool(re.search(r'\bhot\b', query, re.IGNORECASE))
+    hot_flag_cols = [c for c in df.columns if 'hot_container_flag' in c.lower()]
+    if not hot_flag_cols:
+        hot_flag_cols = [c for c in df.columns if 'hot_container' in c.lower()]
+ 
+    if is_hot_query:
+        if not hot_flag_cols:
+            return "Hot container flag column not found in the data."
+        hot_col = hot_flag_cols[0]
+ 
+        def _is_hot(v):
+            if pd.isna(v):
+                return False
+            s = str(v).strip().upper()
+            return s in {"Y", "YES", "TRUE", "1", "HOT"} or v is True or v == 1
+ 
+        df = df[df[hot_col].apply(_is_hot)].copy()
+        if df.empty:
+            return "No hot BLs found for your authorized consignees."
+ 
+    # ----------------------
+    # Transport mode filtering
+    # ----------------------
+    modes = extract_transport_modes(query)
+    if modes and 'transport_mode' in df.columns:
+        df = df[df['transport_mode'].astype(str).str.lower().apply(lambda s: any(m in s for m in modes))].copy()
+        if df.empty:
+            return f"No BLs found for transport mode(s): {', '.join(sorted(modes))}."
+ 
+    # ----------------------
+    # Location filtering
+    # ----------------------
+    port_cols = [c for c in ["discharge_port", "vehicle_arrival_lcn", "final_destination", "place_of_delivery"] if c in df.columns]
+    if port_cols:
+        location_mask = pd.Series(False, index=df.index, dtype=bool)
+        location_found = False
+        location_name = None
+ 
+        candidate_tokens = re.findall(r'\b[A-Z0-9]{3,6}\b', query_upper)
+        skip_tokens = {"NEXT", "DAYS", "IN", "AT", "ON", "THE", "AND", "TO", "FROM", "ARRIVE", "ARRIVING", "HOT", "OBL", "BL"}
+        candidate_tokens = [t for t in candidate_tokens if t not in skip_tokens and not t.isdigit()]
+ 
+        def row_contains_code(port_string, token):
+            if pd.isna(port_string):
+                return False
+            s = str(port_string).upper()
+            if re.search(r'\(' + re.escape(token) + r'\)', s):
+                return True
+            if re.search(r'\b' + re.escape(token) + r'\b', s):
+                return True
+            extracted = re.findall(r'\(([A-Z0-9]{3,6})\)', s)
+            if extracted and token in extracted:
+                return True
+            return False
+ 
+        for tok in candidate_tokens:
+            tok_mask = pd.Series(False, index=df.index)
+            for col in port_cols:
+                tok_mask |= df[col].apply(lambda s, t=tok: row_contains_code(s, t))
+            if tok_mask.any():
+                location_mask = tok_mask
+                location_found = True
+                location_name = tok
+                break
+ 
+        if not location_found:
+            paren = re.search(r'\(([A-Z0-9]{3,6})\)', query_upper)
+            if paren:
+                tok = paren.group(1)
+                tok_mask = pd.Series(False, index=df.index)
+                for col in port_cols:
+                    tok_mask |= df[col].apply(lambda s, t=tok: row_contains_code(s, t))
+                if tok_mask.any():
+                    location_mask = tok_mask
+                    location_found = True
+                    location_name = tok
+ 
+        if not location_found:
+            city_patterns = [
+                r'(?:at|in|to)\s+([A-Za-z\s\.\-]{3,})(?:[,\s]|$)',
+                r'\b(LOS ANGELES|LONG BEACH|SINGAPORE|ROTTERDAM|HONG KONG|SHANGHAI|BUSAN|TOKYO|OAKLAND|SAVANNAH|NLRTM)\b'
+            ]
+            for patt in city_patterns:
+                m = re.search(patt, query, re.IGNORECASE)
+                if m:
+                    city = m.group(1).strip().upper()
+                    location_name = city
+                    city_mask = pd.Series(False, index=df.index)
+                    for col in port_cols:
+                        def match_city(port_string, city=city):
+                            if pd.isna(port_string):
+                                return False
+                            s = str(port_string).upper()
+                            cleaned = re.sub(r'\([^)]*\)', '', s).strip()
+                            return city in cleaned
+                        city_mask |= df[col].apply(match_city)
+                    if city_mask.any():
+                        location_mask = city_mask
+                        location_found = True
+                        break
+ 
+        if location_found:
+            df = df[location_mask].copy()
+            if df.empty:
+                return f"No BLs found at {location_name}."
+ 
+    # ----------------------
+    # DATE selection and filtering
+    # ----------------------
+    date_priority = [c for c in ['revised_eta', 'eta_dp'] if c in df.columns]
+    if not date_priority:
+        return "No ETA columns (revised_eta / eta_dp) found in the data."
+ 
+    parse_cols = date_priority.copy()
+    if 'ata_dp' in df.columns:
+        parse_cols.append('ata_dp')
+    df = ensure_datetime(df, parse_cols)
+ 
+    # ----------------------
+    # Delay detection and filtering
+    # ----------------------
+    is_delay_query = any(w in query.lower() for w in ("delay", "late", "overdue", "behind", "missed"))
+ 
+    if is_delay_query:
+        # Filter for arrived containers (ata_dp not null)
+        arrived = df[df['ata_dp'].notna()].copy()
+        if arrived.empty:
+            return "No BLs have arrived for your authorized consignees."
+ 
+        arrived["delay_days"] = (arrived["ata_dp"] - arrived["eta_dp"]).dt.days.fillna(0).astype(int)
+ 
+        range_match = re.search(r"(\d{1,4})\s*[-–—]\s*(\d{1,4})\s*days?\b", query, re.IGNORECASE)
+        less_than = re.search(r"\b(?:less\s+than|under|below|<)\s*(\d{1,4})\s*days?\b", query, re.IGNORECASE)
+        more_than = re.search(r"\b(?:more\s+than|over|>)\s*(\d{1,4})\s*days?\b", query, re.IGNORECASE)
+        plus_sign = re.search(r"\b(\d{1,4})\s*\+\s*days?\b", query, re.IGNORECASE)
+        exact = re.search(r"\b(?:delayed|late|overdue|behind)\s+by\s+(\d{1,4})\s+days?\b", query, re.IGNORECASE)
+ 
+        if range_match:
+            d1, d2 = int(range_match.group(1)), int(range_match.group(2))
+            low, high = min(d1, d2), max(d1, d2)
+            delayed = arrived[(arrived["delay_days"] >= low) & (arrived["delay_days"] <= high)]
+        elif less_than:
+            d = int(less_than.group(1))
+            delayed = arrived[(arrived["delay_days"] > 0) & (arrived["delay_days"] < d)]
+        elif more_than or plus_sign:
+            d = int((more_than or plus_sign).group(1))
+            delayed = arrived[arrived["delay_days"] > d]
+        elif exact:
+            d = int(exact.group(1))
+            delayed = arrived[arrived["delay_days"] == d]
+        else:
+            delayed = arrived[arrived["delay_days"] > 0]
+ 
+        if delayed.empty:
+            return "No delayed BLs found for your authorized consignees."
+ 
+        # Group by BL and aggregate
+        out_cols = [bl_col, "container_number", "eta_dp", "ata_dp", "delay_days", "discharge_port", "consignee_code_multiple"]
+        if hot_flag_cols:
+            out_cols.append(hot_flag_cols[0])
+        if 'transport_mode' in delayed.columns:
+            out_cols.append('transport_mode')
+        out_cols = [c for c in out_cols if c in delayed.columns]
+ 
+        agg_dict = {
+            "container_number": lambda s: ", ".join(sorted(set(s.dropna().astype(str)))),
+            "delay_days": "max",
+            "eta_dp": "first",
+            "ata_dp": "first",
+            "discharge_port": "first",
+            "consignee_code_multiple": "first"
+        }
+        if hot_flag_cols and hot_flag_cols[0] in delayed.columns:
+            agg_dict[hot_flag_cols[0]] = "first"
+        if 'transport_mode' in delayed.columns:
+            agg_dict['transport_mode'] = "first"
+ 
+        result = delayed.groupby(bl_col).agg(agg_dict).reset_index()
+ 
+        for dcol in ["eta_dp", "ata_dp"]:
+            if dcol in result.columns and pd.api.types.is_datetime64_any_dtype(result[dcol]):
+                result[dcol] = result[dcol].dt.strftime("%Y-%m-%d")
+ 
+        return result.where(pd.notnull(result), None).to_dict(orient="records")
+ 
+    # ----------------------
+    # Upcoming arrivals (not yet arrived)
+    # ----------------------
+    if 'revised_eta' in df.columns and 'eta_dp' in df.columns:
+        df['eta_for_filter'] = df['revised_eta'].where(df['revised_eta'].notna(), df['eta_dp'])
+    elif 'revised_eta' in df.columns:
+        df['eta_for_filter'] = df['revised_eta']
+    else:
+        df['eta_for_filter'] = df['eta_dp']
+ 
+    today = pd.Timestamp.today().normalize()
+    end_date = today + pd.Timedelta(days=days)
+ 
+    date_mask = df['eta_for_filter'].notna() & (df['eta_for_filter'] >= today) & (df['eta_for_filter'] <= end_date)
+    if 'ata_dp' in df.columns:
+        date_mask &= df['ata_dp'].isna()
+ 
+    result = df[date_mask].copy()
+    if result.empty:
+        loc_str = f" at {location_name}" if location_found else ""
+        return f"No BLs arriving{loc_str} between {today.strftime('%Y-%m-%d')} and {end_date.strftime('%Y-%m-%d')}."
+ 
+    # Group by BL and aggregate
+    out_cols = [bl_col, "container_number", "discharge_port", "revised_eta", "eta_dp", "eta_for_filter", "consignee_code_multiple"]
+    if hot_flag_cols:
+        out_cols.append(hot_flag_cols[0])
+    if 'transport_mode' in result.columns:
+        out_cols.append('transport_mode')
+    out_cols = [c for c in out_cols if c in result.columns]
+ 
+    agg_dict = {
+        "container_number": lambda s: ", ".join(sorted(set(s.dropna().astype(str)))),
+        "discharge_port": "first",
+        "revised_eta": "first",
+        "eta_dp": "first",
+        "eta_for_filter": "first",
+        "consignee_code_multiple": "first"
+    }
+    if hot_flag_cols and hot_flag_cols[0] in result.columns:
+        agg_dict[hot_flag_cols[0]] = "first"
+    if 'transport_mode' in result.columns:
+        agg_dict['transport_mode'] = "first"
+ 
+    final_result = result.groupby(bl_col).agg(agg_dict).reset_index().sort_values('eta_for_filter').head(200)
+ 
+    for d in ['revised_eta', 'eta_dp', 'eta_for_filter']:
+        if d in final_result.columns and pd.api.types.is_datetime64_any_dtype(final_result[d]):
+            final_result[d] = final_result[d].dt.strftime('%Y-%m-%d')
+ 
+    if 'eta_for_filter' in final_result.columns:
+        final_result = final_result.drop(columns=['eta_for_filter'])
+ 
+    return final_result.where(pd.notnull(final_result), None).to_dict(orient='records')
+    
 
 
 def vector_search_tool(query: str) -> str:
@@ -5574,6 +5976,7 @@ TOOLS = [
         description="Get ETA for a PO (prefers revised_eta over eta_dp)."
     )
 ]
+
 
 
 
