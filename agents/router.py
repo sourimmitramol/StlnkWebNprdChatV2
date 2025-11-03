@@ -32,6 +32,7 @@ from agents.tools import (
     get_weekly_status_changes,
     get_hot_containers,  # Add this missing import
     get_eta_for_po,
+    get_upcoming_bls,
     _df,  # Import the DataFrame function to test filtering
 )
 
@@ -148,7 +149,26 @@ def route_query(query: str, consignee_codes: list = None) -> str:
         
         if "eta" in q and (po_no or re.search(r'\bpo\b', q)):
             return get_eta_for_po(query)
-            
+
+
+        # ========== NEW: BL/OBL upcoming/delayed queries ==========
+        # Route BL queries with time windows or delay keywords to get_upcoming_bls
+        bl_keywords = ["obl", "ocean bl", "bill of lading", "bl ", " bl", "bill"]
+        has_bl_keyword = any(kw in q for kw in bl_keywords) or obl_no
+       
+        if has_bl_keyword and (
+            # Upcoming BLs
+            re.search(r"(?:upcoming|arriving|arrive|expected|coming|next|within)\s+\d{1,3}\s+days?", q) or
+            "arriving" in q or "upcoming" in q or "expected" in q or
+            # Delayed BLs
+            any(w in q for w in ["delay", "late", "overdue", "behind", "missed"]) or
+            # Hot BLs
+            "hot" in q
+            ):
+            logger.info(f"Router: Upcoming/Delayed BLs route for query: {query}")
+            return get_upcoming_bls(query)
+
+
         # ========== PRIORITY 1: Handle port/location queries ==========
         if any(phrase in q for phrase in ["list containers from", "containers from", "from port"]):
             return get_arrivals_by_port(query)
@@ -230,6 +250,7 @@ def route_query(query: str, consignee_codes: list = None) -> str:
         if consignee_codes and hasattr(threading.current_thread(), 'consignee_codes'):
             delattr(threading.current_thread(), 'consignee_codes')
             logger.debug("Cleaned up consignee codes from thread context")
+
 
 
 
