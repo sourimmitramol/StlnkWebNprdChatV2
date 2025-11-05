@@ -2856,7 +2856,7 @@ def get_upcoming_arrivals(query: str) -> str:
         output_cols.append("consignee_code_multiple")
    
     final_cols = [c for c in output_cols if c in result_df.columns]
-    out_df = result_df.sort_values(by=sort_col, ascending=True).head(100)[final_cols]
+    out_df = result_df.sort_values(by=sort_col, ascending=True).head(300)[final_cols]
  
     # Format all date columns for clean output
     for col in out_df.select_dtypes(include=['datetime64[ns]']).columns:
@@ -5965,6 +5965,7 @@ TOOLS = [
         description="Get ETA for a PO (prefers revised_eta over eta_dp)."
     )
 ]
+
 
 
 
