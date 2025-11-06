@@ -266,7 +266,7 @@ def get_hot_upcoming_arrivals(query: str) -> str:
     default_days = 7
     days = None
     for pat in [
-        r"(?:next|upcoming|within|in)\s+(\d{1,3})\s+days?",
+        r"(?:next|upcoming|coming|within|in)\s+(\d{1,3})\s+days?",
         r"arriving.*?(\d{1,3})\s+days?",
         r"\bin\s+(\d{1,3})\s+days?\b",
         r"(\d{1,3})\s+days?"
@@ -2367,6 +2367,8 @@ def get_upcoming_arrivals(query: str) -> str:
     List containers scheduled to arrive within the next X days or on specific dates.
     - Parses many natural forms for "next N days", "today", "tomorrow", "day after tomorrow", "yesterday", "day before yesterday".
     - Parses time periods: "this week", "this month", "next week", "next month", "last week", "last month".
+    - **NEW**: Parses specific dates like "07 september 2025", "7th sep 2025", "07/11/25", "2025-09-07".
+    - **NEW**: Parses date ranges like "from 7 Sep 2025 to 10 Sep 2025", "between 7-9-2025 and 10-9-2025".
     - Uses per-row ETA priority: revised_eta (if present) else eta_dp for FUTURE dates.
     - For PAST dates, it uses ata_dp first, and if that is null, it falls back to derived_ata_dp.
     - Respects consignee filtering via _df().
@@ -2384,58 +2386,223 @@ def get_upcoming_arrivals(query: str) -> str:
     days = None
     is_past_query = False  # Flag to track if query is about past dates
    
-    # **CRITICAL FIX**: Re-ordered date parsing to be more robust.
-    if re.search(r'\bday\s+before\s+yesterday\b', query_lower):
-        start_date = today - pd.Timedelta(days=2)
-        end_date = start_date
-        is_past_query = True
-    elif re.search(r'\blast\s+week\b', query_lower):
-        start_date = today - pd.Timedelta(days=today.weekday() + 7)
-        end_date = start_date + pd.Timedelta(days=6)
-        is_past_query = True
-    elif re.search(r'\blast\s+month\b', query_lower):
-        start_date = (today.replace(day=1) - pd.Timedelta(days=1)).replace(day=1)
-        end_date = today.replace(day=1) - pd.Timedelta(days=1)
-        is_past_query = True
-    elif re.search(r'\byesterday\b', query_lower):
-        start_date = today - pd.Timedelta(days=1)
-        end_date = start_date
-        is_past_query = True
-    elif re.search(r'\btoday\b', query_lower):
-        start_date = today
-        end_date = today
-    elif re.search(r'\btomorrow\b', query_lower):
-        start_date = today + pd.Timedelta(days=1)
-        end_date = start_date
-    elif re.search(r'\bday\s+after\s+tomorrow\b', query_lower):
-        start_date = today + pd.Timedelta(days=2)
-        end_date = start_date
-    elif re.search(r'\bthis\s+week\b', query_lower):
-        start_date = today - pd.Timedelta(days=today.weekday())
-        end_date = start_date + pd.Timedelta(days=6)
-    elif re.search(r'\bthis\s+month\b', query_lower):
-        start_date = today.replace(day=1)
-        end_date = start_date + pd.offsets.MonthEnd(1)
-    elif re.search(r'\bnext\s+week\b', query_lower):
-        start_date = today - pd.Timedelta(days=today.weekday()) + pd.Timedelta(weeks=1)
-        end_date = start_date + pd.Timedelta(days=6)
-    elif re.search(r'\bnext\s+month\b', query_lower):
-        start_date = (today.replace(day=1) + pd.DateOffset(months=1))
-        end_date = start_date + pd.offsets.MonthEnd(1)
-    else:
-        # Fallback to "next X days" patterns
-        for p in [r"(?:next|upcoming|in|within|coming)\s+(\d{1,4})\s+days?", r"(\d{1,4})\s+days?"]:
-            m = re.search(p, query, re.IGNORECASE)
-            if m:
-                days = int(m.group(1))
+    # **NEW**: Parse date ranges FIRST (highest priority)
+    # Patterns for date ranges:
+    # - "from 7 Sep 2025 to 10 Sep 2025"
+    # - "between 7th September 2025 and 10th September 2025"
+    # - "from 07/09/2025 to 10/09/2025"
+    # - "between 2025-09-07 and 2025-09-10"
+   
+    date_range_patterns = [
+        # Text date ranges: "from 7 Sep 2025 to 10 Sep 2025"
+        r'(?:from|between)\s+(\d{1,2})(?:st|nd|rd|th)?\s+(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[,\s]*[\']?(\d{2,4})\s+(?:to|and)\s+(\d{1,2})(?:st|nd|rd|th)?\s+(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[,\s]*[\']?(\d{2,4})',
+       
+        # Numeric date ranges: "from 07/09/2025 to 10/09/2025"
+        r'(?:from|between)\s+(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})\s+(?:to|and)\s+(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})',
+       
+        # ISO format ranges: "between 2025-09-07 and 2025-09-10"
+        r'(?:from|between)\s+(\d{4})[/-](\d{1,2})[/-](\d{1,2})\s+(?:to|and)\s+(\d{4})[/-](\d{1,2})[/-](\d{1,2})',
+    ]
+   
+    date_range_found = False
+    for pattern_idx, pattern in enumerate(date_range_patterns):
+        m = re.search(pattern, query_lower)
+        if m:
+            try:
+                if pattern_idx == 0:  # Text date format
+                    day1, month1_str, year1, day2, month2_str, year2 = m.groups()
+                   
+                    # Month mapping
+                    month_map = {
+                        'january': 1, 'jan': 1, 'february': 2, 'feb': 2, 'march': 3, 'mar': 3,
+                        'april': 4, 'apr': 4, 'may': 5, 'june': 6, 'jun': 6,
+                        'july': 7, 'jul': 7, 'august': 8, 'aug': 8,
+                        'september': 9, 'sep': 9, 'sept': 9,
+                        'october': 10, 'oct': 10, 'november': 11, 'nov': 11,
+                        'december': 12, 'dec': 12
+                    }
+                   
+                    month1 = month_map.get(month1_str, 1)
+                    month2 = month_map.get(month2_str, 1)
+                    year1 = int(year1)
+                    year2 = int(year2)
+                   
+                    # Handle 2-digit years
+                    if year1 < 100:
+                        year1 += 2000
+                    if year2 < 100:
+                        year2 += 2000
+                   
+                    start_date = pd.Timestamp(year=year1, month=month1, day=int(day1)).normalize()
+                    end_date = pd.Timestamp(year=year2, month=month2, day=int(day2)).normalize()
+                   
+                elif pattern_idx == 1:  # DD/MM/YYYY format
+                    day1, month1, year1, day2, month2, year2 = m.groups()
+                   
+                    year1 = int(year1)
+                    year2 = int(year2)
+                   
+                    # Handle 2-digit years
+                    if year1 < 100:
+                        year1 += 2000
+                    if year2 < 100:
+                        year2 += 2000
+                   
+                    start_date = pd.Timestamp(year=year1, month=int(month1), day=int(day1)).normalize()
+                    end_date = pd.Timestamp(year=year2, month=int(month2), day=int(day2)).normalize()
+                   
+                elif pattern_idx == 2:  # YYYY-MM-DD format
+                    year1, month1, day1, year2, month2, day2 = m.groups()
+                   
+                    start_date = pd.Timestamp(year=int(year1), month=int(month1), day=int(day1)).normalize()
+                    end_date = pd.Timestamp(year=int(year2), month=int(month2), day=int(day2)).normalize()
+               
+                # Determine if it's a past query
+                is_past_query = (end_date < today)
+                date_range_found = True
+               
+                try:
+                    logger.info(f"[get_upcoming_arrivals] Parsed date range: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}, is_past={is_past_query}")
+                except:
+                    pass
+               
                 break
-        if days is None:
-            days = 7 # Default for generic queries like "any arrivals?"
-        end_date = today + pd.Timedelta(days=days)
+               
+            except Exception as e:
+                logger.error(f"Error parsing date range: {e}")
+                continue
+   
+    # **NEW**: Parse specific single dates if no range found
+    if not date_range_found:
+        specific_date = None
+       
+        # Pattern 1: Day Month Year (e.g., "07 september 2025", "7th sep 2025")
+        date_pattern1 = r'(\d{1,2})(?:st|nd|rd|th)?\s+(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[,\s]*[\']?(\d{4}|\d{2})'
+        m1 = re.search(date_pattern1, query_lower)
+        if m1:
+            day = int(m1.group(1))
+            month_str = m1.group(2)
+            year = int(m1.group(3))
+           
+            # Handle 2-digit year
+            if year < 100:
+                year += 2000
+           
+            # Month mapping
+            month_map = {
+                'january': 1, 'jan': 1, 'february': 2, 'feb': 2, 'march': 3, 'mar': 3,
+                'april': 4, 'apr': 4, 'may': 5, 'june': 6, 'jun': 6,
+                'july': 7, 'jul': 7, 'august': 8, 'aug': 8,
+                'september': 9, 'sep': 9, 'sept': 9,
+                'october': 10, 'oct': 10, 'november': 11, 'nov': 11,
+                'december': 12, 'dec': 12
+            }
+            month = month_map.get(month_str, 1)
+           
+            try:
+                specific_date = pd.Timestamp(year=year, month=month, day=day).normalize()
+            except:
+                pass
+       
+        # Pattern 2: Numeric formats (DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD)
+        if not specific_date:
+            # Try DD/MM/YYYY or DD-MM-YYYY format
+            date_pattern2 = r'(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})'
+            m2 = re.search(date_pattern2, query)
+            if m2:
+                part1 = int(m2.group(1))
+                part2 = int(m2.group(2))
+                part3 = int(m2.group(3))
+               
+                # Handle 2-digit year
+                if part3 < 100:
+                    part3 += 2000
+               
+                # Determine if it's DD/MM/YYYY or YYYY-MM-DD
+                if part1 > 1000:  # YYYY-MM-DD format
+                    year, month, day = part1, part2, part3
+                elif part3 > 1000:  # DD/MM/YYYY or MM/DD/YYYY format
+                    # Assume DD/MM/YYYY for international format
+                    day, month, year = part1, part2, part3
+                    # If day > 12, swap with month
+                    if day > 12 and month <= 12:
+                        day, month = month, day
+                else:
+                    day, month, year = part1, part2, part3
+               
+                try:
+                    specific_date = pd.Timestamp(year=year, month=month, day=day).normalize()
+                except:
+                    pass
+       
+        # If specific date found, use it
+        if specific_date:
+            start_date = specific_date
+            end_date = specific_date
+            is_past_query = (specific_date < today)
+           
+            try:
+                logger.info(f"[get_upcoming_arrivals] Parsed specific date: {specific_date.strftime('%Y-%m-%d')}, is_past={is_past_query}")
+            except:
+                pass
+   
+    # **EXISTING**: Check for relative date keywords (only if no specific date/range found)
+    if not date_range_found and not specific_date:
+        if re.search(r'\bday\s+before\s+yesterday\b', query_lower):
+            start_date = today - pd.Timedelta(days=2)
+            end_date = start_date
+            is_past_query = True
+        elif re.search(r'\blast\s+week\b', query_lower):
+            start_date = today - pd.Timedelta(days=today.weekday() + 7)
+            end_date = start_date + pd.Timedelta(days=6)
+            is_past_query = True
+        elif re.search(r'\blast\s+month\b', query_lower):
+            start_date = (today.replace(day=1) - pd.Timedelta(days=1)).replace(day=1)
+            end_date = today.replace(day=1) - pd.Timedelta(days=1)
+            is_past_query = True
+        elif re.search(r'\byesterday\b', query_lower):
+            start_date = today - pd.Timedelta(days=1)
+            end_date = start_date
+            is_past_query = True
+        elif re.search(r'\btoday\b', query_lower):
+            start_date = today
+            end_date = today
+        elif re.search(r'\btomorrow\b', query_lower):
+            start_date = today + pd.Timedelta(days=1)
+            end_date = start_date
+        elif re.search(r'\bday\s+after\s+tomorrow\b', query_lower):
+            start_date = today + pd.Timedelta(days=2)
+            end_date = start_date
+        elif re.search(r'\bthis\s+week\b', query_lower):
+            start_date = today - pd.Timedelta(days=today.weekday())
+            end_date = start_date + pd.Timedelta(days=6)
+        elif re.search(r'\bthis\s+month\b', query_lower):
+            start_date = today.replace(day=1)
+            end_date = start_date + pd.offsets.MonthEnd(1)
+        elif re.search(r'\bnext\s+week\b', query_lower):
+            start_date = today - pd.Timedelta(days=today.weekday()) + pd.Timedelta(weeks=1)
+            end_date = start_date + pd.Timedelta(days=6)
+        elif re.search(r'\bnext\s+month\b', query_lower):
+            start_date = (today.replace(day=1) + pd.DateOffset(months=1))
+            end_date = start_date + pd.offsets.MonthEnd(1)
+        else:
+            # Fallback to "next X days" patterns
+            for p in [r"(?:next|upcoming|in|within|coming)\s+(\d{1,4})\s+days?", r"(\d{1,4})\s+days?"]:
+                m = re.search(p, query, re.IGNORECASE)
+                if m:
+                    days = int(m.group(1))
+                    break
+            if days is None:
+                days = 7 # Default for generic queries
+            end_date = today + pd.Timedelta(days=days)
+ 
+    try:
+        logger.info(f"[get_upcoming_arrivals] parsed_days={days} is_past={is_past_query} today={today.strftime('%Y-%m-%d')} start_date={start_date.strftime('%Y-%m-%d')} end_date={end_date.strftime('%Y-%m-%d')}")
+    except Exception:
+        pass
  
     # 2) Load df and apply filters
     df = _df()
-    # (Location and other filters would go here, simplified for clarity)
  
     # 3) ETA/ATA selection and date filtering
     if is_past_query:
@@ -2451,7 +2618,6 @@ def get_upcoming_arrivals(query: str) -> str:
         if 'ata_dp' in df.columns:
             df['arrival_date_for_filter'] = df['ata_dp']
         if 'derived_ata_dp' in df.columns:
-            # Fill NaNs in our filter column with derived_ata_dp
             df['arrival_date_for_filter'] = df['arrival_date_for_filter'].fillna(df['derived_ata_dp'])
  
         # Filter based on the combined arrival date column
@@ -2460,7 +2626,7 @@ def get_upcoming_arrivals(query: str) -> str:
        
         result_df = df[mask].copy()
         sort_col = 'arrival_date_for_filter'
-        output_cols = ['container_number', 'discharge_port', 'ata_dp', 'derived_ata_dp']
+        output_cols = ['container_number', 'discharge_port', 'ata_dp']
  
     else:
         # --- FUTURE ARRIVALS LOGIC ---
@@ -2500,7 +2666,7 @@ def get_upcoming_arrivals(query: str) -> str:
         output_cols.append("consignee_code_multiple")
    
     final_cols = [c for c in output_cols if c in result_df.columns]
-    out_df = result_df.sort_values(by=sort_col, ascending=True).head(100)[final_cols]
+    out_df = result_df.sort_values(by=sort_col, ascending=True).head(300)[final_cols]
  
     # Format all date columns for clean output
     for col in out_df.select_dtypes(include=['datetime64[ns]']).columns:
@@ -6157,6 +6323,7 @@ TOOLS = [
         description="Get ETA for a PO (prefers revised_eta over eta_dp)."
     )
 ]
+
 
 
 
