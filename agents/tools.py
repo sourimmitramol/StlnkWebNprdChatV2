@@ -6181,12 +6181,18 @@ TOOLS = [
         func=get_containers_by_final_destination,
         description="Find containers arriving at a specific final destination/distribution center (FD/DC) within a timeframe. Handles queries like 'containers arriving at FD Nashville in next 3 days' or 'list containers to DC Phoenix next week'."
     ),
+	Tool(
+        name="Get Upcoming BLs",
+        func=get_upcoming_bls,
+        description="List upcoming ocean BLs. Handles queries with transport mode, location, and timeframes, like 'Show me BLs arriving by sea at NLRTM in next 10 days'."
+    ),
     Tool(
         name="Get ETA For PO",
         func=get_eta_for_po,
         description="Get ETA for a PO (prefers revised_eta over eta_dp)."
     )
 ]
+
 
 
 
