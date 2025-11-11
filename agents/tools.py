@@ -3560,8 +3560,6 @@ def get_delayed_pos(question: str = None, consignee_code: str = None, **kwargs) 
       - Consignee filtering (by code or name)
       - Location filtering (port name or code, fuzzy matching)
     """
-    import re
-    import pandas as pd
     from rapidfuzz import fuzz, process
 
     query = (question or "")
@@ -3683,34 +3681,96 @@ def get_delayed_pos(question: str = None, consignee_code: str = None, **kwargs) 
         if arrived.empty:
             where = f"{code or name}"
             return f"No delayed POs found at {where} for your authorized consignees."
-
+        
     q = query.lower()
-
+    
+    # **CRITICAL FIX**: Add debug logging and ensure correct pattern matching
+    try:
+        logger.info(f"[get_delayed_pos] Processing query: {query}")
+    except:
+        pass
+    
     # -----------------------
-    # Delay day filters
+    # Delay day filters (order: range, <, >, X+, >=, ==, default >=7)
     # -----------------------
     range_match = re.search(r"(\d+)\s*[-–—]\s*(\d+)\s*days?", q)
     less_than = re.search(r"(?:less\s+than|under|below|<)\s*(\d+)\s*days?", q)
-    more_than = re.search(r"(?:more\s+than|over|>\s*)(\d+)\s*days?", q)
+    more_than = re.search(r"(?:more\s+than|over|above|greater\s+than|>)\s*(\d+)\s*days?", q)  # Added 'greater than'
     plus_sign = re.search(r"\b(\d+)\s*\+\s*days?\b", q)
-    exact = re.search(r"(?:by|of|in)\s+(\d+)\s+days?", q)
-
+    at_least = re.search(r"(?:at\s+least|>=|minimum)\s*(\d+)\s*days?", q)
+    exact = re.search(r"(?:exactly|by|of|in)\s+(\d+)\s+days?", q)
+ 
+    # Log which pattern matched
+    try:
+        if range_match:
+            logger.info(f"[get_delayed_pos] Matched range pattern: {range_match.groups()}")
+        elif less_than:
+            logger.info(f"[get_delayed_pos] Matched less_than pattern: {less_than.groups()}")
+        elif more_than:
+            logger.info(f"[get_delayed_pos] Matched more_than pattern: {more_than.groups()}")
+        elif plus_sign:
+            logger.info(f"[get_delayed_pos] Matched plus_sign pattern: {plus_sign.groups()}")
+        elif at_least:
+            logger.info(f"[get_delayed_pos] Matched at_least pattern: {at_least.groups()}")
+        elif exact:
+            logger.info(f"[get_delayed_pos] Matched exact pattern: {exact.groups()}")
+        else:
+            logger.info(f"[get_delayed_pos] No pattern matched, using default >= 7")
+    except:
+        pass
+ 
     if range_match:
         d1, d2 = int(range_match.group(1)), int(range_match.group(2))
         low, high = min(d1, d2), max(d1, d2)
         delayed = arrived[(arrived["delay_days"] >= low) & (arrived["delay_days"] <= high)]
+        try:
+            logger.info(f"[get_delayed_pos] Range filter: {low} <= delay_days <= {high}, results: {len(delayed)}")
+        except:
+            pass
     elif less_than:
         d = int(less_than.group(1))
         delayed = arrived[(arrived["delay_days"] > 0) & (arrived["delay_days"] < d)]
-    elif more_than or plus_sign:
-        d = int((more_than or plus_sign).group(1))
+        try:
+            logger.info(f"[get_delayed_pos] Less than filter: 0 < delay_days < {d}, results: {len(delayed)}")
+        except:
+            pass
+    elif more_than:
+        d = int(more_than.group(1))
+        # **CRITICAL**: Use strictly greater than (>) for "more than X days"
         delayed = arrived[arrived["delay_days"] > d]
+        try:
+            logger.info(f"[get_delayed_pos] More than filter: delay_days > {d}, results: {len(delayed)}")
+            logger.info(f"[get_delayed_pos] Sample delay_days values: {arrived['delay_days'].value_counts().head(10).to_dict()}")
+        except:
+            pass
+    elif plus_sign:
+        d = int(plus_sign.group(1))
+        delayed = arrived[arrived["delay_days"] >= d]
+        try:
+            logger.info(f"[get_delayed_pos] Plus sign filter: delay_days >= {d}, results: {len(delayed)}")
+        except:
+            pass
+    elif at_least:
+        d = int(at_least.group(1))
+        delayed = arrived[arrived["delay_days"] >= d]
+        try:
+            logger.info(f"[get_delayed_pos] At least filter: delay_days >= {d}, results: {len(delayed)}")
+        except:
+            pass
     elif exact:
         d = int(exact.group(1))
         delayed = arrived[arrived["delay_days"] == d]
+        try:
+            logger.info(f"[get_delayed_pos] Exact filter: delay_days == {d}, results: {len(delayed)}")
+        except:
+            pass
     else:
-        delayed = arrived[arrived["delay_days"] > 0]
-
+        delayed = arrived[arrived["delay_days"] >= 7]
+        try:
+            logger.info(f"[get_delayed_pos] Default filter: delay_days >= 7, results: {len(delayed)}")
+        except:
+            pass
+ 
     if delayed.empty:
         where = f" at {code or name}" if (code or name) else ""
         return f"No delayed POs found for your authorized consignees{where}."
@@ -6328,6 +6388,7 @@ TOOLS = [
         description="Get ETA for a PO (prefers revised_eta over eta_dp )."
     )
 ]  
+
 
 
 
