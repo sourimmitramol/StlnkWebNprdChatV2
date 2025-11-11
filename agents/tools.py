@@ -6325,9 +6325,10 @@ TOOLS = [
 	Tool(
         name="Get ETA For PO",
         func=get_eta_for_po,
-        description="Get ETA for a PO (prefers revised_eta over eta_dp ). "
+        description="Get ETA for a PO (prefers revised_eta over eta_dp )."
     )
 ]  
+
 
 
 
