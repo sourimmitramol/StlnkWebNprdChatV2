@@ -5565,22 +5565,19 @@ def get_upcoming_bls(question: str = None, consignee_code: str = None, **kwargs)
     Returns list[dict] with columns: ocean_bl_no_multiple, container_number, discharge_port, revised_eta, eta_dp, delay_days (if delayed), hot_container_flag, transport_mode.
     """
    
- 
     query = (question or "").strip()
     query_upper = query.upper()
- 
-    # Parse days (default 7)
-    days = None
-    for pat in [r"(?:next|coming|within|in)\s+(\d{1,4})\s+days?", r"(\d{1,4})\s+days?"]:
-        m = re.search(pat, query, re.IGNORECASE)
-        if m:
-            try:
-                days = int(m.group(1))
-                break
-            except Exception:
-                pass
-    days = days if days is not None else 7
- 
+
+    # **FIX**: Use parse_time_period() and extract start_date, end_date
+    start_date, end_date, period_desc = parse_time_period(query)
+    
+    try:
+        logger.info(f"[get_upcoming_bls] Period: {period_desc}, "
+                   f"Dates: {format_date_for_display(start_date)} to "
+                   f"{format_date_for_display(end_date)}")
+    except:
+        pass
+
     df = _df()
  
     # Find BL column robustly
@@ -5911,17 +5908,17 @@ def get_upcoming_bls(question: str = None, consignee_code: str = None, **kwargs)
     else:
         df['eta_for_filter'] = df['eta_dp']
  
+    # **FIX**: Use start_date and end_date from parse_time_period()
     today = pd.Timestamp.today().normalize()
-    end_date = today + pd.Timedelta(days=days)
  
-    date_mask = df['eta_for_filter'].notna() & (df['eta_for_filter'] >= today) & (df['eta_for_filter'] <= end_date)
+    date_mask = df['eta_for_filter'].notna() & (df['eta_for_filter'] >= start_date) & (df['eta_for_filter'] <= end_date)
     if 'ata_dp' in df.columns:
         date_mask &= df['ata_dp'].isna()
  
     result = df[date_mask].copy()
     if result.empty:
         loc_str = f" at {location_name}" if location_found else ""
-        return f"No BLs arriving{loc_str} between {today.strftime('%Y-%m-%d')} and {end_date.strftime('%Y-%m-%d')}."
+        return f"No BLs arriving{loc_str} between {start_date.strftime('%Y-%m-%d')} and {end_date.strftime('%Y-%m-%d')}."
  
     # Group by BL and aggregate
     out_cols = [bl_col, "container_number", "discharge_port", "revised_eta", "eta_dp", "eta_for_filter", "consignee_code_multiple"]
@@ -6388,6 +6385,7 @@ TOOLS = [
         description="Get ETA for a PO (prefers revised_eta over eta_dp )."
     )
 ]  
+
 
 
 
