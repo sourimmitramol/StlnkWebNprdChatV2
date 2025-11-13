@@ -14,15 +14,23 @@ from utils.container import extract_container_number,extract_po_number,extract_o
 from utils.logger import logger
 from services.azure_blob import get_shipment_df
 from utils.misc import to_datetime, clean_container_number
-from agents.prompts import map_synonym_to_column
-from agents.prompts import COLUMN_SYNONYMS
+#from agents.prompts import map_synonym_to_column
+#from agents.prompts import COLUMN_SYNONYMS
 from services.vectorstore import get_vectorstore
 from langchain_openai import AzureChatOpenAI
 import sqlite3
 from sqlalchemy import create_engine
 import threading
 from difflib import get_close_matches
-
+# At the top of the file, update the import line:
+from agents.prompts import (
+    map_synonym_to_column,
+    COLUMN_SYNONYMS,
+    parse_time_period,           # Add this
+    format_date_for_display,     # Add this
+    is_date_in_range,
+    map_intent_phrase            # Add this (if you use it)
+)
 # modified by raju for supporting continuity of user chat interaction---:
 from langchain_core.prompts import PromptTemplate
 import json
@@ -6362,6 +6370,7 @@ TOOLS = [
         description="Get ETA for a PO (prefers revised_eta over eta_dp )."
     )
 ]  
+
 
 
 
