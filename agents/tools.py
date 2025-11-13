@@ -2780,316 +2780,267 @@ def get_hot_containers(question: str = None, consignee_code: str = None, **kwarg
 
 
 # ...existing code...
+
 def get_upcoming_arrivals(query: str) -> str:
     """
-    List containers scheduled to arrive within the next X days or on specific dates.
-    - Parses many natural forms for "next N days", "today", "tomorrow", "day after tomorrow", "yesterday", "day before yesterday".
-    - Parses time periods: "this week", "this month", "next week", "next month", "last week", "last month".
-    - **NEW**: Parses specific dates like "07 september 2025", "7th sep 2025", "07/11/25", "2025-09-07".
-    - **NEW**: Parses date ranges like "from 7 Sep 2025 to 10 Sep 2025", "between 7-9-2025 and 10-9-2025".
-    - Uses per-row ETA priority: revised_eta (if present) else eta_dp for FUTURE dates.
-    - For PAST dates, it uses ata_dp first, and if that is null, it falls back to derived_ata_dp.
-    - Respects consignee filtering via _df().
-    - Strictly filters by discharge_port when a port code/city is provided (e.g., USLAX, Los Angeles).
-    Returns list of dict records (up to 100 rows) or a short message if none found.
+    List containers scheduled to arrive OR that have already arrived on specific dates.
+    - Parses many natural forms for dates: "next N days", "today", "tomorrow", specific dates, date ranges
+    - **NEW**: Centralized date parsing using parse_time_period()
+    - **NEW**: Improved port/location filtering with multi-word port names support
+    - Uses per-row ETA priority: revised_eta (if present) else eta_dp for FUTURE dates
+    - For PAST dates, it uses ata_dp first, and if that is null, it falls back to derived_ata_dp
+    - Respects consignee filtering via _df()
+    - Strictly filters by discharge_port when a port code/city is provided (e.g., USLAX, Los Angeles)
+    Returns list of dict records (up to 300 rows) or a short message if none found.
     """
  
     query = (query or "").strip()
     query_lower = query.lower()
  
-    # 1) Parse specific dates or timeframe
-    today = pd.Timestamp.today().normalize()
-    start_date = today
-    end_date = None
-    days = None
-    is_past_query = False  # Flag to track if query is about past dates
-   
-    # **NEW**: Parse date ranges FIRST (highest priority)
-    # Patterns for date ranges:
-    # - "from 7 Sep 2025 to 10 Sep 2025"
-    # - "between 7th September 2025 and 10th September 2025"
-    # - "from 07/09/2025 to 10/09/2025"
-    # - "between 2025-09-07 and 2025-09-10"
-   
-    date_range_patterns = [
-        # Text date ranges: "from 7 Sep 2025 to 10 Sep 2025"
-        r'(?:from|between)\s+(\d{1,2})(?:st|nd|rd|th)?\s+(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[,\s]*[\']?(\d{2,4})\s+(?:to|and)\s+(\d{1,2})(?:st|nd|rd|th)?\s+(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[,\s]*[\']?(\d{2,4})',
-       
-        # Numeric date ranges: "from 07/09/2025 to 10/09/2025"
-        r'(?:from|between)\s+(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})\s+(?:to|and)\s+(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})',
-       
-        # ISO format ranges: "between 2025-09-07 and 2025-09-10"
-        r'(?:from|between)\s+(\d{4})[/-](\d{1,2})[/-](\d{1,2})\s+(?:to|and)\s+(\d{4})[/-](\d{1,2})[/-](\d{1,2})',
-    ]
-   
-    date_range_found = False
-    for pattern_idx, pattern in enumerate(date_range_patterns):
-        m = re.search(pattern, query_lower)
-        if m:
-            try:
-                if pattern_idx == 0:  # Text date format
-                    day1, month1_str, year1, day2, month2_str, year2 = m.groups()
-                   
-                    # Month mapping
-                    month_map = {
-                        'january': 1, 'jan': 1, 'february': 2, 'feb': 2, 'march': 3, 'mar': 3,
-                        'april': 4, 'apr': 4, 'may': 5, 'june': 6, 'jun': 6,
-                        'july': 7, 'jul': 7, 'august': 8, 'aug': 8,
-                        'september': 9, 'sep': 9, 'sept': 9,
-                        'october': 10, 'oct': 10, 'november': 11, 'nov': 11,
-                        'december': 12, 'dec': 12
-                    }
-                   
-                    month1 = month_map.get(month1_str, 1)
-                    month2 = month_map.get(month2_str, 1)
-                    year1 = int(year1)
-                    year2 = int(year2)
-                   
-                    # Handle 2-digit years
-                    if year1 < 100:
-                        year1 += 2000
-                    if year2 < 100:
-                        year2 += 2000
-                   
-                    start_date = pd.Timestamp(year=year1, month=month1, day=int(day1)).normalize()
-                    end_date = pd.Timestamp(year=year2, month=month2, day=int(day2)).normalize()
-                   
-                elif pattern_idx == 1:  # DD/MM/YYYY format
-                    day1, month1, year1, day2, month2, year2 = m.groups()
-                   
-                    year1 = int(year1)
-                    year2 = int(year2)
-                   
-                    # Handle 2-digit years
-                    if year1 < 100:
-                        year1 += 2000
-                    if year2 < 100:
-                        year2 += 2000
-                   
-                    start_date = pd.Timestamp(year=year1, month=int(month1), day=int(day1)).normalize()
-                    end_date = pd.Timestamp(year=year2, month=int(month2), day=int(day2)).normalize()
-                   
-                elif pattern_idx == 2:  # YYYY-MM-DD format
-                    year1, month1, day1, year2, month2, day2 = m.groups()
-                   
-                    start_date = pd.Timestamp(year=int(year1), month=int(month1), day=int(day1)).normalize()
-                    end_date = pd.Timestamp(year=int(year2), month=int(month2), day=int(day2)).normalize()
-               
-                # Determine if it's a past query
-                is_past_query = (end_date < today)
-                date_range_found = True
-               
-                try:
-                    logger.info(f"[get_upcoming_arrivals] Parsed date range: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}, is_past={is_past_query}")
-                except:
-                    pass
-               
-                break
-               
-            except Exception as e:
-                logger.error(f"Error parsing date range: {e}")
-                continue
-   
-    # **NEW**: Parse specific single dates if no range found
-    if not date_range_found:
-        specific_date = None
-       
-        # Pattern 1: Day Month Year (e.g., "07 september 2025", "7th sep 2025")
-        date_pattern1 = r'(\d{1,2})(?:st|nd|rd|th)?\s+(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[,\s]*[\']?(\d{4}|\d{2})'
-        m1 = re.search(date_pattern1, query_lower)
-        if m1:
-            day = int(m1.group(1))
-            month_str = m1.group(2)
-            year = int(m1.group(3))
-           
-            # Handle 2-digit year
-            if year < 100:
-                year += 2000
-           
-            # Month mapping
-            month_map = {
-                'january': 1, 'jan': 1, 'february': 2, 'feb': 2, 'march': 3, 'mar': 3,
-                'april': 4, 'apr': 4, 'may': 5, 'june': 6, 'jun': 6,
-                'july': 7, 'jul': 7, 'august': 8, 'aug': 8,
-                'september': 9, 'sep': 9, 'sept': 9,
-                'october': 10, 'oct': 10, 'november': 11, 'nov': 11,
-                'december': 12, 'dec': 12
-            }
-            month = month_map.get(month_str, 1)
-           
-            try:
-                specific_date = pd.Timestamp(year=year, month=month, day=day).normalize()
-            except:
-                pass
-       
-        # Pattern 2: Numeric formats (DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD)
-        if not specific_date:
-            # Try DD/MM/YYYY or DD-MM-YYYY format
-            date_pattern2 = r'(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})'
-            m2 = re.search(date_pattern2, query)
-            if m2:
-                part1 = int(m2.group(1))
-                part2 = int(m2.group(2))
-                part3 = int(m2.group(3))
-               
-                # Handle 2-digit year
-                if part3 < 100:
-                    part3 += 2000
-               
-                # Determine if it's DD/MM/YYYY or YYYY-MM-DD
-                if part1 > 1000:  # YYYY-MM-DD format
-                    year, month, day = part1, part2, part3
-                elif part3 > 1000:  # DD/MM/YYYY or MM/DD/YYYY format
-                    # Assume DD/MM/YYYY for international format
-                    day, month, year = part1, part2, part3
-                    # If day > 12, swap with month
-                    if day > 12 and month <= 12:
-                        day, month = month, day
-                else:
-                    day, month, year = part1, part2, part3
-               
-                try:
-                    specific_date = pd.Timestamp(year=year, month=month, day=day).normalize()
-                except:
-                    pass
-       
-        # If specific date found, use it
-        if specific_date:
-            start_date = specific_date
-            end_date = specific_date
-            is_past_query = (specific_date < today)
-           
-            try:
-                logger.info(f"[get_upcoming_arrivals] Parsed specific date: {specific_date.strftime('%Y-%m-%d')}, is_past={is_past_query}")
-            except:
-                pass
-   
-    # **EXISTING**: Check for relative date keywords (only if no specific date/range found)
-    if not date_range_found and not specific_date:
-        if re.search(r'\bday\s+before\s+yesterday\b', query_lower):
-            start_date = today - pd.Timedelta(days=2)
-            end_date = start_date
-            is_past_query = True
-        elif re.search(r'\blast\s+week\b', query_lower):
-            start_date = today - pd.Timedelta(days=today.weekday() + 7)
-            end_date = start_date + pd.Timedelta(days=6)
-            is_past_query = True
-        elif re.search(r'\blast\s+month\b', query_lower):
-            start_date = (today.replace(day=1) - pd.Timedelta(days=1)).replace(day=1)
-            end_date = today.replace(day=1) - pd.Timedelta(days=1)
-            is_past_query = True
-        elif re.search(r'\byesterday\b', query_lower):
-            start_date = today - pd.Timedelta(days=1)
-            end_date = start_date
-            is_past_query = True
-        elif re.search(r'\btoday\b', query_lower):
-            start_date = today
-            end_date = today
-        elif re.search(r'\btomorrow\b', query_lower):
-            start_date = today + pd.Timedelta(days=1)
-            end_date = start_date
-        elif re.search(r'\bday\s+after\s+tomorrow\b', query_lower):
-            start_date = today + pd.Timedelta(days=2)
-            end_date = start_date
-        elif re.search(r'\bthis\s+week\b', query_lower):
-            start_date = today - pd.Timedelta(days=today.weekday())
-            end_date = start_date + pd.Timedelta(days=6)
-        elif re.search(r'\bthis\s+month\b', query_lower):
-            start_date = today.replace(day=1)
-            end_date = start_date + pd.offsets.MonthEnd(1)
-        elif re.search(r'\bnext\s+week\b', query_lower):
-            start_date = today - pd.Timedelta(days=today.weekday()) + pd.Timedelta(weeks=1)
-            end_date = start_date + pd.Timedelta(days=6)
-        elif re.search(r'\bnext\s+month\b', query_lower):
-            start_date = (today.replace(day=1) + pd.DateOffset(months=1))
-            end_date = start_date + pd.offsets.MonthEnd(1)
-        else:
-            # Fallback to "next X days" patterns
-            for p in [r"(?:next|upcoming|in|within|coming)\s+(\d{1,4})\s+days?", r"(\d{1,4})\s+days?"]:
-                m = re.search(p, query, re.IGNORECASE)
-                if m:
-                    days = int(m.group(1))
-                    break
-            if days is None:
-                days = 7 # Default for generic queries
-            end_date = today + pd.Timedelta(days=days)
- 
+    # ----------------------
+    # Parse time period using centralized helper
+    # ----------------------
+    start_date, end_date, period_desc = parse_time_period(query)
+    
+    # Determine if it's a past query based on end_date
+    is_past_query = (end_date < pd.Timestamp.today().normalize())
+    
     try:
-        logger.info(f"[get_upcoming_arrivals] parsed_days={days} is_past={is_past_query} today={today.strftime('%Y-%m-%d')} start_date={start_date.strftime('%Y-%m-%d')} end_date={end_date.strftime('%Y-%m-%d')}")
+        logger.info(f"[get_upcoming_arrivals] Period: {period_desc}, "
+                   f"Dates: {format_date_for_display(start_date)} to "
+                   f"{format_date_for_display(end_date)}, is_past={is_past_query}")
     except Exception:
         pass
  
-    # 2) Load df and apply filters
+    # ----------------------
+    # Load df and apply filters
+    # ----------------------
     df = _df()
- 
-    # 3) ETA/ATA selection and date filtering
+
+    # ----------------------
+    # Location/Port filtering (IMPROVED - handles multi-word ports)
+    # ----------------------
+    port_cols = [c for c in ["discharge_port", "vehicle_arrival_lcn", "final_destination", "place_of_delivery"] 
+                 if c in df.columns]
+    
+    if port_cols:
+        location_mask = pd.Series(False, index=df.index, dtype=bool)
+        location_found = False
+        location_name = None
+        
+        # Helper function to normalize port names
+        def normalize_port_name(port_str):
+            if pd.isna(port_str):
+                return ""
+            s = str(port_str).upper()
+            # Remove content in parentheses (port codes)
+            s = re.sub(r'\([^)]*\)', '', s)
+            # Normalize whitespace
+            s = re.sub(r'\s+', ' ', s).strip()
+            return s
+        
+        # Pattern 1: Explicit port codes in parentheses like (USLAX) or (SGSIN)
+        paren_match = re.search(r'\(([A-Z0-9]{3,6})\)', query.upper())
+        if paren_match:
+            tok = paren_match.group(1)
+            tok_mask = pd.Series(False, index=df.index, dtype=bool)
+            for col in port_cols:
+                tok_mask |= df[col].astype(str).str.upper().str.contains(rf'\({re.escape(tok)}\)', na=False)
+            if tok_mask.any():
+                location_mask = tok_mask
+                location_found = True
+                location_name = tok
+                try:
+                    logger.info(f"[get_upcoming_arrivals] Found location in parentheses: {tok}")
+                except:
+                    pass
+        
+        # Pattern 2: City names with prepositions (explicit patterns)
+        if not location_found:
+            city_patterns = [
+                # Pattern with prepositions: "at/in/to CITY_NAME"
+                r'\b(?:AT|IN|TO)\s+([A-Z][A-Za-z\s\.\-\']{3,}?)(?:\s+IN\s+|\s+NEXT\s+|\s+WITHIN\s+|,|\s*$)',
+                # Known major ports/cities
+                r'\b(LOS\s+ANGELES|LONG\s+BEACH|NEW\s+YORK|SINGAPORE|ROTTERDAM|HONG\s+KONG|SHANGHAI|BUSAN|TOKYO|OAKLAND|SAVANNAH|HOUSTON|MIAMI|SEATTLE|CHICAGO|PORT\s+OF\s+[A-Z\s]+)\b'
+            ]
+            
+            for pattern in city_patterns:
+                city_match = re.search(pattern, query, re.IGNORECASE)
+                if city_match:
+                    city = city_match.group(1).strip()
+                    # Clean up the matched city name by removing trailing timeframe words
+                    city = re.sub(r'\s+(IN\s+)?NEXT.*$', '', city, flags=re.IGNORECASE).strip()
+                    city = re.sub(r'\s+(IN\s+)?THE\s+LAST.*$', '', city, flags=re.IGNORECASE).strip()
+                    city = re.sub(r'\s+LAST\s+.*$', '', city, flags=re.IGNORECASE).strip()
+                    
+                    if city and len(city) > 2:
+                        location_name = city.upper()
+                        
+                        # Normalize and match
+                        city_norm = normalize_port_name(city)
+                        city_words = city_norm.split()
+                        
+                        city_mask = pd.Series(False, index=df.index)
+                        for col in port_cols:
+                            # Create normalized column for matching
+                            col_norm = df[col].apply(normalize_port_name)
+                            
+                            # Try exact match first
+                            exact_match = col_norm == city_norm
+                            
+                            # If no exact match, try word-by-word matching
+                            if not exact_match.any() and len(city_words) > 0:
+                                word_match = pd.Series(True, index=df.index)
+                                for word in city_words:
+                                    if len(word) >= 3:  # Only check meaningful words
+                                        word_match &= col_norm.str.contains(word, na=False, regex=False)
+                                city_mask |= word_match
+                            else:
+                                city_mask |= exact_match
+                        
+                        if city_mask.any():
+                            location_mask = city_mask
+                            location_found = True
+                            try:
+                                logger.info(f"[get_upcoming_arrivals] Found city location: {city} (normalized: {city_norm})")
+                            except:
+                                pass
+                            break
+        
+        # Pattern 3: Bare port codes (only if no explicit location found) - validate against known codes
+        if not location_found and port_cols:
+            # Extract known port codes from the dataset FIRST
+            known_codes = set()
+            try:
+                for col in port_cols:
+                    vals = df[col].dropna().astype(str).str.upper()
+                    known_codes |= set(re.findall(r'\(([A-Z0-9]{3,6})\)', ' '.join(vals.tolist())))
+            except Exception:
+                pass
+            
+            # Only proceed if we have known codes
+            if known_codes:
+                # Extract candidate tokens from query
+                candidate_tokens = re.findall(r'\b[A-Z0-9]{3,6}\b', query.upper())
+                
+                # Skip ALL timeframe and common words
+                skip_tokens = {
+                    "NEXT", "DAYS", "DAY", "IN", "AT", "ON", "THE", "AND", "TO", "FROM", 
+                    "ARRIVE", "ARRIVING", "ARRIVED", "CONTAINERS", "CONTAINER", "PLEASE", 
+                    "CAN", "YOU", "LET", "ME", "KNOW", "WITHIN", "UPCOMING", "US", "TELL",
+                    "TODAY", "TOMORROW", "WEEK", "MONTH", "THIS", "LAST", "AFTER", "BEFORE",
+                    "SHOW", "LIST", "WHICH", "WHAT", "WHEN", "WHERE"
+                }
+                
+                # Filter to only tokens that:
+                # 1. Are not in skip list
+                # 2. Are not purely numeric
+                # 3. Actually exist in our known_codes set
+                candidate_tokens = [
+                    t for t in candidate_tokens 
+                    if t not in skip_tokens 
+                    and not t.isdigit() 
+                    and t in known_codes
+                ]
+                
+                # Try each valid candidate
+                for tok in candidate_tokens:
+                    tok_mask = pd.Series(False, index=df.index)
+                    for col in port_cols:
+                        tok_mask |= df[col].astype(str).str.upper().str.contains(rf'\({re.escape(tok)}\)', na=False)
+                    
+                    if tok_mask.any():
+                        location_mask = tok_mask
+                        location_found = True
+                        location_name = tok
+                        try:
+                            logger.info(f"[get_upcoming_arrivals] Found bare port code: {tok} (validated against known codes)")
+                        except:
+                            pass
+                        break
+        
+        # Apply location filter if found
+        if location_found:
+            df = df[location_mask].copy()
+            if df.empty:
+                verb = "arrived" if is_past_query else "scheduled to arrive"
+                return f"No containers {verb} at {location_name} between {start_date.strftime('%Y-%m-%d')} and {end_date.strftime('%Y-%m-%d')}."
+
+    # ----------------------
+    # ETA/ATA selection and date filtering
+    # ----------------------
     if is_past_query:
         # --- PAST ARRIVALS LOGIC ---
         date_cols = [c for c in ['ata_dp', 'derived_ata_dp'] if c in df.columns]
         if not date_cols:
             return "No actual arrival date columns (ata_dp, derived_ata_dp) found."
-       
+        
         df = ensure_datetime(df, date_cols)
-       
+        
         # Create a single arrival date column, prioritizing ata_dp
         df['arrival_date_for_filter'] = pd.NaT
         if 'ata_dp' in df.columns:
             df['arrival_date_for_filter'] = df['ata_dp']
         if 'derived_ata_dp' in df.columns:
             df['arrival_date_for_filter'] = df['arrival_date_for_filter'].fillna(df['derived_ata_dp'])
- 
+
         # Filter based on the combined arrival date column
         mask = (df['arrival_date_for_filter'].dt.normalize() >= start_date) & \
                (df['arrival_date_for_filter'].dt.normalize() <= end_date)
-       
+        
         result_df = df[mask].copy()
         sort_col = 'arrival_date_for_filter'
         output_cols = ['container_number', 'discharge_port', 'ata_dp']
- 
+
     else:
         # --- FUTURE ARRIVALS LOGIC ---
         date_cols = [c for c in ['revised_eta', 'eta_dp', 'ata_dp'] if c in df.columns]
         if not any(c in date_cols for c in ['revised_eta', 'eta_dp']):
              return "No estimated arrival date columns (revised_eta, eta_dp) found."
- 
+
         df = ensure_datetime(df, date_cols)
- 
+
         # Create a single ETA column, prioritizing revised_eta
         df['eta_for_filter'] = pd.NaT
         if 'revised_eta' in df.columns:
             df['eta_for_filter'] = df['revised_eta']
         if 'eta_dp' in df.columns:
             df['eta_for_filter'] = df['eta_for_filter'].fillna(df['eta_dp'])
- 
+
         # Filter for future dates and exclude already arrived containers
         mask = (df['eta_for_filter'].dt.normalize() >= start_date) & \
                (df['eta_for_filter'].dt.normalize() <= end_date)
         if 'ata_dp' in df.columns:
             mask &= df['ata_dp'].isna()
-           
+            
         result_df = df[mask].copy()
         sort_col = 'eta_for_filter'
         output_cols = ['container_number', 'discharge_port', 'revised_eta', 'eta_dp']
- 
-    # 4) Format and return results
+
+    # ----------------------
+    # Format and return results
+    # ----------------------
     if result_df.empty:
         verb = "arrived" if is_past_query else "scheduled to arrive"
+        loc_str = f" at {location_name}" if location_found else ""
         if start_date == end_date:
-            return f"No containers {verb} on {start_date.strftime('%Y-%m-%d')}."
+            return f"No containers {verb}{loc_str} on {start_date.strftime('%Y-%m-%d')}."
         else:
-            return f"No containers {verb} between {start_date.strftime('%Y-%m-%d')} and {end_date.strftime('%Y-%m-%d')}."
- 
+            return f"No containers {verb}{loc_str} between {start_date.strftime('%Y-%m-%d')} and {end_date.strftime('%Y-%m-%d')}."
+
     # Add common columns and sort
     if "consignee_code_multiple" in result_df.columns:
         output_cols.append("consignee_code_multiple")
-   
+    if "po_number_multiple" in result_df.columns:
+        output_cols.append("po_number_multiple")
+    
     final_cols = [c for c in output_cols if c in result_df.columns]
     out_df = result_df.sort_values(by=sort_col, ascending=True).head(300)[final_cols]
- 
+
     # Format all date columns for clean output
     for col in out_df.select_dtypes(include=['datetime64[ns]']).columns:
         out_df[col] = out_df[col].dt.strftime('%Y-%m-%d')
- 
+
     return out_df.where(pd.notnull(out_df), None).to_dict(orient='records')
 
 
@@ -6172,6 +6123,7 @@ TOOLS = [
         description="Get ETA for a PO (prefers revised_eta over eta_dp)."
     )
 ]
+
 
 
 
