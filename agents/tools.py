@@ -3166,12 +3166,12 @@ import re
 from difflib import get_close_matches
 import pandas as pd
 
-# ...existing code...
+
 def get_arrivals_by_port(query: str) -> str:
     """
     Find containers arriving at a specific port or country within the next N days.
     Behaviour:
-    - Parse 'next X days' robustly.
+    - Parse timeframe using centralized parse_time_period() helper.
     - For each row, prefer revised_eta; if null use eta_dp (eta_for_filter).
     - Exclude rows that already have ata_dp (already arrived).
     - Return up to 50 matching rows (dict records) with formatted dates.
@@ -3179,74 +3179,16 @@ def get_arrivals_by_port(query: str) -> str:
    
     df = _df()
  
-    # ---------- 1) Parse timeframe ----------
-    default_days = 7
-    days = None
-    specific_date = None
-   
-    # Check for specific date patterns first (e.g., "within 17th Oct'25", "by October 17, 2025")
-    date_patterns = [
-        r'(?:within|by|before|on|until)\s+(\d{1,2})(?:st|nd|rd|th)?\s+(\w+)[,\s]*[\']?(\d{2,4})',  # "within 17th Oct'25"
-        r'(?:within|by|before|on|until)\s+(\w+)\s+(\d{1,2})(?:st|nd|rd|th)?[,\s]+(\d{4})',  # "by October 17, 2025"
-    ]
-   
-    for pattern in date_patterns:
-        m = re.search(pattern, query, re.IGNORECASE)
-        if m:
-            try:
-                if pattern == date_patterns[0]:  # Day Month Year format
-                    day, month, year = m.groups()
-                else:  # Month Day Year format
-                    month, day, year = m.groups()
-               
-                # Parse year (handle 2-digit years)
-                year = int(year)
-                if year < 100:
-                    year += 2000
-               
-                # Parse month
-                month_map = {
-                    'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
-                    'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12,
-                    'january': 1, 'february': 2, 'march': 3, 'april': 4,
-                    'june': 6, 'july': 7, 'august': 8, 'september': 9,
-                    'october': 10, 'november': 11, 'december': 12
-                }
-                month_num = month_map.get(str(month).lower()[:3])
-                if month_num:
-                    specific_date = pd.Timestamp(year=year, month=month_num, day=int(day)).normalize()
-                    break
-            except Exception:
-                pass
-   
-    # If no specific date found, try to parse "next N days"
-    if not specific_date:
-        for pat in [
-            r"(?:next|upcoming|within|in)\s+(\d{1,3})\s+days?",
-            r"arriving.*?(\d{1,3})\s+days?",
-            r"(\d{1,3})\s+days?"
-        ]:
-            m = re.search(pat, query, re.IGNORECASE)
-            if m:
-                days = int(m.group(1))
-                break
-   
-    n_days = days if days is not None else default_days
- 
-    today = pd.Timestamp.today().normalize()
-   
-    # Set end_date based on specific date or days window
-    if specific_date:
-        end_date = specific_date
-    else:
-        end_date = today + pd.Timedelta(days=n_days)
- 
-    # Log parsed timeframe for debugging
+    # ---------- 1) Parse timeframe using centralized helper ----------
+    start_date, end_date, period_desc = parse_time_period(query)
+    
     try:
-        logger.info(f"[get_arrivals_by_port] query={query!r} specific_date={specific_date} parsed_n_days={n_days} today={today.strftime('%Y-%m-%d')} end_date={end_date.strftime('%Y-%m-%d')}")
-    except Exception:
-        print(f"[get_arrivals_by_port] specific_date={specific_date} parsed_n_days={n_days} today={today} end_date={end_date}")
- 
+        logger.info(f"[get_arrivals_by_port] Period: {period_desc}, "
+                   f"Dates: {format_date_for_display(start_date)} to "
+                   f"{format_date_for_display(end_date)}")
+    except:
+        pass
+
     # ---------- 2) Extract port name or code ----------
     port_name_query = None
     port_code_query = None
@@ -3331,20 +3273,20 @@ def get_arrivals_by_port(query: str) -> str:
     else:
         filtered['eta_for_filter'] = filtered['eta_dp']
  
-    # Inclusive window and exclude already-arrived
-    date_mask = (filtered['eta_for_filter'] >= today) & (filtered['eta_for_filter'] <= end_date)
+    # **CRITICAL FIX**: Use start_date and end_date from parse_time_period()
+    date_mask = (filtered['eta_for_filter'] >= start_date) & (filtered['eta_for_filter'] <= end_date)
     if 'ata_dp' in filtered.columns:
         date_mask &= filtered['ata_dp'].isna()
  
     arrivals = filtered[date_mask].copy()
     if arrivals.empty:
         return (
-            f"No containers with ETA between {today.strftime('%Y-%m-%d')} and {end_date.strftime('%Y-%m-%d')} "
+            f"No containers with ETA between {format_date_for_display(start_date)} and {format_date_for_display(end_date)} "
             f"for the requested port ('{port_code_query or port_name_query}')."
         )
  
     # ---------- 6) Build display ----------
-    display_cols = ['container_number', 'discharge_port', 'revised_eta', 'eta_dp']
+    display_cols = ['container_number', 'po_number_multiple', 'discharge_port', 'revised_eta', 'eta_dp']
     # include the matching port column for context
     for pc in ['discharge_port', 'final_load_port'] + existing_port_cols:
         if pc in arrivals.columns:
@@ -3365,7 +3307,7 @@ def get_arrivals_by_port(query: str) -> str:
     # Always include eta_for_filter for sorting, then drop before returning
     display_cols = [c for c in (display_cols + ['eta_for_filter']) if c in arrivals.columns]
  
-    result_df = arrivals[display_cols].sort_values('eta_for_filter').head(50).copy()
+    result_df = arrivals[display_cols].sort_values('eta_for_filter').head(100).copy()
  
     # Format date columns
     for dcol in ['revised_eta', 'eta_dp', 'eta_for_filter']:
@@ -6230,6 +6172,7 @@ TOOLS = [
         description="Get ETA for a PO (prefers revised_eta over eta_dp)."
     )
 ]
+
 
 
 
