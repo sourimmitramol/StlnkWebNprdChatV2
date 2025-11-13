@@ -598,54 +598,453 @@ def map_synonym_to_column(term: str) -> str:
  
     return COLUMN_SYNONYMS.get(term, term)
  
- 
 INTENT_SYNONYMS = {
-    # delay family
+    # ==========================================
+    # DELAY FAMILY - All variations of "delayed/late"
+    # ==========================================
+    "delay": "delay",
     "delayed": "delay",
     "late": "delay",
     "overdue": "delay",
     "behind": "delay",
     "behind schedule": "delay",
     "running late": "delay",
-    # arrivals (future)
+    "past due": "delay",
+    "missed deadline": "delay",
+    "not on time": "delay",
+    "tardy": "delay",
+    "slow": "delay",
+    "lagging": "delay",
+    "backlog": "delay",
+    "held up": "delay",
+    "stuck": "delay",
+    "waiting": "delay",
+    "pending": "delay",
+    "not arrived": "delay",
+    "hasn't arrived": "delay",
+    "still waiting": "delay",
+    "taking too long": "delay",
+    
+    # ==========================================
+    # UPCOMING/FUTURE ARRIVALS - Containers not yet arrived
+    # ==========================================
     "upcoming": "upcoming_arrivals",
     "next": "upcoming_arrivals",
     "arriving": "upcoming_arrivals",
     "arrivals": "upcoming_arrivals",
     "arriving soon": "upcoming_arrivals",
     "expected arrivals": "upcoming_arrivals",
-    "early arrival": "upcoming_arrivals",
+    "expected": "upcoming_arrivals",
     "due to arrive": "upcoming_arrivals",
-    # arrived/departed
+    "scheduled": "upcoming_arrivals",
+    "scheduled to arrive": "upcoming_arrivals",
+    "coming": "upcoming_arrivals",
+    "on the way": "upcoming_arrivals",
+    "in transit": "upcoming_arrivals",
+    "incoming": "upcoming_arrivals",
+    "future": "upcoming_arrivals",
+    "forecasted": "upcoming_arrivals",
+    "anticipated": "upcoming_arrivals",
+    "will arrive": "upcoming_arrivals",
+    "going to arrive": "upcoming_arrivals",
+    "eta": "upcoming_arrivals",
+    "estimated arrival": "upcoming_arrivals",
+    "early arrival": "upcoming_arrivals",
+    "advance notice": "upcoming_arrivals",
+    
+    # ==========================================
+    # ARRIVED - Containers that have reached destination
+    # ==========================================
     "arrived": "arrived",
+    "reached": "arrived",
     "landed": "arrived",
     "delivered": "arrived",
-    "reached": "arrived",
+    "received": "arrived",
+    "got in": "arrived",
+    "came in": "arrived",
+    "made it": "arrived",
+    "at port": "arrived",
+    "at destination": "arrived",
+    "discharged": "arrived",
+    "unloaded": "arrived",
+    "completed": "arrived",
+    "finished": "arrived",
+    "ata": "arrived",
+    "actual arrival": "arrived",
+    "has arrived": "arrived",
+    "already arrived": "arrived",
+    
+    # ==========================================
+    # DEPARTED - Containers that have left origin
+    # ==========================================
     "departed": "departed",
     "sailed": "departed",
     "shipped": "departed",
+    "left": "departed",
     "left port": "departed",
-    # hot / booking / return
+    "sailed from": "departed",
+    "departed from": "departed",
+    "set off": "departed",
+    "moved out": "departed",
+    "loaded": "departed",
+    "picked up": "departed",
+    "atd": "departed",
+    "actual departure": "departed",
+    "has departed": "departed",
+    "already departed": "departed",
+    "on board": "departed",
+    "vessel departed": "departed",
+    
+    # ==========================================
+    # HOT CONTAINERS - Priority/urgent shipments
+    # ==========================================
     "hot": "hot",
+    "Hot": "hot",
+    "HOT": "hot",
     "priority": "hot",
+    "urgent": "hot",
     "rush": "hot",
     "expedite": "hot",
+    "expedited": "hot",
+    "critical": "hot",
+    "high priority": "hot",
+    "express": "hot",
+    "fast track": "hot",
+    "time sensitive": "hot",
+    "asap": "hot",
+    "emergency": "hot",
+    "immediate": "hot",
+    "vip": "hot",
+    "top priority": "hot",
+    
+    # ==========================================
+    # LATE BOOKING - Booking delays
+    # ==========================================
     "late booking": "late_booking",
     "booking late": "late_booking",
+    "booking delayed": "late_booking",
+    "delayed booking": "late_booking",
+    "booking not confirmed": "late_booking",
+    "booking pending": "late_booking",
+    "booking overdue": "late_booking",
+    
+    # ==========================================
+    # LATE CONTAINER RETURN - Return delays
+    # ==========================================
     "late return": "late_container_return",
     "return delayed": "late_container_return",
+    "delayed return": "late_container_return",
+    "return overdue": "late_container_return",
+    "not returned": "late_container_return",
+    "hasn't been returned": "late_container_return",
+    "return pending": "late_container_return",
+    "return late": "late_container_return",
 }
- 
+
+
 def map_intent_phrase(text: str) -> Optional[str]:
     """
-    Map a free-text phrase to a canonical intent:
-    delay, upcoming_arrivals, arrived, departed, hot, late_booking, late_container_return.
+    Map a free-text phrase to a canonical intent using longest-match-first strategy.
+    
+    Supported intents:
+    - delay: delayed, late, overdue, behind schedule, etc.
+    - upcoming_arrivals: arriving, next, upcoming, expected, etc.
+    - arrived: reached, landed, delivered, discharged, etc.
+    - departed: sailed, shipped, left port, etc.
+    - hot: priority, urgent, rush, expedited, etc.
+    - late_booking: booking delays
+    - late_container_return: container return delays
+    
+    Args:
+        text: User query string
+    
+    Returns:
+        Canonical intent string or None if no match
+    
+    Examples:
+        >>> map_intent_phrase("Show me delayed containers")
+        'delay'
+        
+        >>> map_intent_phrase("Which containers are arriving next week?")
+        'upcoming_arrivals'
+        
+        >>> map_intent_phrase("Hot containers at USNYC")
+        'hot'
     """
-    t = (text or "").lower()
-    for key, intent in INTENT_SYNONYMS.items():
-        if key in t:
-            return intent
+    if not text:
+        return None
+    
+    text_lower = text.lower()
+    
+    # Sort keys by length (longest first) to match multi-word phrases before single words
+    # E.g., "behind schedule" should match before "behind"
+    sorted_keys = sorted(INTENT_SYNONYMS.keys(), key=len, reverse=True)
+    
+    for key in sorted_keys:
+        # Use word boundary matching for better accuracy
+        # This prevents "notified" from matching "not" in "not arrived"
+        if len(key.split()) == 1:  # Single word
+            pattern = r'\b' + re.escape(key.lower()) + r'\b'
+        else:  # Multi-word phrase
+            pattern = re.escape(key.lower())
+        
+        if re.search(pattern, text_lower):
+            return INTENT_SYNONYMS[key]
+    
     return None
+
+
+# Optional: Reverse mapping for debugging/logging
+INTENT_TO_SYNONYMS = {}
+for synonym, intent in INTENT_SYNONYMS.items():
+    if intent not in INTENT_TO_SYNONYMS:
+        INTENT_TO_SYNONYMS[intent] = []
+    INTENT_TO_SYNONYMS[intent].append(synonym)
+
+# Example output:
+# {
+#     'delay': ['delay', 'delayed', 'late', 'overdue', ...],
+#     'upcoming_arrivals': ['upcoming', 'next', 'arriving', ...],
+#     ...
+# }
+
+import re
+import pandas as pd
+from datetime import datetime
+from typing import Tuple, Optional
+
+def parse_time_period(query: str) -> Tuple[pd.Timestamp, pd.Timestamp, str]:
+    """
+    Centralized time period parser for all tools.
+    
+    Handles various time expressions:
+    - Relative: today, tomorrow, this week, next week, last month, etc.
+    - Numeric: next 7 days, last 30 days, in 5 days
+    - Absolute: 21/1/2025, 2025-01-21, Jan 21 2025
+    - Ranges: from 1/1/2025 to 15/1/2025
+    
+    Returns:
+        Tuple of (start_date, end_date, description)
+        - start_date: pd.Timestamp (normalized to 00:00:00)
+        - end_date: pd.Timestamp (normalized to 23:59:59 of that day)
+        - description: Human-readable string (e.g., "today", "next 7 days")
+    
+    Examples:
+        >>> parse_time_period("show me containers arriving tomorrow")
+        (Timestamp('2025-11-12 00:00:00'), Timestamp('2025-11-12 23:59:59'), 'tomorrow')
+        
+        >>> parse_time_period("list POs in next 10 days")
+        (Timestamp('2025-11-11 00:00:00'), Timestamp('2025-11-21 23:59:59'), 'next 10 days')
+        
+        >>> parse_time_period("containers arriving on 21/1/2025")
+        (Timestamp('2025-01-21 00:00:00'), Timestamp('2025-01-21 23:59:59'), '21/1/2025')
+    """
+    query = (query or "").strip()
+    today = pd.Timestamp.today().normalize()
+    
+    # ==========================================
+    # 1. SPECIFIC DAY KEYWORDS
+    # ==========================================
+    if re.search(r'\btoday\b', query, re.IGNORECASE):
+        return today, today, "today"
+    
+    if re.search(r'\btomorrow\b', query, re.IGNORECASE):
+        tomorrow = today + pd.Timedelta(days=1)
+        return tomorrow, tomorrow, "tomorrow"
+    
+    if re.search(r'\byesterday\b', query, re.IGNORECASE):
+        yesterday = today - pd.Timedelta(days=1)
+        return yesterday, yesterday, "yesterday"
+    
+    if re.search(r'\bday\s+before\s+yesterday\b', query, re.IGNORECASE):
+        dby = today - pd.Timedelta(days=2)
+        return dby, dby, "day before yesterday"
+    
+    if re.search(r'\bday\s+after\s+tomorrow\b', query, re.IGNORECASE):
+        dat = today + pd.Timedelta(days=2)
+        return dat, dat, "day after tomorrow"
+    
+    # ==========================================
+    # 2. WEEK PERIODS
+    # ==========================================
+    if re.search(r'\bthis\s+week\b', query, re.IGNORECASE):
+        start = today
+        end = today + pd.Timedelta(days=7)
+        return start, end, "this week (next 7 days)"
+    
+    if re.search(r'\bnext\s+week\b', query, re.IGNORECASE):
+        start = today + pd.Timedelta(days=8)
+        end = today + pd.Timedelta(days=14)
+        return start, end, "next week (days 8-14)"
+    
+    if re.search(r'\blast\s+week\b', query, re.IGNORECASE):
+        start = today - pd.Timedelta(days=7)
+        end = today - pd.Timedelta(days=1)
+        return start, end, "last week (previous 7 days)"
+    
+    # ==========================================
+    # 3. MONTH PERIODS
+    # ==========================================
+    if re.search(r'\bthis\s+month\b', query, re.IGNORECASE):
+        start = today
+        end = today + pd.Timedelta(days=30)
+        return start, end, "this month (next 30 days)"
+    
+    if re.search(r'\bnext\s+month\b', query, re.IGNORECASE):
+        start = today + pd.Timedelta(days=31)
+        end = today + pd.Timedelta(days=60)
+        return start, end, "next month (days 31-60)"
+    
+    if re.search(r'\blast\s+month\b', query, re.IGNORECASE):
+        start = today - pd.Timedelta(days=30)
+        end = today - pd.Timedelta(days=1)
+        return start, end, "last month (previous 30 days)"
+    
+    # ==========================================
+    # 4. NUMERIC DAY PERIODS (next/last/in N days)
+    # ==========================================
+    # Pattern: "next 7 days", "in next 10 days", "upcoming 5 days"
+    match = re.search(
+        r'(?:next|upcoming|within|in\s+next|in\s+the\s+next|in)\s+(\d{1,3})\s+days?',
+        query,
+        re.IGNORECASE
+    )
+    if match:
+        days = int(match.group(1))
+        start = today
+        end = today + pd.Timedelta(days=days)
+        return start, end, f"next {days} days"
+    
+    # Pattern: "last 30 days", "past 14 days", "previous 7 days"
+    match = re.search(
+        r'(?:last|past|previous|in\s+last|in\s+the\s+last)\s+(\d{1,3})\s+days?',
+        query,
+        re.IGNORECASE
+    )
+    if match:
+        days = int(match.group(1))
+        start = today - pd.Timedelta(days=days)
+        end = today - pd.Timedelta(days=1)
+        return start, end, f"last {days} days"
+    
+    # ==========================================
+    # 5. ABSOLUTE DATE FORMATS
+    # ==========================================
+    
+    # Pattern: DD/MM/YYYY or D/M/YYYY (e.g., 21/1/2025, 05/12/2024)
+    match = re.search(r'\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\b', query)
+    if match:
+        day, month, year = int(match.group(1)), int(match.group(2)), int(match.group(3))
+        try:
+            date = pd.Timestamp(year=year, month=month, day=day)
+            return date, date, f"{day}/{month}/{year}"
+        except ValueError:
+            pass  # Invalid date, continue to next pattern
+    
+    # Pattern: YYYY-MM-DD or YYYY/MM/DD (e.g., 2025-01-21)
+    match = re.search(r'\b(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})\b', query)
+    if match:
+        year, month, day = int(match.group(1)), int(match.group(2)), int(match.group(3))
+        try:
+            date = pd.Timestamp(year=year, month=month, day=day)
+            return date, date, f"{year}-{month:02d}-{day:02d}"
+        except ValueError:
+            pass
+    
+    # Pattern: Month DD, YYYY or DD Month YYYY (e.g., "Jan 21 2025", "21 January 2025")
+    match = re.search(
+        r'\b(?:(\d{1,2})\s+)?'
+        r'(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|'
+        r'jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)'
+        r'\s+(?:(\d{1,2})\s+)?(\d{4})\b',
+        query,
+        re.IGNORECASE
+    )
+    if match:
+        day_before = match.group(1)
+        month_name = match.group(2)
+        day_after = match.group(3)
+        year = int(match.group(4))
+        
+        day = int(day_before) if day_before else (int(day_after) if day_after else 1)
+        
+        month_map = {
+            'jan': 1, 'january': 1, 'feb': 2, 'february': 2, 'mar': 3, 'march': 3,
+            'apr': 4, 'april': 4, 'may': 5, 'jun': 6, 'june': 6,
+            'jul': 7, 'july': 7, 'aug': 8, 'august': 8, 'sep': 9, 'september': 9,
+            'oct': 10, 'october': 10, 'nov': 11, 'november': 11, 'dec': 12, 'december': 12
+        }
+        month = month_map.get(month_name.lower())
+        
+        if month:
+            try:
+                date = pd.Timestamp(year=year, month=month, day=day)
+                return date, date, f"{month_name.capitalize()} {day}, {year}"
+            except ValueError:
+                pass
+    
+    # ==========================================
+    # 6. DATE RANGES (from...to...)
+    # ==========================================
+    # Pattern: "from DD/MM/YYYY to DD/MM/YYYY"
+    match = re.search(
+        r'\bfrom\s+(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\s+to\s+(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\b',
+        query,
+        re.IGNORECASE
+    )
+    if match:
+        d1, m1, y1 = int(match.group(1)), int(match.group(2)), int(match.group(3))
+        d2, m2, y2 = int(match.group(4)), int(match.group(5)), int(match.group(6))
+        try:
+            start = pd.Timestamp(year=y1, month=m1, day=d1)
+            end = pd.Timestamp(year=y2, month=m2, day=d2)
+            return start, end, f"from {d1}/{m1}/{y1} to {d2}/{m2}/{y2}"
+        except ValueError:
+            pass
+    
+    # Pattern: "between DD/MM/YYYY and DD/MM/YYYY"
+    match = re.search(
+        r'\bbetween\s+(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\s+and\s+(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\b',
+        query,
+        re.IGNORECASE
+    )
+    if match:
+        d1, m1, y1 = int(match.group(1)), int(match.group(2)), int(match.group(3))
+        d2, m2, y2 = int(match.group(4)), int(match.group(5)), int(match.group(6))
+        try:
+            start = pd.Timestamp(year=y1, month=m1, day=d1)
+            end = pd.Timestamp(year=y2, month=m2, day=d2)
+            return start, end, f"between {d1}/{m1}/{y1} and {d2}/{m2}/{y2}"
+        except ValueError:
+            pass
+    
+    # ==========================================
+    # 7. DEFAULT FALLBACK
+    # ==========================================
+    # If no time period found, default to next 7 days
+    start = today
+    end = today + pd.Timedelta(days=7)
+    return start, end, "next 7 days (default)"
+
+
+def format_date_for_display(dt: pd.Timestamp) -> str:
+    """
+    Format a pandas Timestamp for display.
+    Returns format: YYYY-MM-DD
+    """
+    if pd.isna(dt):
+        return None
+    return dt.strftime('%Y-%m-%d')
+
+
+def is_date_in_range(date: pd.Timestamp, start: pd.Timestamp, end: pd.Timestamp) -> bool:
+    """
+    Check if a date falls within a date range (inclusive).
+    """
+    if pd.isna(date):
+        return False
+    return start <= date <= end
+
 
 
 
