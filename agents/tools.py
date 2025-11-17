@@ -6042,7 +6042,25 @@ TOOLS = [
     Tool(
         name="Get Upcoming POs",
         func=get_upcoming_pos,
-        description="List PO's scheduled to ship in the next X days."
+        description=(
+            "PRIMARY TOOL FOR ALL PO/PURCHASE ORDER ARRIVAL QUERIES"
+            "CRITICAL: Use this tool if query contains ANY of these keywords:"
+            "- 'PO', 'pos', 'purchase order', 'P.O.', 'po number'"
+            "- Numeric patterns like '5302816722', '6300134648'"
+            "- Phrases: 'which POs', 'POs arriving', 'POs scheduled', 'upcoming POs'"
+            "Handles ALL PO-related arrival queries:"
+            "which POs are arriving in next 5 days?"
+            "POs arriving at DEHAM in 7 days"
+            "show upcoming POs for consignee 0000866"
+            "'list POs scheduled for USNYC next week'\n"
+            "is PO 5302816722 arriving this week?"
+            "ALWAYS use this tool when:"
+            "1. Query explicitly mentions 'PO' or 'purchase order'"
+            "2. Query asks about 'POs' (plural)\n"
+            "3. Query contains numeric PO identifiers (e.g., 5302816722)"
+            "DO NOT use 'Get Upcoming Arrivals' for PO queries."
+            "Supports: port/location filtering, consignee filtering, time periods, hot flag."
+        )
     ),
     Tool(
         name="Get Delayed POs",
@@ -6194,6 +6212,7 @@ TOOLS = [
         description="Get ETA for a PO (prefers revised_eta over eta_dp)."
     )
 ]
+
 
 
 
