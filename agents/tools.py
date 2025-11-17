@@ -6158,17 +6158,17 @@ TOOLS = [
         name="Get Upcoming Arrivals",
         func=get_upcoming_arrivals,
         description=(
-            "List **containers** (NOT POs) scheduled to arrive OR that have already arrived on specific dates.\n"
-            "**Use ONLY when query asks about containers/shipments WITHOUT mentioning 'PO' or 'purchase order'.**\n"
-            "\n**Examples when to use:**\n"
-            "'containers arriving today/tomorrow/next week'\n"
-            "'containers arrived yesterday/last week'\n"
-            "'show arrivals at USNYC in next 5 days'\n"
-            "'containers that arrived last month'\n"
-            "\n**DO NOT use when query mentions:**\n"
-            "'PO', 'POs', 'purchase order' → Use 'Get Upcoming POs' instead\n"
-            "Numeric PO identifiers → Use 'Get Upcoming POs' instead\n"
-            "\nHandles past/future arrivals, port filtering, date ranges."
+            "List **containers** (NOT POs) scheduled to arrive OR that have already arrived on specific dates."
+            "Use ONLY when query asks about containers/shipments WITHOUT mentioning 'PO' or 'purchase order'."
+            "Examples when to use:"
+            "containers arriving today/tomorrow/next week"
+            "containers arrived yesterday/last week"
+            "show arrivals at USNYC in next 5 days"
+            "containers that arrived last month"
+            "DO NOT use when query mentions:"
+            "'PO', 'POs', 'purchase order' → Use 'Get Upcoming POs' instead"
+            "Numeric PO identifiers → Use 'Get Upcoming POs' instead"
+            "Handles past/future arrivals, port filtering, date ranges."
         )
     ),
     Tool(
@@ -6200,22 +6200,22 @@ TOOLS = [
         name="Get Upcoming POs",
         func=get_upcoming_pos,
         description=(
-            "**PRIMARY TOOL FOR ALL PO/PURCHASE ORDER ARRIVAL QUERIES** \n"
-            "**CRITICAL: Use this tool if query contains ANY of these keywords:**\n"
-            "- 'PO', 'pos', 'purchase order', 'P.O.', 'po number'\n"
-            "- Numeric patterns like '5302816722', '6300134648'\n"
-            "- Phrases: 'which POs', 'POs arriving', 'POs scheduled', 'upcoming POs'\n"
-            "\n**Handles ALL PO-related arrival queries:**\n"
-            "'which POs are arriving in next 5 days?'\n"
-            "'POs arriving at DEHAM in 7 days'\n"
-            "'show upcoming POs for consignee 0000866'\n"
+            "PRIMARY TOOL FOR ALL PO/PURCHASE ORDER ARRIVAL QUERIES"
+            "CRITICAL: Use this tool if query contains ANY of these keywords:"
+            "- 'PO', 'pos', 'purchase order', 'P.O.', 'po number'"
+            "- Numeric patterns like '5302816722', '6300134648'"
+            "- Phrases: 'which POs', 'POs arriving', 'POs scheduled', 'upcoming POs'"
+            "Handles ALL PO-related arrival queries:"
+            "which POs are arriving in next 5 days?"
+            "POs arriving at DEHAM in 7 days"
+            "show upcoming POs for consignee 0000866"
             "'list POs scheduled for USNYC next week'\n"
-            "'is PO 5302816722 arriving this week?'\n"
-            "\n**ALWAYS use this tool when:**\n"
-            "1. Query explicitly mentions 'PO' or 'purchase order'\n"
+            "is PO 5302816722 arriving this week?"
+            "ALWAYS use this tool when:"
+            "1. Query explicitly mentions 'PO' or 'purchase order'"
             "2. Query asks about 'POs' (plural)\n"
-            "3. Query contains numeric PO identifiers (e.g., 5302816722)\n"
-            "\n**DO NOT use 'Get Upcoming Arrivals' for PO queries.**\n"
+            "3. Query contains numeric PO identifiers (e.g., 5302816722)"
+            "DO NOT use 'Get Upcoming Arrivals' for PO queries."
             "Supports: port/location filtering, consignee filtering, time periods, hot flag."
         )
     ),
@@ -6374,6 +6374,7 @@ TOOLS = [
         description="Get ETA for a PO (prefers revised_eta over eta_dp )."
     )
 ]  
+
 
 
 
