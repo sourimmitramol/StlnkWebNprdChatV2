@@ -6001,13 +6001,17 @@ TOOLS = [
         name="Get Upcoming Arrivals",
         func=get_upcoming_arrivals,
         description=(
-            "List containers scheduled to arrive OR that have already arrived on specific dates. "
-            "Handles queries like 'containers arriving today/tomorrow/in next X days' AND "
-            "'containers arrived yesterday/day before yesterday/last week/last month'. "
-            "Use this for ANY date-based arrival queries (past or future). "
-            "For past dates, returns containers with ata_dp or derived_ata_dp values. "
-            "DO NOT use 'Get Container Milestones' for general arrival date queries."
-			"DO NOT use 'Check Arrival Status' for general arrival date queries."
+            "List **containers** (NOT POs) scheduled to arrive OR that have already arrived on specific dates."
+            "Use ONLY when query asks about containers/shipments WITHOUT mentioning 'PO' or 'purchase order'."
+            "Examples when to use:"
+            "containers arriving today/tomorrow/next week"
+            "containers arrived yesterday/last week"
+            "show arrivals at USNYC in next 5 days"
+            "containers that arrived last month"
+            "DO NOT use when query mentions:"
+            "'PO', 'POs', 'purchase order' → Use 'Get Upcoming POs' instead"
+            "Numeric PO identifiers → Use 'Get Upcoming POs' instead"
+            "Handles past/future arrivals, port filtering, date ranges."
         )
     ),
     Tool(
@@ -6190,6 +6194,7 @@ TOOLS = [
         description="Get ETA for a PO (prefers revised_eta over eta_dp)."
     )
 ]
+
 
 
 
