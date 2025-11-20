@@ -813,161 +813,132 @@ import pandas as pd
 from datetime import datetime
 from typing import Tuple, Optional
 
+# ...existing code...
 def parse_time_period(query: str) -> Tuple[pd.Timestamp, pd.Timestamp, str]:
     """
     Centralized time period parser for all tools.
-    
-    Handles various time expressions:
-    - Relative: today, tomorrow, this week, next week, last month, etc.
-    - Numeric: next 7 days, last 30 days, in 5 days
-    - Absolute: 21/1/2025, 2025-01-21, Jan 21 2025
-    - Ranges: from 1/1/2025 to 15/1/2025
-    
-    Returns:
-        Tuple of (start_date, end_date, description)
-        - start_date: pd.Timestamp (normalized to 00:00:00)
-        - end_date: pd.Timestamp (normalized to 23:59:59 of that day)
-        - description: Human-readable string (e.g., "today", "next 7 days")
-    
-    Examples:
-        >>> parse_time_period("show me containers arriving tomorrow")
-        (Timestamp('2025-11-12 00:00:00'), Timestamp('2025-11-12 23:59:59'), 'tomorrow')
-        
-        >>> parse_time_period("list POs in next 10 days")
-        (Timestamp('2025-11-11 00:00:00'), Timestamp('2025-11-21 23:59:59'), 'next 10 days')
-        
-        >>> parse_time_period("containers arriving on 21/1/2025")
-        (Timestamp('2025-01-21 00:00:00'), Timestamp('2025-01-21 23:59:59'), '21/1/2025')
+
+    Calendar rules:
+    - Weeks are Monday–Sunday
+      * this week: current Monday to current Sunday
+      * next week: next Monday to next Sunday
+      * last week: previous Monday to previous Sunday
+    - Months are calendar months
+      * this month: 1st of current month to last day of current month
+      * next month: 1st of next month to last day of next month
+      * last month: 1st of previous month to last day of previous month
+
+    Also handles:
+    - Relative days: today, tomorrow, yesterday, etc.
+    - Numeric windows: next N days, last N days
+    - Absolute dates: DD/MM/YYYY, YYYY-MM-DD, Month DD YYYY
+    - Ranges: from DD/MM/YYYY to DD/MM/YYYY, between ... and ...
     """
     query = (query or "").strip()
     today = pd.Timestamp.today().normalize()
-    
-    # ==========================================
-    # 1. SPECIFIC DAY KEYWORDS
-    # ==========================================
+
+    # Helpers
+    def month_start(ts: pd.Timestamp) -> pd.Timestamp:
+        return ts.replace(day=1)
+
+    def next_month_start(ts: pd.Timestamp) -> pd.Timestamp:
+        y = ts.year + (1 if ts.month == 12 else 0)
+        m = 1 if ts.month == 12 else ts.month + 1
+        return pd.Timestamp(year=y, month=m, day=1)
+
+    def prev_month_start(ts: pd.Timestamp) -> pd.Timestamp:
+        y = ts.year - (1 if ts.month == 1 else 0)
+        m = 12 if ts.month == 1 else ts.month - 1
+        return pd.Timestamp(year=y, month=m, day=1)
+
+    # Specific day keywords
     if re.search(r'\btoday\b', query, re.IGNORECASE):
         return today, today, "today"
-    
     if re.search(r'\btomorrow\b', query, re.IGNORECASE):
-        tomorrow = today + pd.Timedelta(days=1)
-        return tomorrow, tomorrow, "tomorrow"
-    
+        t = today + pd.Timedelta(days=1)
+        return t, t, "tomorrow"
     if re.search(r'\byesterday\b', query, re.IGNORECASE):
-        yesterday = today - pd.Timedelta(days=1)
-        return yesterday, yesterday, "yesterday"
-    
+        y = today - pd.Timedelta(days=1)
+        return y, y, "yesterday"
     if re.search(r'\bday\s+before\s+yesterday\b', query, re.IGNORECASE):
         dby = today - pd.Timedelta(days=2)
         return dby, dby, "day before yesterday"
-    
     if re.search(r'\bday\s+after\s+tomorrow\b', query, re.IGNORECASE):
         dat = today + pd.Timedelta(days=2)
         return dat, dat, "day after tomorrow"
-    
-    # ==========================================
-    # 2. WEEK PERIODS
-    # ==========================================
-    if re.search(r'\bthis\s+week\b', query, re.IGNORECASE):
-        start = today
-        end = today + pd.Timedelta(days=7)
-        return start, end, "this week (next 7 days)"
-    
+
+    # Weeks (Monday–Sunday)
+    this_week_start = today - pd.Timedelta(days=today.weekday())       # Monday
+    this_week_end = this_week_start + pd.Timedelta(days=6)             # Sunday
+    next_week_start = this_week_start + pd.Timedelta(days=7)
+    next_week_end = next_week_start + pd.Timedelta(days=6)
+    last_week_start = this_week_start - pd.Timedelta(days=7)
+    last_week_end = last_week_start + pd.Timedelta(days=6)
+
+    if re.search(r'\b(this|current)\s+week\b', query, re.IGNORECASE):
+        return this_week_start, this_week_end, f"this week ({this_week_start.strftime('%Y-%m-%d')} to {this_week_end.strftime('%Y-%m-%d')})"
     if re.search(r'\bnext\s+week\b', query, re.IGNORECASE):
-        start = today + pd.Timedelta(days=8)
-        end = today + pd.Timedelta(days=14)
-        return start, end, "next week (days 8-14)"
-    
-    if re.search(r'\blast\s+week\b', query, re.IGNORECASE):
-        start = today - pd.Timedelta(days=7)
-        end = today - pd.Timedelta(days=1)
-        return start, end, "last week (previous 7 days)"
-    
-    # ==========================================
-    # 3. MONTH PERIODS
-    # ==========================================
+        return next_week_start, next_week_end, f"next week ({next_week_start.strftime('%Y-%m-%d')} to {next_week_end.strftime('%Y-%m-%d')})"
+    if re.search(r'\b(last|previous)\s+week\b', query, re.IGNORECASE):
+        return last_week_start, last_week_end, f"last week ({last_week_start.strftime('%Y-%m-%d')} to {last_week_end.strftime('%Y-%m-%d')})"
+
+    # Months (calendar)
     if re.search(r'\bthis\s+month\b', query, re.IGNORECASE):
-        start = today
-        end = today + pd.Timedelta(days=30)
-        return start, end, "this month (next 30 days)"
-    
+        start = month_start(today)
+        end = next_month_start(today) - pd.Timedelta(days=1)
+        return start, end, f"this month ({start.strftime('%Y-%m-%d')} to {end.strftime('%Y-%m-%d')})"
     if re.search(r'\bnext\s+month\b', query, re.IGNORECASE):
-        start = today + pd.Timedelta(days=31)
-        end = today + pd.Timedelta(days=60)
-        return start, end, "next month (days 31-60)"
-    
+        nm_start = next_month_start(today)
+        nm_end = next_month_start(nm_start) - pd.Timedelta(days=1)
+        return nm_start, nm_end, f"next month ({nm_start.strftime('%Y-%m-%d')} to {nm_end.strftime('%Y-%m-%d')})"
     if re.search(r'\blast\s+month\b', query, re.IGNORECASE):
-        start = today - pd.Timedelta(days=30)
-        end = today - pd.Timedelta(days=1)
-        return start, end, "last month (previous 30 days)"
-    
-    # ==========================================
-    # 4. NUMERIC DAY PERIODS (next/last/in N days)
-    # ==========================================
-    # Pattern: "next 7 days", "in next 10 days", "upcoming 5 days"
-    match = re.search(
-        r'(?:next|upcoming|within|in\s+next|in\s+the\s+next|in)\s+(\d{1,3})\s+days?',
-        query,
-        re.IGNORECASE
-    )
-    if match:
-        days = int(match.group(1))
-        start = today
-        end = today + pd.Timedelta(days=days)
-        return start, end, f"next {days} days"
-    
-    # Pattern: "last 30 days", "past 14 days", "previous 7 days"
-    match = re.search(
-        r'(?:last|past|previous|in\s+last|in\s+the\s+last)\s+(\d{1,3})\s+days?',
-        query,
-        re.IGNORECASE
-    )
-    if match:
-        days = int(match.group(1))
-        start = today - pd.Timedelta(days=days)
-        end = today - pd.Timedelta(days=1)
-        return start, end, f"last {days} days"
-    
-    # ==========================================
-    # 5. ABSOLUTE DATE FORMATS
-    # ==========================================
-    
-    # Pattern: DD/MM/YYYY or D/M/YYYY (e.g., 21/1/2025, 05/12/2024)
-    match = re.search(r'\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\b', query)
-    if match:
-        day, month, year = int(match.group(1)), int(match.group(2)), int(match.group(3))
+        pm_start = prev_month_start(today)
+        pm_end = month_start(today) - pd.Timedelta(days=1)
+        return pm_start, pm_end, f"last month ({pm_start.strftime('%Y-%m-%d')} to {pm_end.strftime('%Y-%m-%d')})"
+
+    # Numeric windows
+    m = re.search(r'(?:next|upcoming|within|in\s+next|in\s+the\s+next|in)\s+(\d{1,3})\s+days?', query, re.IGNORECASE)
+    if m:
+        days = int(m.group(1))
+        return today, today + pd.Timedelta(days=days), f"next {days} days"
+
+    m = re.search(r'(?:last|past|previous|in\s+last|in\s+the\s+last)\s+(\d{1,3})\s+days?', query, re.IGNORECASE)
+    if m:
+        days = int(m.group(1))
+        return today - pd.Timedelta(days=days), today - pd.Timedelta(days=1), f"last {days} days"
+
+    # Absolute dates
+    m = re.search(r'\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\b', query)
+    if m:
+        d, mo, y = int(m.group(1)), int(m.group(2)), int(m.group(3))
         try:
-            date = pd.Timestamp(year=year, month=month, day=day)
-            return date, date, f"{day}/{month}/{year}"
-        except ValueError:
-            pass  # Invalid date, continue to next pattern
-    
-    # Pattern: YYYY-MM-DD or YYYY/MM/DD (e.g., 2025-01-21)
-    match = re.search(r'\b(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})\b', query)
-    if match:
-        year, month, day = int(match.group(1)), int(match.group(2)), int(match.group(3))
-        try:
-            date = pd.Timestamp(year=year, month=month, day=day)
-            return date, date, f"{year}-{month:02d}-{day:02d}"
+            dt = pd.Timestamp(year=y, month=mo, day=d)
+            return dt.normalize(), dt.normalize(), f"{d}/{mo}/{y}"
         except ValueError:
             pass
-    
-    # Pattern: Month DD, YYYY or DD Month YYYY (e.g., "Jan 21 2025", "21 January 2025")
-    match = re.search(
+
+    m = re.search(r'\b(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})\b', query)
+    if m:
+        y, mo, d = int(m.group(1)), int(m.group(2)), int(m.group(3))
+        try:
+            dt = pd.Timestamp(year=y, month=mo, day=d)
+            return dt.normalize(), dt.normalize(), f"{y}-{mo:02d}-{d:02d}"
+        except ValueError:
+            pass
+
+    m = re.search(
         r'\b(?:(\d{1,2})\s+)?'
         r'(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|'
         r'jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)'
         r'\s+(?:(\d{1,2})\s+)?(\d{4})\b',
-        query,
-        re.IGNORECASE
+        query, re.IGNORECASE
     )
-    if match:
-        day_before = match.group(1)
-        month_name = match.group(2)
-        day_after = match.group(3)
-        year = int(match.group(4))
-        
+    if m:
+        day_before = m.group(1)
+        month_name = m.group(2)
+        day_after = m.group(3)
+        year = int(m.group(4))
         day = int(day_before) if day_before else (int(day_after) if day_after else 1)
-        
         month_map = {
             'jan': 1, 'january': 1, 'feb': 2, 'february': 2, 'mar': 3, 'march': 3,
             'apr': 4, 'april': 4, 'may': 5, 'jun': 6, 'june': 6,
@@ -975,56 +946,37 @@ def parse_time_period(query: str) -> Tuple[pd.Timestamp, pd.Timestamp, str]:
             'oct': 10, 'october': 10, 'nov': 11, 'november': 11, 'dec': 12, 'december': 12
         }
         month = month_map.get(month_name.lower())
-        
         if month:
             try:
-                date = pd.Timestamp(year=year, month=month, day=day)
-                return date, date, f"{month_name.capitalize()} {day}, {year}"
+                dt = pd.Timestamp(year=year, month=month, day=day)
+                return dt.normalize(), dt.normalize(), f"{month_name.capitalize()} {day}, {year}"
             except ValueError:
                 pass
-    
-    # ==========================================
-    # 6. DATE RANGES (from...to...)
-    # ==========================================
-    # Pattern: "from DD/MM/YYYY to DD/MM/YYYY"
-    match = re.search(
-        r'\bfrom\s+(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\s+to\s+(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\b',
-        query,
-        re.IGNORECASE
-    )
-    if match:
-        d1, m1, y1 = int(match.group(1)), int(match.group(2)), int(match.group(3))
-        d2, m2, y2 = int(match.group(4)), int(match.group(5)), int(match.group(6))
+
+    # Ranges
+    m = re.search(r'\bfrom\s+(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\s+to\s+(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\b', query, re.IGNORECASE)
+    if m:
+        d1, m1, y1, d2, m2, y2 = map(int, m.groups())
         try:
-            start = pd.Timestamp(year=y1, month=m1, day=d1)
-            end = pd.Timestamp(year=y2, month=m2, day=d2)
+            start = pd.Timestamp(year=y1, month=m1, day=d1).normalize()
+            end = pd.Timestamp(year=y2, month=m2, day=d2).normalize()
             return start, end, f"from {d1}/{m1}/{y1} to {d2}/{m2}/{y2}"
         except ValueError:
             pass
-    
-    # Pattern: "between DD/MM/YYYY and DD/MM/YYYY"
-    match = re.search(
-        r'\bbetween\s+(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\s+and\s+(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\b',
-        query,
-        re.IGNORECASE
-    )
-    if match:
-        d1, m1, y1 = int(match.group(1)), int(match.group(2)), int(match.group(3))
-        d2, m2, y2 = int(match.group(4)), int(match.group(5)), int(match.group(6))
+
+    m = re.search(r'\bbetween\s+(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\s+and\s+(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\b', query, re.IGNORECASE)
+    if m:
+        d1, m1, y1, d2, m2, y2 = map(int, m.groups())
         try:
-            start = pd.Timestamp(year=y1, month=m1, day=d1)
-            end = pd.Timestamp(year=y2, month=m2, day=d2)
+            start = pd.Timestamp(year=y1, month=m1, day=d1).normalize()
+            end = pd.Timestamp(year=y2, month=m2, day=d2).normalize()
             return start, end, f"between {d1}/{m1}/{y1} and {d2}/{m2}/{y2}"
         except ValueError:
             pass
-    
-    # ==========================================
-    # 7. DEFAULT FALLBACK
-    # ==========================================
-    # If no time period found, default to next 7 days
-    start = today
-    end = today + pd.Timedelta(days=7)
-    return start, end, "next 7 days (default)"
+
+    # Default
+    return today, today + pd.Timedelta(days=7), "next 7 days (default)"
+# ...existing code...
 
 
 def format_date_for_display(dt: pd.Timestamp) -> str:
@@ -1044,6 +996,7 @@ def is_date_in_range(date: pd.Timestamp, start: pd.Timestamp, end: pd.Timestamp)
     if pd.isna(date):
         return False
     return start <= date <= end
+
 
 
 
