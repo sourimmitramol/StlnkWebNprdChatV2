@@ -2004,6 +2004,7 @@ def ensure_datetime(df: pd.DataFrame, columns: list) -> pd.DataFrame:
 
 # ...existing code...
 
+
 def get_delayed_containers(question: str = None, consignee_code: str = None, **kwargs) -> str:
     """
     Get containers that arrived delayed (ATA > ETA at discharge port).
@@ -2111,13 +2112,15 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
     delay_threshold = None
     delay_operator = ">"  # default: any positive delay
     
-    # Patterns for delay thresholds
+    # **CRITICAL FIX**: Check "less than" pattern BEFORE "exact" pattern
+    # Patterns for delay thresholds (ORDER MATTERS!)
     patterns = [
-        (r'(?:more\s+than|over|greater\s+than|>\s*)\s*(\d+)\s+days?', '>'),
+        (r'(?:less\s+than|under|below|<)\s*(\d+)\s+days?', '<'),
+        (r'(?:more\s+than|over|above|greater\s+than|>)\s*(\d+)\s+days?', '>'),
         (r'(?:at\s+least|minimum|>=\s*|≥\s*)\s*(\d+)\s+days?', '>='),
-        (r'(?:exactly|equal\s+to|=\s*)\s*(\d+)\s+days?', '=='),
         (r'(?:up\s+to|no\s+more\s+than|maximum|within|<=\s*|≤\s*)\s*(\d+)\s+days?', '<='),
-        (r'(?:delayed\s+by|late\s+by|\s)(\d+)\s+days?(?:\s+late)?', '=='),
+        (r'(?:exactly|equal\s+to|=\s*)\s*(\d+)\s+days?', '=='),
+        (r'(?:delayed\s+by|late\s+by)\s+(\d+)\s+days?(?:\s+late)?', '=='),
     ]
     
     for pattern, op in patterns:
@@ -2125,11 +2128,17 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
         if m:
             delay_threshold = int(m.group(1))
             delay_operator = op
+            try:
+                logger.info(f"[get_delayed_containers] Matched pattern: {pattern} with operator: {op}, threshold: {delay_threshold}")
+            except:
+                pass
             break
     
     # 10) Apply delay filter
     if delay_threshold is not None:
-        if delay_operator == '>':
+        if delay_operator == '<':
+            delay_mask = (df_arrived["delay_days"] > 0) & (df_arrived["delay_days"] < delay_threshold)
+        elif delay_operator == '>':
             delay_mask = df_arrived["delay_days"] > delay_threshold
         elif delay_operator == '>=':
             delay_mask = df_arrived["delay_days"] >= delay_threshold
@@ -2233,7 +2242,6 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
             out[dcol] = out[dcol].dt.strftime("%Y-%m-%d")
     
     return out.where(pd.notnull(out), None).to_dict(orient="records")
-
 
 
 # ...existing code...
@@ -6224,6 +6232,7 @@ TOOLS = [
         description="Get ETA for a PO (prefers revised_eta over eta_dp)."
     )
 ]
+
 
 
 
