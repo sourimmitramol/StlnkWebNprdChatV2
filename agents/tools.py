@@ -1932,7 +1932,7 @@ def ensure_datetime(df: pd.DataFrame, columns: list) -> pd.DataFrame:
     return df
 
 # ...existing code...
-# ...existing code...
+
 
 
 def get_delayed_containers(question: str = None, consignee_code: str = None, **kwargs) -> str:
@@ -1943,25 +1943,24 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
     - Time windows: "this week", "last 7 days", "in August", etc. (applied to ATA)
     - Port filtering: "delayed at USNYC", "late at Rotterdam"
     - Consignee filtering via consignee_code parameter
-    
+
     Returns list[dict] with: container_number, eta_dp, ata_dp, delay_days, discharge_port, consignee_code_multiple
     """
     import re
     import pandas as pd
-    
+
     query = (question or "").strip()
     q_up = query.upper()
-    
+
     try:
         logger.info(f"[get_delayed_containers] Query: {query!r}, consignee_code: {consignee_code}")
     except Exception:
         pass
-    
-    # 1) Parse time window for ATA filtering (if time expressions present)
+
+    # 1) Parse time window using centralized helper
     start_date, end_date, period_desc = parse_time_period(query)
     apply_time_filter = False
-    
-    # Check if query contains time-related keywords
+
     time_keywords = [
         r'\bthis\s+week\b', r'\bnext\s+week\b', r'\blast\s+week\b',
         r'\bthis\s+month\b', r'\bnext\s+month\b', r'\blast\s+month\b',
@@ -1971,28 +1970,60 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
         r'\bfrom\s+\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}\b',
         r'\bbetween\s+\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}\b'
     ]
-    
     for pattern in time_keywords:
         if re.search(pattern, query, re.IGNORECASE):
             apply_time_filter = True
             break
-    
+
+    # **CRITICAL FIX**: Detect month names BEFORE port filtering
+    month_match = re.search(
+        r'\b(?:in|during)\s+('
+        r'jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|'
+        r'jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b',
+        query,
+        re.IGNORECASE,
+    )
+    requested_month = None
+    if month_match:
+        requested_month = month_match.group(1).lower()
+        apply_time_filter = True
+        # Override start/end to "this year's <month>"
+        today = pd.Timestamp.today().normalize()
+        month_map = {
+            'jan': 1, 'january': 1, 'feb': 2, 'february': 2, 'mar': 3, 'march': 3,
+            'apr': 4, 'april': 4, 'may': 5, 'jun': 6, 'june': 6,
+            'jul': 7, 'july': 7, 'aug': 8, 'august': 8, 'sep': 9, 'september': 9,
+            'oct': 10, 'october': 10, 'nov': 11, 'november': 11, 'dec': 12, 'december': 12
+        }
+        m = month_map.get(requested_month)
+        if m:
+            year = today.year
+            start_date = pd.Timestamp(year=year, month=m, day=1).normalize()
+            if m == 12:
+                end_date = pd.Timestamp(year=year + 1, month=1, day=1).normalize() - pd.Timedelta(days=1)
+            else:
+                end_date = pd.Timestamp(year=year, month=m + 1, day=1).normalize() - pd.Timedelta(days=1)
+            period_desc = f"{requested_month.capitalize()} {year}"
+
     try:
         if apply_time_filter:
-            logger.info(f"[get_delayed_containers] Time filter detected: {period_desc} ({start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')})")
+            logger.info(
+                f"[get_delayed_containers] Time filter: {period_desc} "
+                f"({start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')})"
+            )
     except Exception:
         pass
-    
+
     # 2) Load data
     df = _df()
     if df.empty:
         return "No container records available."
-    
+
     # 3) Apply consignee filter if provided
     if consignee_code and "consignee_code_multiple" in df.columns:
         codes = [c.strip().upper() for c in str(consignee_code).split(",") if c.strip()]
         code_set = set(codes) | {c.lstrip("0") for c in codes}
-        
+
         def row_has_code(cell):
             if pd.isna(cell):
                 return False
@@ -2000,50 +2031,45 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
             if any(re.search(rf"\({re.escape(c)}\)", s) for c in code_set):
                 return True
             return any(re.search(rf"\b{re.escape(c)}\b", s) for c in code_set)
-        
+
         df = df[df["consignee_code_multiple"].apply(row_has_code)].copy()
         if df.empty:
             return f"No containers found for consignee code(s) {', '.join(codes)}."
-    
+
     # 4) Validate required columns
     if "ata_dp" not in df.columns or "eta_dp" not in df.columns:
         return "Required columns (ata_dp, eta_dp) not found in the dataset."
-    
+
     # 5) Parse dates
     df = ensure_datetime(df, ["ata_dp", "eta_dp"])
-    
-    # 6) Filter to arrived containers only (ata_dp not null)
+
+    # 6) Filter to arrived containers only
     arrived_mask = df["ata_dp"].notna() & df["eta_dp"].notna()
     df_arrived = df[arrived_mask].copy()
-    
     if df_arrived.empty:
         return "No arrived containers found."
-    
-    # 7) Apply TIME WINDOW filter on ATA (if detected)
+
+    # 7) Apply time window filter on ATA (if detected)
     if apply_time_filter:
         ata_norm = df_arrived["ata_dp"].dt.normalize()
         time_mask = (ata_norm >= start_date) & (ata_norm <= end_date)
         df_arrived = df_arrived[time_mask].copy()
-        
         if df_arrived.empty:
-            return f"No containers arrived in the {period_desc}."
-        
+            return f"No containers arrived in {period_desc}."
+
         try:
             logger.info(f"[get_delayed_containers] After time filter: {len(df_arrived)} containers")
         except Exception:
             pass
-    
+
     # 8) Calculate delay_days
     df_arrived["delay_days"] = (
         (df_arrived["ata_dp"] - df_arrived["eta_dp"]).dt.total_seconds() / 86400
     ).round().astype(int)
-    
+
     # 9) Parse delay threshold from query
     delay_threshold = None
-    delay_operator = ">"  # default: any positive delay
-    
-    # **CRITICAL FIX**: Check "less than" pattern BEFORE "exact" pattern
-    # Patterns for delay thresholds (ORDER MATTERS!)
+    delay_operator = ">"
     patterns = [
         (r'(?:less\s+than|under|below|<)\s*(\d+)\s+days?', '<'),
         (r'(?:more\s+than|over|above|greater\s+than|>)\s*(\d+)\s+days?', '>'),
@@ -2052,18 +2078,13 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
         (r'(?:exactly|equal\s+to|=\s*)\s*(\d+)\s+days?', '=='),
         (r'(?:delayed\s+by|late\s+by)\s+(\d+)\s+days?(?:\s+late)?', '=='),
     ]
-    
     for pattern, op in patterns:
         m = re.search(pattern, query, re.IGNORECASE)
         if m:
             delay_threshold = int(m.group(1))
             delay_operator = op
-            try:
-                logger.info(f"[get_delayed_containers] Matched pattern: {pattern} with operator: {op}, threshold: {delay_threshold}")
-            except:
-                pass
             break
-    
+
     # 10) Apply delay filter
     if delay_threshold is not None:
         if delay_operator == '<':
@@ -2079,29 +2100,25 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
         else:
             delay_mask = df_arrived["delay_days"] > 0
     else:
-        # No threshold specified: any positive delay
         delay_mask = df_arrived["delay_days"] > 0
-    
+
     result = df_arrived[delay_mask].copy()
-    
     if result.empty:
-        time_context = f" in the {period_desc}" if apply_time_filter else ""
+        time_context = f" in {period_desc}" if apply_time_filter else ""
         if delay_threshold is not None:
             return f"No containers with delay {delay_operator} {delay_threshold} days{time_context}."
         else:
             return f"No delayed containers found{time_context}."
-    
-    # 11) Port filtering (if specified)
-    if "discharge_port" in result.columns:
+
+    # 11) Port filtering - **CRITICAL FIX**: Skip port filter if month was detected
+    if "discharge_port" in result.columns and not requested_month:
         port_code = None
         port_name = None
-        
-        # Extract port code from parentheses
+
         m_code = re.search(r"\(([A-Z0-9]{3,6})\)", q_up)
         if m_code:
             port_code = m_code.group(1).strip().upper()
-        
-        # Extract port name after "at/in"
+
         if not port_code:
             m_name = re.search(
                 r"\b(?:AT|IN|FROM)\s+([A-Z][A-Z\s\.\-]{3,}?)(?:\s+BUT\s+|\s+AND\s+|,|\?|\.$|\s*$)",
@@ -2109,7 +2126,7 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
             )
             if m_name:
                 port_name = m_name.group(1).strip()
-        
+
         if port_code or port_name:
             def normalize_port(s):
                 if pd.isna(s):
@@ -2117,9 +2134,9 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
                 t = str(s).upper()
                 t = re.sub(r"\([^)]*\)", "", t)
                 return re.sub(r"\s+", " ", t).strip()
-            
+
             port_series = result["discharge_port"].astype(str)
-            
+
             if port_code:
                 port_mask = port_series.str.upper().str.contains(
                     rf"\({re.escape(port_code)}\)", na=False
@@ -2127,7 +2144,6 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
             else:
                 port_norm = result["discharge_port"].apply(normalize_port)
                 phrase_norm = re.sub(r"\s+", " ", port_name).strip()
-                
                 exact = (port_norm == phrase_norm)
                 if exact.any():
                     port_mask = exact
@@ -2139,17 +2155,20 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
                             port_mask &= port_norm.str.contains(re.escape(w), na=False)
                     else:
                         port_mask = port_norm.str.contains(re.escape(phrase_norm), na=False)
-            
+
             result = result[port_mask].copy()
-            
+
             if result.empty:
                 location = port_code or port_name
-                time_context = f" in the {period_desc}" if apply_time_filter else ""
+                time_context = f" in {period_desc}" if apply_time_filter else ""
                 return f"No delayed containers at {location}{time_context}."
-    
-    # 12) Sort and prepare output
-    result = result.sort_values("delay_days", ascending=False)
-    
+
+    # 12) Sort and format output
+    if 'ata_dp' in result.columns:
+        result = result.sort_values(['ata_dp', 'delay_days'], ascending=[False, False])
+    else:
+        result = result.sort_values("delay_days", ascending=False)
+
     out_cols = [
         "container_number",
         "eta_dp",
@@ -2162,15 +2181,14 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
     for col in additional_cols:
         if col in result.columns:
             out_cols.append(col)
-    
+
     out_cols = [c for c in out_cols if c in result.columns]
     out = result[out_cols].head(200).copy()
-    
-    # Format dates
+
     for dcol in ["eta_dp", "ata_dp"]:
         if dcol in out.columns and pd.api.types.is_datetime64_any_dtype(out[dcol]):
             out[dcol] = out[dcol].dt.strftime("%Y-%m-%d")
-    
+
     return out.where(pd.notnull(out), None).to_dict(orient="records")
 
 
@@ -6476,6 +6494,7 @@ TOOLS = [
         description="List containers whose ETD (etd_lp) falls within a time window parsed from the query (e.g., 'Which containers have ETD in the next 7 days?'). Supports consignee filtering."
     )
 ]  
+
 
 
 
