@@ -26,7 +26,7 @@ from agents.tools import (
     # Add the missing functions
     check_transit_status,
     get_containers_by_carrier,
-    get_containers_by_supplier,
+    
     get_hot_upcoming_arrivals,
     check_po_month_arrival,
     get_weekly_status_changes,
@@ -34,6 +34,7 @@ from agents.tools import (
     get_eta_for_po,
     get_upcoming_bls,
     get_containers_by_etd_window,
+    get_containers_PO_OBL_by_supplier,
 
     _df,  # Import the DataFrame function to test filtering
 )
@@ -204,8 +205,21 @@ def route_query(query: str, consignee_codes: list = None) -> str:
         if "carrier" in q and ("container" in q or "ship" in q) and ("last" in q or "days" in q):
             return get_containers_by_carrier(query)
         
-        if "supplier" in q and ("container" in q or "po" in q):
-            return get_containers_by_supplier(query)
+        # Supplier/shipper queries:
+        # Only route here when user explicitly asks "supplier for / shipper for ..."
+        supplier_lookup_phrases = [
+            "what is the supplier", "what is the shipper",
+            "who is the supplier", "who is the shipper",
+            "supplier for", "shipper for",
+            "show supplier", "show shipper",
+            "tell me the supplier", "tell me the shipper",
+            "get supplier", "get shipper",
+            "find supplier", "find shipper",
+        ]
+        has_supplier_lookup_phrase = any(p in q for p in supplier_lookup_phrases)
+
+        if has_supplier_lookup_phrase and ("container" in q or "po" in q or "obl" in q):
+            return get_containers_PO_OBL_by_supplier(query)
         
         # ========== PRIORITY 9: Question 24 - PO arrival by month end ==========
         if "po" in q and ("arrive" in q or "destination" in q) and ("month" in q or "end" in q):
@@ -252,6 +266,7 @@ def route_query(query: str, consignee_codes: list = None) -> str:
         if consignee_codes and hasattr(threading.current_thread(), 'consignee_codes'):
             delattr(threading.current_thread(), 'consignee_codes')
             logger.debug("Cleaned up consignee codes from thread context")
+
 
 
 
