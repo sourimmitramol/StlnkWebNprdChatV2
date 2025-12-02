@@ -6862,11 +6862,7 @@ TOOLS = [
         func=get_supplier_last_days,
         description="Containers from a supplier that have arrived in the last N days (ata_dp within window)."
     ),
-    Tool(
-        name="Get Containers By Supplier", 
-        func=get_containers_by_supplier,
-        description="Get containers from a specific supplier, either in transit or from recent days"
-    ),
+    
     Tool(
         name="Check PO Month Arrival",
         func=check_po_month_arrival,
@@ -6972,6 +6968,7 @@ TOOLS = [
         description="List containers whose ETD (etd_lp) falls within a time window parsed from the query (e.g., 'Which containers have ETD in the next 7 days?'). Supports consignee filtering."
     )
 ]  
+
 
 
 
