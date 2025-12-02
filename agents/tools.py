@@ -1933,7 +1933,480 @@ def ensure_datetime(df: pd.DataFrame, columns: list) -> pd.DataFrame:
 
 # ...existing code...
 
+def get_containers_PO_OBL_by_supplier(query: str) -> str:
+    """
+    Handle supplier/shipper-related queries including:
+    1. Lookup supplier for a specific container/PO/OBL
+    2. List containers arriving from a supplier (upcoming/delayed)
+    3. Filter by supplier with date windows and delay thresholds.
+    """
+    query = (query or "").strip()
+    q_lower = query.lower()
+    q_upper = query.upper()
 
+    df = _df()  # already consignee-filtered via thread context
+
+    if "supplier_vendor_name" not in df.columns:
+        return "Supplier/vendor information not available in the dataset."
+
+    # ---------- explicit identifiers ----------
+    raw_container = extract_container_number(query)
+    raw_po = extract_po_number(query)
+    try:
+        raw_obl = extract_ocean_bl_number(query)
+    except Exception:
+        raw_obl = None
+
+    # Fallback: if query is just an alphanumeric string (8-20 chars), treat as OBL if not PO/Container
+    if not raw_obl and not raw_po and not raw_container:
+         # Check if query is a single token or "OBL <token>"
+         cleaned_q = query.strip().upper()
+         # Case 1: Just the token
+         if re.match(r'^[A-Z0-9]{8,20}$', cleaned_q):
+             raw_obl = cleaned_q
+         # Case 2: "OBL <token>"
+         else:
+             m_obl = re.search(r'\bOBL\s+([A-Z0-9]{8,20})\b', cleaned_q)
+             if m_obl:
+                 raw_obl = m_obl.group(1)
+
+    # Did user explicitly say PO / purchase order?
+    mentions_po = bool(re.search(r'\b(po|purchase\s+order)\b', q_lower))
+
+    # If the user explicitly says PO, we should **not** treat a pure number as container
+    container_no = raw_container if (raw_container and not mentions_po) else None
+    po_no = raw_po
+    obl_no = raw_obl
+
+    # Log what we extracted for debugging
+    try:
+        logger.info(f"[get_containers_PO_OBL_by_supplier] Extracted: container={container_no}, po={po_no}, obl={obl_no}")
+    except:
+        pass
+
+    # ==========================================================
+    # CASE 1 — Direct lookup: identifier present OR "supplier for"
+    # ==========================================================
+    supplier_lookup_phrases = [
+        "what is the supplier",
+        "what is the shipper",
+        "who is the supplier",
+        "who is the shipper",
+        "supplier for",
+        "shipper for",
+        "show supplier",
+        "show shipper",
+        "tell me the supplier",
+        "tell me the shipper",
+        "get supplier",
+        "get shipper",
+        "find supplier",
+        "find shipper",
+    ]
+    is_lookup_query = any(p in q_lower for p in supplier_lookup_phrases)
+
+    # If we have any identifier, treat as lookup
+    if container_no or po_no or obl_no:
+        is_lookup_query = True
+
+    if is_lookup_query:
+        # -------------------------
+        # 1) PO → supplier (PREFER when query talks about PO)
+        # -------------------------
+        if po_no:
+            po_norm = _normalize_po_token(po_no)
+            po_col = (
+                "po_number_multiple"
+                if "po_number_multiple" in df.columns
+                else ("po_number" if "po_number" in df.columns else None)
+            )
+            if not po_col:
+                return "PO column not found in the dataset."
+
+            mask = df[po_col].apply(lambda cell: _po_in_cell(cell, po_norm))
+            rows = df[mask].copy()
+            
+            try:
+                logger.info(f"[get_containers_PO_OBL_by_supplier] PO lookup: po_norm={po_norm}, found {len(rows)} rows")
+            except:
+                pass
+            
+            if rows.empty:
+                return f"No data found for PO {po_no}."
+
+            suppliers = (
+                rows["supplier_vendor_name"]
+                .dropna()
+                .astype(str)
+                .map(str.strip)
+            )
+            suppliers = [
+                s
+                for s in suppliers.unique().tolist()
+                if s and s.upper() not in {"NAN", "NONE", "NULL"}
+            ]
+
+            containers = (
+                rows["container_number"]
+                .dropna()
+                .astype(str)
+                .unique()
+                .tolist()
+                if "container_number" in rows.columns
+                else []
+            )
+
+            return [
+                {
+                    "po_number": po_no,
+                    "supplier_vendor_name": ", ".join(suppliers)
+                    if suppliers
+                    else "Not Available",
+                    "container_count": len(containers),
+                    "containers": ", ".join(containers[:5])
+                    + ("..." if len(containers) > 5 else ""),
+                    "discharge_port": rows.iloc[0].get("discharge_port"),
+                    "consignee_code_multiple": rows.iloc[0].get(
+                        "consignee_code_multiple"
+                    ),
+                }
+            ]
+
+        # -------------------------
+        # 2) Container → supplier
+        # -------------------------
+        if container_no:
+            clean = clean_container_number(container_no)
+            df_loc = df.copy()
+            if "container_number" not in df_loc.columns:
+                return f"No data found for container {container_no}."
+
+            df_loc["container_number"] = (
+                df_loc["container_number"]
+                .astype(str)
+                .str.upper()
+                .str.replace(r"[^A-Z0-9]", "", regex=True)
+            )
+
+            rows = df_loc[df_loc["container_number"] == clean]
+            if rows.empty:
+                rows = df_loc[
+                    df_loc["container_number"].astype(str).str.contains(
+                        clean, case=False, na=False
+                    )
+                ]
+
+            try:
+                logger.info(f"[get_containers_PO_OBL_by_supplier] Container lookup: clean={clean}, found {len(rows)} rows")
+            except:
+                pass
+
+            if rows.empty:
+                return f"No data found for container {container_no}."
+
+            row = rows.iloc[0]
+            supplier = row.get("supplier_vendor_name")
+            if pd.isna(supplier) or str(supplier).strip().upper() in {
+                "",
+                "NAN",
+                "NONE",
+                "NULL",
+            }:
+                supplier = "Not Available"
+
+            return [
+                {
+                    "container_number": row.get("container_number"),
+                    "supplier_vendor_name": supplier,
+                    "po_number_multiple": row.get("po_number_multiple"),
+                    "ocean_bl_no_multiple": row.get("ocean_bl_no_multiple"),
+                    "discharge_port": row.get("discharge_port"),
+                    "eta_dp": row.get("eta_dp"),
+                    "ata_dp": row.get("ata_dp"),
+                    "consignee_code_multiple": row.get("consignee_code_multiple"),
+                }
+            ]
+
+        # -------------------------
+        # 3) OBL/BL → supplier (FIXED VERSION)
+        # -------------------------
+        if obl_no:
+            # Use the robust helper to find the BL column
+            bl_col = _find_ocean_bl_col(df)
+            
+            try:
+                logger.info(f"[get_containers_PO_OBL_by_supplier] OBL lookup: obl_no={obl_no}, bl_col={bl_col}")
+            except:
+                pass
+            
+            if not bl_col:
+                return "No ocean BL column found in the dataset."
+
+            # Normalize the OBL number for matching
+            bl_norm = _normalize_bl_token(obl_no)
+            
+            try:
+                logger.info(f"[get_containers_PO_OBL_by_supplier] Normalized OBL: {bl_norm}")
+            except:
+                pass
+
+            # Use the robust cell matching function
+            mask = df[bl_col].apply(lambda cell: _bl_in_cell(cell, bl_norm))
+            rows = df[mask].copy()
+            
+            try:
+                logger.info(f"[get_containers_PO_OBL_by_supplier] OBL mask found {len(rows)} rows")
+                if len(rows) > 0:
+                    logger.info(f"[get_containers_PO_OBL_by_supplier] Sample BL values: {rows[bl_col].head().tolist()}")
+            except:
+                pass
+
+            if rows.empty:
+                return f"No data found for OBL {obl_no}."
+
+            suppliers = (
+                rows["supplier_vendor_name"]
+                .dropna()
+                .astype(str)
+                .map(str.strip)
+            )
+            suppliers = [
+                s
+                for s in suppliers.unique().tolist()
+                if s and s.upper() not in {"NAN", "NONE", "NULL"}
+            ]
+
+            containers = (
+                rows["container_number"]
+                .dropna()
+                .astype(str)
+                .unique()
+                .tolist()
+                if "container_number" in rows.columns
+                else []
+            )
+
+            # **CRITICAL FIX**: Add early return here to prevent falling through to CASE 2/3
+            return [
+                {
+                    "ocean_bl_no": obl_no,
+                    "supplier_vendor_name": ", ".join(suppliers)
+                    if suppliers
+                    else "Not Available",
+                    "container_count": len(containers),
+                    "containers": ", ".join(containers[:5])
+                    + ("..." if len(containers) > 5 else ""),
+                    "discharge_port": rows.iloc[0].get("discharge_port"),
+                    "consignee_code_multiple": rows.iloc[0].get(
+                        "consignee_code_multiple"
+                    ),
+                }
+            ]
+
+        # If we reach here in lookup mode but no identifier matched
+        return "Please specify a valid container number, PO number, or OBL number to look up the supplier."
+
+    # ==========================================================
+    # CASE 2/3 — supplier-name, delayed/upcoming logic continues below...
+    # ==========================================================
+    supplier_name = None
+
+    m = re.search(
+        r"(?:from|by)\s+(?:supplier|shipper|vendor)\s+([A-Z0-9\(\)&\.\'\-\s]{3,})",
+        q_upper,
+        re.IGNORECASE,
+    )
+    if m:
+        supplier_name = m.group(1).strip()
+
+    if not supplier_name:
+        m = re.search(
+            r"(?:supplier|shipper|vendor)\s+([A-Z0-9\(\)&\.\'\-\s]{3,})",
+            q_upper,
+            re.IGNORECASE,
+        )
+        if m:
+            candidate = m.group(1).strip()
+            if not any(
+                word in candidate.upper()
+                for word in [
+                    "LATE",
+                    "DELAYED",
+                    "ARRIVING",
+                    "NEXT",
+                    "LAST",
+                    "DAYS",
+                    "FOR",
+                ]
+            ):
+                supplier_name = candidate
+
+    if supplier_name:
+        supplier_name = re.sub(r"\s*\([^)]+\)\s*$", "", supplier_name).strip()
+        supplier_name = re.sub(
+            r"\s+(LATE|DELAYED|ARRIVING|IN\s+NEXT|LAST|WITHIN).*?$",
+            "",
+            supplier_name,
+            flags=re.IGNORECASE,
+        ).strip()
+
+    if supplier_name and len(supplier_name) > 2:
+        sup_mask = df["supplier_vendor_name"].astype(str).str.upper().str.contains(
+            re.escape(supplier_name.upper()), na=False
+        )
+        df = df[sup_mask].copy()
+        if df.empty:
+            return f"No containers found from supplier '{supplier_name}' for your authorized consignees."
+
+    is_delayed_query = any(
+        w in q_lower for w in ["delay", "late", "overdue", "behind", "missed"]
+    )
+    is_upcoming_query = any(
+        w in q_lower
+        for w in [
+            "upcoming",
+            "arriving",
+            "arrive",
+            "next",
+            "coming",
+            "expected",
+            "will arrive",
+        ]
+    )
+    is_transit_query = any(
+        p in q_lower for p in ["in transit", "still moving", "not arrived", "on the way"]
+    )
+    is_arrived_query = any(
+        w in q_lower for w in ["arrived", "reached", "landed", "delivered"]
+    ) and not is_upcoming_query
+
+    # Check if we actually applied any filter
+    has_supplier_filter = (supplier_name is not None and len(supplier_name) > 2)
+    has_status_filter = (is_delayed_query or is_upcoming_query or is_transit_query or is_arrived_query)
+    
+    if not has_supplier_filter and not has_status_filter:
+         return "Please specify a supplier, container, PO, or OBL number."
+
+    start_date, end_date, period_desc = parse_time_period(query)
+
+    date_cols = [
+        "eta_dp",
+        "revised_eta",
+        "ata_dp",
+        "atd_lp",
+        "etd_lp",
+        "delivery_date_to_consignee",
+        "empty_container_return_date",
+    ]
+    df = ensure_datetime(df, [c for c in date_cols if c in df.columns])
+
+    if is_delayed_query:
+        if "ata_dp" not in df.columns or "eta_dp" not in df.columns:
+            return "Required columns for delay calculation not found."
+
+        arrived_mask = df["ata_dp"].notna() & df["eta_dp"].notna()
+        df_arrived = df[arrived_mask].copy()
+        if df_arrived.empty:
+            ctx = f" from supplier '{supplier_name}'" if supplier_name else ""
+            return f"No arrived containers found{ctx}."
+
+        df_arrived["delay_days"] = (
+            (df_arrived["ata_dp"] - df_arrived["eta_dp"]).dt.total_seconds() / 86400
+        ).round().astype(int)
+
+        delay_threshold = None
+        delay_operator = ">"
+        patterns = [
+            (r"(?:less\s+than|under|below|<)\s*(\d+)\s+days?", "<"),
+            (r"(?:more\s+than|over|above|>)\s*(\d+)\s+days?", ">"),
+            (r"(?:at\s+least|minimum|>=)\s*(\d+)\s+days?", ">="),
+            (r"(?:up\s+to|maximum|<=)\s*(\d+)\s+days?", "<="),
+            (r"(?:exactly|equal\s+to|=)\s*(\d+)\s+days?", "=="),
+        ]
+        for pat, op in patterns:
+            m = re.search(pat, query, re.IGNORECASE)
+            if m:
+                delay_threshold = int(m.group(1))
+                delay_operator = op
+                break
+
+        if delay_threshold is not None:
+            if delay_operator == "<":
+                delay_mask = (df_arrived["delay_days"] > 0) & (
+                    df_arrived["delay_days"] < delay_threshold
+                )
+            elif delay_operator == ">":
+                delay_mask = df_arrived["delay_days"] > delay_threshold
+            elif delay_operator == ">=":
+                delay_mask = df_arrived["delay_days"] >= delay_threshold
+            elif delay_operator == "==":
+                delay_mask = df_arrived["delay_days"] == delay_threshold
+            elif delay_operator == "<=":
+                delay_mask = (df_arrived["delay_days"] > 0) & (
+                    df_arrived["delay_days"] <= delay_threshold
+                )
+        else:
+            delay_mask = df_arrived["delay_days"] > 0
+
+        result = df_arrived[delay_mask].copy()
+        if result.empty:
+            ctx = f" from supplier '{supplier_name}'" if supplier_name else ""
+            if delay_threshold is not None:
+                return f"No containers with delay {delay_operator} {delay_threshold} days{ctx}."
+            return f"No delayed containers found{ctx}."
+
+        result = safe_sort_dataframe(result, "delay_days", ascending=False)
+        out_cols = [
+            c
+            for c in [
+                "container_number",
+                "supplier_vendor_name",
+                "po_number_multiple",
+                "eta_dp",
+                "ata_dp",
+                "delay_days",
+                "discharge_port",
+                "consignee_code_multiple",
+            ]
+            if c in result.columns
+        ]
+        out = result[out_cols].head(200).copy()
+        for dcol in ["eta_dp", "ata_dp"]:
+            if dcol in out.columns and pd.api.types.is_datetime64_any_dtype(out[dcol]):
+                out[dcol] = out[dcol].dt.strftime("%Y-%m-%d")
+        return out.where(pd.notnull(out), None).to_dict(orient="records")
+
+    if df.empty:
+        ctx = f" from supplier '{supplier_name}'" if supplier_name else ""
+        return f"No containers found{ctx}."
+
+    sort_col = (
+        "eta_dp"
+        if "eta_dp" in df.columns
+        else ("ata_dp" if "ata_dp" in df.columns else None)
+    )
+    if sort_col:
+        df = safe_sort_dataframe(df, sort_col, ascending=False)
+
+    out_cols = [
+        c
+        for c in [
+            "container_number",
+            "supplier_vendor_name",
+            "po_number_multiple",
+            "ocean_bl_no_multiple",
+            "discharge_port",
+            "eta_dp",
+            "ata_dp",
+            "consignee_code_multiple",
+        ]
+        if c in df.columns
+    ]
+    out = df[out_cols].head(200).copy()
+    for dcol in ["eta_dp", "ata_dp"]:
+        if dcol in out.columns and pd.api.types.is_datetime64_any_dtype(out[dcol]):
+            out[dcol] = out[dcol].dt.strftime("%Y-%m-%d")
+    return out.where(pd.notnull(out), None).to_dict(orient="records")
 
 def get_delayed_containers(question: str = None, consignee_code: str = None, **kwargs) -> str:
     """
@@ -6489,11 +6962,17 @@ TOOLS = [
         description="Get ETA for a PO (prefers revised_eta over eta_dp )."
     ),
 	Tool(
+        name="Get Containers or PO or OBL By Supplier", 
+        func=get_containers_PO_OBL_by_supplier,
+        description="use this function when user query mentions supplier or shipper name to get related containers or POs or OBLs.dont look for any other function if user query mentions supplier or shipper name."
+    ),
+	Tool(
         name="Get Containers By ETD Window",
         func=get_containers_by_etd_window,
         description="List containers whose ETD (etd_lp) falls within a time window parsed from the query (e.g., 'Which containers have ETD in the next 7 days?'). Supports consignee filtering."
     )
 ]  
+
 
 
 
