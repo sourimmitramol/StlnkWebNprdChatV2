@@ -6471,7 +6471,19 @@ TOOLS = [
     Tool(
         name="Get Container Milestones",
         func=get_container_milestones,
-        description="Retrieve all milestone dates for a specific container."
+        description=(
+            "PRIMARY TOOL FOR ALL CONTAINER STATUS AND MILESTONE QUERIES. "
+            "Use this tool FIRST for ANY query asking about:\n"
+            "- Container status (e.g., 'what is status of ABCD1234567')\n"
+            "- Container milestones (e.g., 'show milestones for container X')\n"
+            "- Container tracking (e.g., 'track container Y')\n"
+            "- Container location (e.g., 'where is container Z')\n"
+            "- Container journey/events (e.g., 'event history for container')\n"
+            "- When/where queries (e.g., 'when did container arrive', 'where is my container')\n"
+            "Keywords: status, milestone, track, tracking, where, location, journey, event, history, progress\n"
+            "This tool provides complete timeline of container movement with all milestone dates.\n"
+            "DO NOT use 'Check Arrival Status' if query asks for status/milestones."
+        )
     ),
 
     Tool(
@@ -6717,6 +6729,7 @@ TOOLS = [
         description="List containers whose ETD (etd_lp) falls within a time window parsed from the query (e.g., 'Which containers have ETD in the next 7 days?'). Supports consignee filtering."
     )
 ]
+
 
 
 
