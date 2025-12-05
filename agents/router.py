@@ -26,7 +26,7 @@ from agents.tools import (
     # Add the missing functions
     check_transit_status,
     get_containers_by_carrier,
-    
+    get_containers_departed_from_load_port,
     get_hot_upcoming_arrivals,
     check_po_month_arrival,
     get_weekly_status_changes,
@@ -266,6 +266,7 @@ def route_query(query: str, consignee_codes: list = None) -> str:
         if consignee_codes and hasattr(threading.current_thread(), 'consignee_codes'):
             delattr(threading.current_thread(), 'consignee_codes')
             logger.debug("Cleaned up consignee codes from thread context")
+
 
 
 
