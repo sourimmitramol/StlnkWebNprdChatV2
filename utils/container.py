@@ -7,20 +7,36 @@ def extract_container_number(text: str) -> Optional[str]:
     """
     Detect a container number in free‑form text.
     Handles:
-        - “container ABCD1234567”
-        - the raw pattern “ABCD1234567”
-        - purely numerical container numbers like “8663022072”
+        - "container ABCD1234567"
+        - the raw pattern "ABCD1234567"
+        - purely numerical container numbers like "8663022072"
     Returns the cleaned, upper‑cased number or None.
+    
+    Avoids false positives from consignee codes, user IDs, etc.
     """
+    # **CRITICAL**: Skip numbers that appear in consignee/user context
+    # Match patterns like "consignee 0028664", "user 0028664", "for consignee 0028664"
+    if re.search(r'\b(?:consignee|user)(?:\s+code)?\s+\d{7}', text, re.IGNORECASE):
+        # Extract the consignee number to exclude it
+        consignee_match = re.search(r'(?:consignee|user)(?:\s+code)?\s+(\d{7})', text, re.IGNORECASE)
+        if consignee_match:
+            consignee_num = consignee_match.group(1)
+            # Remove it from consideration
+            text = text.replace(consignee_num, '')
+    
     patterns = [
-        r'container\s*([A-Z0-9]+)',          # with the word “container”
-        r'([A-Z]{4}\d{7})',                  # just the raw 4‑letters + 7‑digits
-        r'\b(\d{7,12})\b'                    # purely numerical (7-12 digits, adjust as needed)
+        r'container\s+([A-Z]{4}\d{7})',      # "container" + 4 letters + 7 digits (ISO standard)
+        r'container\s+(\d{7,12})',           # "container" + 7-12 digit number
+        r'\b([A-Z]{4}\d{7})\b',              # just the raw 4‑letters + 7‑digits (with word boundaries)
+        r'\b(\d{7,12})\b'                    # purely numerical (7-12 digits) with word boundaries
     ]
     for pat in patterns:
         m = re.search(pat, text, flags=re.IGNORECASE)
         if m:
-            return re.sub(r'[^A-Z0-9]', '', m.group(1).upper())
+            candidate = re.sub(r'[^A-Z0-9]', '', m.group(1).upper())
+            # Validate: must be at least 7 characters and not just from word "containers" or "container"
+            if len(candidate) >= 7:
+                return candidate
     return None
  
  
