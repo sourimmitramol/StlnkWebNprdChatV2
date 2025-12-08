@@ -6109,6 +6109,8 @@ def get_eta_for_po(question: str = None, consignee_code: str = None, **kwargs) -
 
 
 
+
+
 def get_containers_departed_from_load_port(query: str) -> str:
     """
     Get containers/POs/OBLs that have departed from specific load ports within a time period.
@@ -6118,6 +6120,8 @@ def get_containers_departed_from_load_port(query: str) -> str:
     - PO queries: "POs that departed from QINGDAO yesterday"  
     - OBL queries: "BLs that left NINGBO last week"
     - Mixed queries: "show shipments from load port BUSAN in past 5 days"
+    - Transport mode filtering: "containers departed by sea from HONG KONG"
+    - Hot container filtering: "hot containers that left SHANGHAI last week"
     
     Uses ATD_LP when available; falls back to ETD_LP when ATD_LP is missing.
     Returns list[dict] with container/PO/OBL info and departure details.
@@ -6151,18 +6155,18 @@ def get_containers_departed_from_load_port(query: str) -> str:
     
     # Pattern 1: "from load port PORTNAME" or "from PORTNAME"
     match = re.search(
-        r'from\s+(?:load\s+port\s+)?([A-Za-z0-9\s,\-\(\)]+?)(?=\s+in\s+|\s+last\s+|\s+during\s+|\s+for\s+|[\?\.\,]|$)',
+        r'from\s+(?:load\s+port\s+)?([A-Za-z0-9\s,\-\(\)]+?)(?=\s+in\s+|\s+last\s+|\s+during\s+|\s+for\s+|\s+by\s+|[\?\.\,]|$)',
         query, re.IGNORECASE)
     if match:
         cand = match.group(1).strip()
         # Exclude common noise words
-        if cand and cand.upper() not in ['CONSIGNEE', 'IN', 'LAST', 'THE', 'DAYS', 'NEXT', 'THIS']:
+        if cand and cand.upper() not in ['CONSIGNEE', 'IN', 'LAST', 'THE', 'DAYS', 'NEXT', 'THIS', 'SEA', 'AIR', 'ROAD']:
             load_port = cand.upper()
 
     # Pattern 2: "load port PORTNAME"
     if not load_port:
         match = re.search(
-            r'load\s+port\s+([A-Za-z0-9\s,\-\(\)]+?)(?=\s+in\s+|\s+last\s+|\s+during\s+|\s+for\s+|[\?\.\,]|$)',
+            r'load\s+port\s+([A-Za-z0-9\s,\-\(\)]+?)(?=\s+in\s+|\s+last\s+|\s+during\s+|\s+for\s+|\s+by\s+|[\?\.\,]|$)',
             query, re.IGNORECASE)
         if match:
             load_port = match.group(1).strip().upper()
@@ -6170,11 +6174,11 @@ def get_containers_departed_from_load_port(query: str) -> str:
     # Pattern 3: "departed/left from PORTNAME"
     if not load_port:
         match = re.search(
-            r'(?:departed|left)\s+(?:from\s+)?([A-Za-z0-9\s,\-\(\)]+?)(?=\s+in\s+|\s+last\s+|\s+during\s+|\s+for\s+|[\?\.\,]|$)',
+            r'(?:departed|left)\s+(?:from\s+)?([A-Za-z0-9\s,\-\(\)]+?)(?=\s+in\s+|\s+last\s+|\s+during\s+|\s+for\s+|\s+by\s+|[\?\.\,]|$)',
             query, re.IGNORECASE)
         if match:
             cand = match.group(1).strip()
-            if cand and cand.upper() not in ['CONSIGNEE', 'IN', 'LAST', 'THE', 'DAYS', 'NEXT', 'THIS']:
+            if cand and cand.upper() not in ['CONSIGNEE', 'IN', 'LAST', 'THE', 'DAYS', 'NEXT', 'THIS', 'SEA', 'AIR', 'ROAD']:
                 load_port = cand.upper()
 
     # Pattern 4: Port with code in parentheses like "SHANGHAI(CNSHA)"
@@ -6204,7 +6208,6 @@ def get_containers_departed_from_load_port(query: str) -> str:
     df = _df()  # Respects consignee filtering
     
     try:
-        import threading
         if hasattr(threading.current_thread(), 'consignee_codes'):
             codes = threading.current_thread().consignee_codes
             logger.info(f"[get_containers_departed_from_load_port] Authorized consignee codes: {codes}, rows after filtering: {len(df)}")
@@ -6274,6 +6277,70 @@ def get_containers_departed_from_load_port(query: str) -> str:
     if df.empty:
         if identifier_type:
             return f"No data found for {identifier_type} {container_no or po_no or obl_no}."
+
+    # ========== NEW: 5A) TRANSPORT MODE FILTER ==========
+    modes = extract_transport_modes(query)
+    if modes:
+        try:
+            logger.info(f"[get_containers_departed_from_load_port] Transport modes detected: {modes}")
+        except:
+            pass
+        
+        if 'transport_mode' in df.columns:
+            mode_mask = df['transport_mode'].astype(str).str.lower().apply(lambda s: any(m in s for m in modes))
+            df = df[mode_mask].copy()
+            
+            try:
+                logger.info(f"[get_containers_departed_from_load_port] After transport mode filter: {len(df)} rows")
+            except:
+                pass
+            
+            if df.empty:
+                mode_str = ", ".join(sorted(modes))
+                desc = f"{identifier_type} {container_no or po_no or obl_no}" if identifier_type else "containers"
+                return f"No {desc} departed by {mode_str}."
+        else:
+            try:
+                logger.warning(f"[get_containers_departed_from_load_port] transport_mode column not found, skipping mode filter")
+            except:
+                pass
+
+    # ========== NEW: 5B) HOT CONTAINER FLAG FILTER ==========
+    is_hot_query = bool(re.search(r'\bhot\b', query, re.IGNORECASE))
+    if is_hot_query:
+        try:
+            logger.info(f"[get_containers_departed_from_load_port] Hot container filter requested")
+        except:
+            pass
+        
+        hot_flag_cols = [c for c in df.columns if 'hot_container_flag' in c.lower()]
+        if not hot_flag_cols:
+            hot_flag_cols = [c for c in df.columns if 'hot_container' in c.lower()]
+        
+        if hot_flag_cols:
+            hot_col = hot_flag_cols[0]
+            
+            def _is_hot(v):
+                if pd.isna(v):
+                    return False
+                return str(v).strip().upper() in {"Y", "YES", "TRUE", "1", "HOT"}
+            
+            hot_mask = df[hot_col].apply(_is_hot)
+            df = df[hot_mask].copy()
+            
+            try:
+                logger.info(f"[get_containers_departed_from_load_port] After hot flag filter: {len(df)} rows")
+            except:
+                pass
+            
+            if df.empty:
+                desc = f"{identifier_type} {container_no or po_no or obl_no}" if identifier_type else "containers"
+                return f"No hot {desc} found."
+        else:
+            try:
+                logger.warning(f"[get_containers_departed_from_load_port] hot_container_flag column not found")
+            except:
+                pass
 
     # ========== 6) APPLY LOAD PORT FILTER (IMPROVED) ==========
     if load_port:
@@ -6431,7 +6498,9 @@ def get_containers_departed_from_load_port(query: str) -> str:
     if results.empty:
         desc = f"{identifier_type} {container_no or po_no or obl_no}" if identifier_type else "containers"
         port_desc = f" from load port {load_port}" if load_port else ""
-        return f"No {desc} departed{port_desc} in the {period_desc}."
+        mode_desc = f" by {', '.join(sorted(modes))}" if modes else ""
+        hot_desc = " (hot)" if is_hot_query else ""
+        return f"No {desc}{hot_desc} departed{port_desc}{mode_desc} in the {period_desc}."
 
     # ========== 10) SORT BY DEPARTURE DATE (MOST RECENT FIRST) ==========
     results = results.sort_values('dep_for_filter', ascending=False)
@@ -6452,8 +6521,19 @@ def get_containers_departed_from_load_port(query: str) -> str:
 
     # Add additional context columns
     additional_cols = ['discharge_port', 'eta_dp', 'revised_eta', 'consignee_code_multiple', 'final_carrier_name']
+    
+    # Add transport_mode if it was used in filtering
+    if modes and 'transport_mode' in results.columns:
+        additional_cols.append('transport_mode')
+    
+    # Add hot_container_flag if it was used in filtering
+    if is_hot_query:
+        hot_cols = [c for c in results.columns if 'hot_container_flag' in c.lower() or 'hot_container' in c.lower()]
+        if hot_cols:
+            additional_cols.append(hot_cols[0])
+    
     for c in additional_cols:
-        if c in results.columns:
+        if c in results.columns and c not in output_cols:
             output_cols.append(c)
 
     # Filter to available columns
@@ -6476,6 +6556,8 @@ def get_containers_departed_from_load_port(query: str) -> str:
         pass
 
     return out.where(pd.notnull(out), None).to_dict(orient='records')
+
+# ...existing code...
 
 
 
@@ -7345,6 +7427,7 @@ TOOLS = [
         description="List containers whose ETD (etd_lp) falls within a time window parsed from the query (e.g., 'Which containers have ETD in the next 7 days?'). Supports consignee filtering."
     )
 ]  
+
 
 
 
