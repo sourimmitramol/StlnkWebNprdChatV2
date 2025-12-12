@@ -200,23 +200,18 @@ def get_hot_upcoming_arrivals(query: str = None, consignee_code: str = None, **k
     """
     List ONLY hot containers arriving within a requested window.
 
-    Window rules (to match tool usage like 'days=3'):
-    - If days is provided (kwargs['days'] or embedded 'days=3' in query): use an EXACT inclusive window
-      of N calendar days starting today: [today, today + (N-1)].
-    - Else fall back to agents.prompts.parse_time_period(query).
-
-    Filters enforced:
-    - Consignee authorization via _df() thread-local + optional consignee_code param (extra narrowing)
-    - hot_container_flag truthy only
-    - Upcoming only (exclude rows where ata_dp is present)
-    - ETA preference: revised_eta if present else eta_dp
-
-    Returns: list[dict] (empty list if none)
+    Robustness improvements:
+    - Accepts 'question' kwarg as alias for query (agent sometimes calls tool with question=...)
+    - Honors days from kwargs['days'], 'days=N' text, or 'next N days' text
+      using an EXACT inclusive N-day window: [today .. today+(N-1)].
+    - Optional transport_mode filter from query text (sea/air/road/rail/courier/sea-air).
+    - Optional strict discharge_port/vehicle_arrival_lcn filter from query text per prompts policy.
     """
     import re
     import pandas as pd
 
-    q = (query or "").strip()
+    # ---- 0) Normalize incoming text (Tool sometimes passes question=...) ----
+    q = (query or kwargs.get("question") or kwargs.get("input") or "").strip()
 
     # ---------------------------
     # 1) Determine requested days (tool override)
@@ -230,7 +225,7 @@ def get_hot_upcoming_arrivals(query: str = None, consignee_code: str = None, **k
 
     if requested_days is None:
         m = re.search(
-            r"(?:next|in|upcoming|within)\s+(\d{1,3})\s+days?\b",
+            r"(?:next|upcoming|within|in\s+next|in\s+the\s+next|in)\s+(\d{1,3})\s+days?\b",
             q,
             flags=re.IGNORECASE,
         )
@@ -241,30 +236,33 @@ def get_hot_upcoming_arrivals(query: str = None, consignee_code: str = None, **k
     # 2) Compute time window
     # ---------------------------
     if requested_days is not None:
-        # EXACT N-day inclusive window: today..today+(N-1)
         n = max(int(requested_days), 1)
         today = pd.Timestamp.today().normalize()
         start_date = today
         end_date = today + pd.Timedelta(days=n - 1)
-        period_desc = f"next {n} days (tool override)"
+        period_desc = f"next {n} days (exact)"
     else:
         start_date, end_date, period_desc = parse_time_period(q)
         start_date = pd.Timestamp(start_date).normalize()
         end_date = pd.Timestamp(end_date).normalize()
 
     try:
-        logger.info(
-            f"[get_hot_upcoming_arrivals] Query: {q} | Window: {start_date}..{end_date} ({period_desc})"
-        )
+        logger.info(f"[get_hot_upcoming_arrivals] Query: {q}")
+        logger.info(f"[get_hot_upcoming_arrivals] Time window: {start_date}..{end_date} ({period_desc})")
     except Exception:
         pass
 
     # ---------------------------
-    # 3) Load data (already thread-local filtered) + optional consignee_code narrowing
+    # 3) Load data + optional consignee_code narrowing
     # ---------------------------
     df = _df()
     if df is None or getattr(df, "empty", True):
         return []
+
+    try:
+        logger.info(f"[get_hot_upcoming_arrivals] Initial dataset: {len(df)} rows")
+    except:
+        pass
 
     if consignee_code and "consignee_code_multiple" in df.columns:
         codes = [c.strip() for c in str(consignee_code).split(",") if c.strip()]
@@ -275,6 +273,119 @@ def get_hot_upcoming_arrivals(query: str = None, consignee_code: str = None, **k
                 .astype(str)
                 .apply(lambda x: bool(re.search(pattern, x, re.IGNORECASE)))
             ].copy()
+        try:
+            logger.info(f"[get_hot_upcoming_arrivals] After consignee filter ({consignee_code}): {len(df)} rows")
+        except:
+            pass
+
+    if df.empty:
+        return []
+
+    # ---------------------------
+    # 3A) Transport mode filter (optional)
+    # ---------------------------
+    try:
+        modes = extract_transport_modes(q) or set()
+    except Exception:
+        modes = set()
+
+    # **CRITICAL FIX**: Normalize modes -> dataset values (typically "SEA", "AIR", etc.)
+    mode_map = {
+        "sea": "SEA",
+        "ocean": "SEA",
+        "air": "AIR",
+        "airfreight": "AIR",
+        "road": "ROAD",
+        "truck": "ROAD",
+        "rail": "RAIL",
+        "courier": "COURIER",
+        "sea-air": "SEA-AIR",
+    }
+    wanted_modes = set()
+    for m in modes:
+        normalized = mode_map.get(m.lower(), str(m).upper())
+        wanted_modes.add(normalized)
+
+    if wanted_modes and "transport_mode" in df.columns:
+        tm = df["transport_mode"].astype(str).str.upper()
+        df = df[tm.apply(lambda s: any(wm in s for wm in wanted_modes))].copy()
+        try:
+            logger.info(f"[get_hot_upcoming_arrivals] After transport_mode filter ({wanted_modes}): {len(df)} rows")
+        except:
+            pass
+
+    if df.empty:
+        return []
+
+    # ---------------------------
+    # 3B) Strict location filter (optional)
+    # Policy: if code present -> require "(CODE)" in discharge_port or vehicle_arrival_lcn
+    # ---------------------------
+    port_cols = [c for c in ["discharge_port", "vehicle_arrival_lcn"] if c in df.columns]
+
+    def _extract_loc_code_or_name(text: str):
+        # Prefer explicit "NAME(CODE)"
+        m_paren = re.search(r"([A-Z0-9 ,\.\-']+?)\s*\(([A-Z0-9]{2,6})\)", text.upper())
+        if m_paren:
+            return m_paren.group(2).strip(), m_paren.group(1).strip()
+
+        # Code-only token (3–6 alnum) heuristic - ONLY if query has location keywords
+        location_keywords = r"\b(?:port|location|at|to|from|via|arriving|departure|destination|discharge)\b"
+        has_location_context = bool(re.search(location_keywords, text, re.IGNORECASE))
+        
+        if has_location_context:
+            tokens = re.findall(r"\b[A-Z0-9]{3,6}\b", text.upper())
+            stop = {
+                "NEXT", "DAYS", "DAY", "HOT", "ETA", "ATA", "ETD",
+                "WITHIN", "UPCOMING", "ARRIVE", "ARRIVING", "ARRIVALS",
+                "CONTAINER", "CONTAINERS", "FOR", "USER", "CONSIGNEE", "CODE",
+                "SEA", "AIR", "ROAD", "RAIL", "COURIER",
+                # Common query words that are NOT port codes
+                "PLEASE", "WHAT", "ARE", "THE", "SHOW", "LIST", "GET", "GIVE",
+                "TELL", "KNOW", "LET", "ME", "MY", "ALL", "ANY", "SOME",
+                "FROM", "TO", "IN", "AT", "ON", "BY", "WITH", "THIS", "THAT",
+                "WEEK", "MONTH", "YEAR", "TODAY", "NOW", "SOON", "LATER", "VIA",
+                "PORT", "LOCATION", "DESTINATION", "DISCHARGE", "DEPARTURE"
+            }
+            for t in tokens:
+                if t not in stop and not t.isdigit():
+                    return t, None
+
+            # Name heuristic: "at/to/in/from <proper name>" (only with location context)
+            # More restrictive: name should be capitalized and reasonably port-like
+            m_name = re.search(r"\b(?:at|to|from|via)\s+([A-Z][A-Za-z\s\.\-']{3,25})\b(?:\s+port|\s+location|$)", text, flags=re.IGNORECASE)
+            if m_name:
+                name_candidate = m_name.group(1).strip()
+                # Exclude common time/direction words
+                if name_candidate.upper() not in {"NEXT", "THIS", "THAT", "EVERY", "EACH"}:
+                    return None, name_candidate
+
+        return None, None
+
+    loc_code, loc_name = _extract_loc_code_or_name(q)
+    if port_cols and (loc_code or loc_name):
+        try:
+            logger.info(f"[get_hot_upcoming_arrivals] Location filter: code={loc_code}, name={loc_name}")
+        except:
+            pass
+        
+        if loc_code:
+            code_pat = re.compile(rf"\({re.escape(loc_code)}\)", re.IGNORECASE)
+            mask = pd.Series(False, index=df.index)
+            for c in port_cols:
+                mask |= df[c].astype(str).apply(lambda x: bool(code_pat.search(x)))
+            df = df[mask].copy()
+        else:
+            name_pat = re.compile(re.escape(str(loc_name)), re.IGNORECASE)
+            mask = pd.Series(False, index=df.index)
+            for c in port_cols:
+                mask |= df[c].astype(str).apply(lambda x: bool(name_pat.search(x)))
+            df = df[mask].copy()
+        
+        try:
+            logger.info(f"[get_hot_upcoming_arrivals] After location filter: {len(df)} rows")
+        except:
+            pass
 
     if df.empty:
         return []
@@ -286,6 +397,10 @@ def get_hot_upcoming_arrivals(query: str = None, consignee_code: str = None, **k
     if not hot_flag_cols:
         hot_flag_cols = [c for c in df.columns if "hot_container" in c.lower()]
     if not hot_flag_cols:
+        try:
+            logger.warning(f"[get_hot_upcoming_arrivals] No hot_container_flag column found")
+        except:
+            pass
         return []
 
     hot_col = hot_flag_cols[0]
@@ -299,6 +414,11 @@ def get_hot_upcoming_arrivals(query: str = None, consignee_code: str = None, **k
         return s in {"Y", "YES", "TRUE", "1", "HOT", "T"}
 
     df = df[df[hot_col].apply(_is_hot)].copy()
+    try:
+        logger.info(f"[get_hot_upcoming_arrivals] After hot_container_flag filter: {len(df)} rows")
+    except:
+        pass
+    
     if df.empty:
         return []
 
@@ -307,6 +427,10 @@ def get_hot_upcoming_arrivals(query: str = None, consignee_code: str = None, **k
     # ---------------------------
     date_cols = [c for c in ["revised_eta", "eta_dp", "ata_dp"] if c in df.columns]
     if not date_cols:
+        try:
+            logger.warning(f"[get_hot_upcoming_arrivals] No date columns found")
+        except:
+            pass
         return []
 
     df = ensure_datetime(df, date_cols)
@@ -319,27 +443,30 @@ def get_hot_upcoming_arrivals(query: str = None, consignee_code: str = None, **k
     else:
         df["eta_for_filter"] = df["eta_dp"]
 
-    # Strict inclusive date window; exclude already arrived
     eta_norm = df["eta_for_filter"].dt.normalize()
     date_mask = df["eta_for_filter"].notna() & (eta_norm >= start_date) & (eta_norm <= end_date)
 
+    # Upcoming only: exclude already arrived
     if "ata_dp" in df.columns:
         date_mask &= df["ata_dp"].isna()
 
     result = df[date_mask].copy()
+    try:
+        logger.info(f"[get_hot_upcoming_arrivals] After date/upcoming filter (start={start_date}, end={end_date}): {len(result)} rows")
+    except:
+        pass
+    
     if result.empty:
         return []
 
-    # ---------------------------
-    # 6) Final guard (prevents any leakage into observation)
-    # ---------------------------
+    # Final guard (prevents leakage beyond window)
     eta_norm_r = result["eta_for_filter"].dt.normalize()
     result = result[result["eta_for_filter"].notna() & (eta_norm_r >= start_date) & (eta_norm_r <= end_date)].copy()
     if result.empty:
         return []
 
     # ---------------------------
-    # 7) Output shaping (no eta_for_filter in observation)
+    # 6) Output shaping (no eta_for_filter in observation)
     # ---------------------------
     result = result.sort_values("eta_for_filter", ascending=True).head(200).copy()
 
@@ -350,6 +477,7 @@ def get_hot_upcoming_arrivals(query: str = None, consignee_code: str = None, **k
         "revised_eta",
         "eta_dp",
         "consignee_code_multiple",
+        "transport_mode",
         
     ]
     out_cols = [c for c in out_cols if c in result.columns]
@@ -359,6 +487,11 @@ def get_hot_upcoming_arrivals(query: str = None, consignee_code: str = None, **k
     for dcol in ["revised_eta", "eta_dp"]:
         if dcol in out_df.columns and pd.api.types.is_datetime64_any_dtype(out_df[dcol]):
             out_df[dcol] = out_df[dcol].dt.strftime("%Y-%m-%d")
+
+    try:
+        logger.info(f"[get_hot_upcoming_arrivals] Returning {len(out_df)} hot container records")
+    except:
+        pass
 
     return out_df.where(pd.notnull(out_df), None).to_dict(orient="records")
 
@@ -7090,6 +7223,7 @@ TOOLS = [
         description="List containers whose ETD (etd_lp) falls within a time window parsed from the query (e.g., 'Which containers have ETD in the next 7 days?'). Supports consignee filtering."
     )
 ]
+
 
 
 
