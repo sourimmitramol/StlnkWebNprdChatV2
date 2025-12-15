@@ -7144,13 +7144,41 @@ TOOLS = [
         description="List hot containers (and related POs) arriving within next N days."
     ),
     Tool(
-        name="Get Hot Containers",
-        func=get_hot_containers,
-        description=(
-           "Use this tool ONLY if the user asks directly about hot containers "
-           "without mentioning any delay, lateness, ETA, or days. "
-           "For example: 'Show my hot containers' or 'List all priority shipments'."),
-    ),
+    name="Get Hot Containers",
+    func=get_hot_containers,
+    description=(
+        "PRIMARY TOOL FOR ALL HOT/PRIORITY CONTAINER QUERIES.\n"
+        "\n"
+        "Use this tool for ANY query that mentions 'hot', 'priority', 'urgent', 'rush', or 'expedited' containers.\n"
+        "\n"
+        "CRITICAL: This tool handles BOTH:\n"
+        "1. Generic hot container queries: 'Show my hot containers', 'List all priority shipments'\n"
+        "2. Hot containers WITH filters:\n"
+        "   - Delay filters: 'hot containers delayed by more than 3 days', 'priority shipments late by 5 days'\n"
+        "   - Port filters: 'hot containers at Rotterdam', 'urgent shipments arriving at NLRTM'\n"
+        "   - Transport mode: 'hot containers by sea', 'priority shipments by air'\n"
+        "   - Arrival status: 'hot containers that have arrived', 'priority shipments already reached'\n"
+        "\n"
+        "Examples of queries this tool handles:\n"
+        "- 'Show me all hot containers'\n"
+        "- 'List priority shipments'\n"
+        "- 'Hot containers delayed by more than 3 days'\n"
+        "- 'Which hot containers are late by 5 days?'\n"
+        "- 'Urgent shipments at USNYC'\n"
+        "- 'Priority containers by sea'\n"
+        "- 'Hot containers that have arrived'\n"
+        "\n"
+        "DO NOT use 'Get Delayed Containers' if query mentions 'hot' or 'priority'.\n"
+        "DO NOT use 'Get Hot Upcoming Arrivals' unless query explicitly asks about upcoming/arriving/next X days.\n"
+        "\n"
+        "This tool automatically:\n"
+        "- Filters to ONLY hot_container_flag = TRUE\n"
+        "- Applies delay calculations when delay keywords present\n"
+        "- Filters by port when location mentioned\n"
+        "- Filters by transport mode when sea/air/road mentioned\n"
+        "- Returns all relevant hot containers without date restrictions (unless delay filter applied)"
+    )
+),
     Tool(
         name="Get Delayed BLs",
         func=get_delayed_bls,
@@ -7223,6 +7251,7 @@ TOOLS = [
         description="List containers whose ETD (etd_lp) falls within a time window parsed from the query (e.g., 'Which containers have ETD in the next 7 days?'). Supports consignee filtering."
     )
 ]
+
 
 
 
