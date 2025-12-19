@@ -2420,10 +2420,10 @@ def get_hot_containers(question: str = None, consignee_code: str = None, **kwarg
     Unified hot-container handler.
 
     Enhancements:
-      ✅ Supports consignee_code filtering (comma-separated)
-      ✅ Detects consignee name in question to further narrow results
-      ✅ Handles "less than", "more than", "8+", "1–3", "missed ETA", etc.
-      ✅ Location detection now supports both codes (USLAX) and names ("Los Angeles")
+      Supports consignee_code filtering (comma-separated)
+      Detects consignee name in question to further narrow results
+      Handles "less than", "more than", "8+", "1–3", "missed ETA", etc.
+      Location detection now supports both codes (USLAX) and names ("Los Angeles")
     """
     import re
     import pandas as pd
@@ -2510,6 +2510,8 @@ def get_hot_containers(question: str = None, consignee_code: str = None, **kwarg
         m2_list = re.findall(r"(?:\b(?:ON|AT|IN|TO|FROM)\s+([A-Z][A-Z0-9\s\.,'\-]{2,}))", q_up)
         if m2_list:
             cand = max(m2_list, key=len).strip()
+            # Stop at common separators like "FOR" (e.g., "at Los Angeles for consignee 0000866")
+            cand = re.split(r"\bFOR\b", cand, maxsplit=1)[0].strip()
             # Clean noise like "BY", "DELAYED", "DAYS", etc.
             cand = re.sub(r"(?:(?:\d+\s*DAYS?)|ARRIV(?:ING|AL)?|LATE|DELAYED|OVERDUE|BEHIND|BY|ONWARD).*", "", cand).strip()
             if cand:
@@ -2527,6 +2529,29 @@ def get_hot_containers(question: str = None, consignee_code: str = None, **kwarg
         return None, None
 
     code, name = _extract_loc_code_and_name(query)
+
+    def _looks_like_time_phrase(text: str) -> bool:
+        if not text:
+            return False
+        t = str(text).strip().lower()
+        # Common month names/abbrevs, relative periods, or a year token.
+        if re.search(
+            r"\b(jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|"
+            r"sep|sept|september|oct|october|nov|november|dec|december)\b",
+            t,
+        ):
+            return True
+        if re.search(r"\b(this|next|last)\s+(week|month)\b", t):
+            return True
+        if re.search(r"\b(today|tomorrow|yesterday)\b", t):
+            return True
+        if re.search(r"\b\d{4}\b", t):
+            return True
+        return False
+
+    # Avoid mis-classifying time phrases like "in November 2025" as locations.
+    if name and _looks_like_time_phrase(name):
+        name = None
 
     if code or name:
         loc_mask = pd.Series(False, index=hot_df.index)
@@ -2547,6 +2572,135 @@ def get_hot_containers(question: str = None, consignee_code: str = None, **kwarg
             return f"No hot containers found at {where} for your authorized consignees."
 
     ql = (query or "").lower()
+
+    # -----------------------
+    # Optional carrier/vessel filter (minimal + query-driven)
+    # -----------------------
+    def _extract_carrier_or_vessel(q: str) -> str | None:
+        q_norm = (q or "").strip()
+        if not q_norm:
+            return None
+        # Primary patterns: "with Maersk", "carrier Maersk", "line Maersk"
+        m = re.search(
+            r"\b(?:with|carrier|line)\s+([A-Za-z0-9&\-\.'\s]{2,60}?)(?=\s+\b(?:in|on|for|to|from|at|between|during|within|next|last|this)\b|\s*$)",
+            q_norm,
+            re.IGNORECASE,
+        )
+        if m:
+            cand = m.group(1).strip(" \t\r\n,.;:-")
+            return cand or None
+
+        # Secondary pattern: "by <carrier>" (avoid delay phrases like "by more than 5 days")
+        m2 = re.search(
+            r"\bby\s+([A-Za-z][A-Za-z&\-\.'\s]{1,60}?)(?=\s+\b(?:in|on|for|to|from|at|between|during|within|next|last|this)\b|\s*$)",
+            q_norm,
+            re.IGNORECASE,
+        )
+        if not m2:
+            return None
+        cand2 = m2.group(1).strip(" \t\r\n,.;:-")
+        # Reject common non-carrier phrases
+        if re.search(r"\b(more|less|under|over|than|days?|weeks?|months?|eta|delayed|late|overdue|behind)\b", cand2, re.IGNORECASE):
+            return None
+        return cand2 or None
+
+    carrier_or_vessel = _extract_carrier_or_vessel(query)
+    if carrier_or_vessel:
+        carrier_cols = [c for c in ["final_carrier_name", "final_vessel_name"] if c in hot_df.columns]
+        if carrier_cols:
+            carrier_mask = pd.Series(False, index=hot_df.index)
+            for c in carrier_cols:
+                carrier_mask |= hot_df[c].astype(str).str.contains(carrier_or_vessel, case=False, na=False)
+            hot_df = hot_df[carrier_mask].copy()
+            if hot_df.empty:
+                return f"No hot containers found for carrier/vessel '{carrier_or_vessel}' for your authorized consignees."
+
+    # -----------------------
+    # Optional time filter (minimal + query-driven)
+    # -----------------------
+    def _extract_month_year_range(q: str) -> tuple[pd.Timestamp, pd.Timestamp, str] | None:
+        ql_local = (q or "").lower()
+        month_map = {
+            "jan": 1,
+            "january": 1,
+            "feb": 2,
+            "february": 2,
+            "mar": 3,
+            "march": 3,
+            "apr": 4,
+            "april": 4,
+            "may": 5,
+            "jun": 6,
+            "june": 6,
+            "jul": 7,
+            "july": 7,
+            "aug": 8,
+            "august": 8,
+            "sep": 9,
+            "sept": 9,
+            "september": 9,
+            "oct": 10,
+            "october": 10,
+            "nov": 11,
+            "november": 11,
+            "dec": 12,
+            "december": 12,
+        }
+
+        # Match "November 2025" or "Nov 2025" (month + year, no day).
+        m = re.search(
+            r"\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|"
+            r"sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{4})\b",
+            ql_local,
+        )
+        if not m:
+            return None
+
+        # If there's an explicit day present (e.g., "Nov 10 2025"), let parse_time_period handle it.
+        if re.search(r"\b\d{1,2}\s+" + re.escape(m.group(1)) + r"\s+\d{4}\b", ql_local):
+            return None
+        if re.search(r"\b" + re.escape(m.group(1)) + r"\s+\d{1,2}\s+\d{4}\b", ql_local):
+            return None
+
+        month_key = m.group(1)
+        year = int(m.group(2))
+        # Normalize key to the shortest month prefix when possible.
+        month_key = month_key[:3] if month_key[:3] in month_map else month_key
+        month = month_map.get(month_key, month_map.get(month_key.lower()))
+        if not month:
+            return None
+
+        start = pd.Timestamp(year=year, month=month, day=1).normalize()
+        end = (start + pd.offsets.MonthEnd(0)).normalize()
+        return start, end, f"{start.strftime('%B %Y')} ({start.strftime('%Y-%m-%d')} to {end.strftime('%Y-%m-%d')})"
+
+    def _query_has_explicit_time(q: str) -> bool:
+        ql_local = (q or "").lower()
+        return bool(
+            re.search(
+                r"\b(today|tomorrow|yesterday)\b|\b(this|next|last)\s+(week|month)\b|\bbetween\b|\bfrom\b|"
+                r"\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}\b|\b\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}\b|"
+                r"\b(?:jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|sep|sept|september|"
+                r"oct|october|nov|november|dec|december)\b\s+\d{4}\b|\bnext\s+\d{1,3}\s+days?\b|\blast\s+\d{1,3}\s+days?\b",
+                ql_local,
+            )
+        )
+
+    if _query_has_explicit_time(query):
+        month_range = _extract_month_year_range(query)
+        if month_range:
+            start_date, end_date, period_desc = month_range
+        else:
+            start_date, end_date, period_desc = parse_time_period(query)
+
+        eta_cols = [c for c in ["revised_eta", "eta_dp", "eta_fd", "predictive_eta"] if c in hot_df.columns]
+        if eta_cols:
+            hot_df = ensure_datetime(hot_df, eta_cols)
+            eta_for_filter = hot_df[eta_cols].bfill(axis=1).iloc[:, 0]
+            date_mask = eta_for_filter.notna() & (eta_for_filter.dt.normalize() >= start_date) & (eta_for_filter.dt.normalize() <= end_date)
+            hot_df = hot_df[date_mask].copy()
+            if hot_df.empty:
+                return f"No hot containers found for {period_desc} for your authorized consignees."
 
     # -----------------------
     # A) Delayed / missed ETA hot containers
@@ -7636,6 +7790,7 @@ TOOLS = [
         description="List containers whose ETD (etd_lp) falls within a time window parsed from the query (e.g., 'Which containers have ETD in the next 7 days?'). Supports consignee filtering."
     )
 ]  
+
 
 
 
