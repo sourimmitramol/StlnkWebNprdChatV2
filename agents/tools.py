@@ -2592,29 +2592,47 @@ def get_hot_containers(question: str = None, consignee_code: str = None, **kwarg
         q_norm = (q or "").strip()
         if not q_norm:
             return None
-        # Primary patterns: "with Maersk", "carrier Maersk", "line Maersk"
-        m = re.search(
-            r"\b(?:with|carrier|line)\s+([A-Za-z0-9&\-\.'\s]{2,60}?)(?=\s+\b(?:in|on|for|to|from|at|between|during|within|next|last|this)\b|\s*$)",
-            q_norm,
-            re.IGNORECASE,
-        )
-        if m:
-            cand = m.group(1).strip(" \t\r\n,.;:-")
-            return cand or None
 
-        # Secondary pattern: "by <carrier>" (avoid delay phrases like "by more than 5 days")
-        m2 = re.search(
-            r"\bby\s+([A-Za-z][A-Za-z&\-\.'\s]{1,60}?)(?=\s+\b(?:in|on|for|to|from|at|between|during|within|next|last|this)\b|\s*$)",
+        # Stop words that indicate the carrier name is finished.
+        # NOTE: include "and" to avoid capturing "Maersk and ETA ..."
+        boundary = r"(?:in|on|for|to|from|at|between|during|within|next|last|this|and|eta|arriv(?:e|ing|al)?|delayed|late|overdue|behind)"
+
+        # Pattern A: "with Maersk" OR "with carrier Maersk" OR "with line Maersk"
+        m = re.search(
+            rf"\bwith\s+(?:(?:carrier|line)\s+)?([A-Za-z0-9&\-\.'\s]{{2,60}}?)(?=\s+\b{boundary}\b|\s*$)",
             q_norm,
-            re.IGNORECASE,
+            flags=re.IGNORECASE,
         )
-        if not m2:
-            return None
-        cand2 = m2.group(1).strip(" \t\r\n,.;:-")
+        if not m:
+            # Pattern B: "carrier Maersk" OR "line Maersk"
+            m = re.search(
+                rf"\b(?:carrier|line)\s+([A-Za-z0-9&\-\.'\s]{{2,60}}?)(?=\s+\b{boundary}\b|\s*$)",
+                q_norm,
+                flags=re.IGNORECASE,
+            )
+        if not m:
+            # Pattern C: "by Maersk" but avoid "by more than 5 days" etc.
+            m = re.search(
+                rf"\bby\s+([A-Za-z][A-Za-z&\-\.'\s]{{1,60}}?)(?=\s+\b{boundary}\b|\s*$)",
+                q_norm,
+                flags=re.IGNORECASE,
+            )
+            if not m:
+                return None
+
+        cand = m.group(1).strip(" \t\r\n,.;:-")
+
+        # If something like "carrier Maersk" still got captured, drop the prefix.
+        cand = re.sub(r"^(?:carrier|line)\s+", "", cand, flags=re.IGNORECASE).strip()
+
+        # Hard stop at "and ..." (extra safety for messy prompts)
+        cand = re.split(r"\band\b", cand, maxsplit=1, flags=re.IGNORECASE)[0].strip()
+
         # Reject common non-carrier phrases
-        if re.search(r"\b(more|less|under|over|than|days?|weeks?|months?|eta|delayed|late|overdue|behind)\b", cand2, re.IGNORECASE):
+        if re.search(r"\b(more|less|under|over|than|days?|weeks?|months?|eta|delayed|late|overdue|behind)\b", cand, re.IGNORECASE):
             return None
-        return cand2 or None
+
+        return cand or None
 
     carrier_or_vessel = _extract_carrier_or_vessel(query)
     if carrier_or_vessel:
@@ -7615,6 +7633,7 @@ TOOLS = [
         description="List containers whose ETD (etd_lp) falls within a time window parsed from the query (e.g., 'Which containers have ETD in the next 7 days?'). Supports consignee filtering."
     )
 ]
+
 
 
 
