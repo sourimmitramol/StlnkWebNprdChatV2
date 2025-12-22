@@ -790,6 +790,8 @@ def get_supplier_last_days(query: str) -> str:
     
 
 
+
+
 def get_containers_PO_OBL_by_supplier(query: str) -> str:
     """
     Handle supplier/shipper-related queries including:
@@ -814,26 +816,34 @@ def get_containers_PO_OBL_by_supplier(query: str) -> str:
     except Exception:
         raw_obl = None
 
-    # Fallback: if query is just an alphanumeric string (8-20 chars), treat as OBL if not PO/Container
-    if not raw_obl and not raw_po and not raw_container:
-         # Check if query is a single token or "OBL <token>"
-         cleaned_q = query.strip().upper()
-         # Case 1: Just the token
-         if re.match(r'^[A-Z0-9]{8,20}$', cleaned_q):
-             raw_obl = cleaned_q
-         # Case 2: "OBL <token>"
-         else:
-             m_obl = re.search(r'\bOBL\s+([A-Z0-9]{8,20})\b', cleaned_q)
-             if m_obl:
-                 raw_obl = m_obl.group(1)
+    # --- CRITICAL FIX: Always honor a true container token, even if query mentions "PO" ---
+    # Some queries like "What is PO number in <CONTAINER>?" include "PO" but are container-mapping intents.
+    m_true_container = re.search(r"\b([A-Z]{4}\d{7})\b", q_upper)
+    true_container = m_true_container.group(1) if m_true_container else None
 
-    # Did user explicitly say PO / purchase order?
-    mentions_po = bool(re.search(r'\b(po|purchase\s+order)\b', q_lower))
-
-    # If the user explicitly says PO, we should **not** treat a pure number as container
-    container_no = raw_container if (raw_container and not mentions_po) else None
+    container_no = true_container or raw_container
     po_no = raw_po
     obl_no = raw_obl
+
+    # If BL extractor mistakenly captured a container-looking token, prefer container semantics
+    if container_no and obl_no:
+        try:
+            if _normalize_bl_token(obl_no) == clean_container_number(container_no):
+                obl_no = None
+        except Exception:
+            pass
+
+    # Fallback: treat as OBL only when it does NOT look like a container/PO
+    # (prevents "TCKU1255049" being misrouted as OBL)
+    if not obl_no and not po_no and not container_no:
+        cleaned_q = query.strip().upper()
+        # Only accept single-token OBL fallback if it is NOT a container pattern
+        if re.match(r"^[A-Z0-9]{8,20}$", cleaned_q) and not re.match(r"^[A-Z]{4}\d{7}$", cleaned_q):
+            obl_no = cleaned_q
+        else:
+            m_obl = re.search(r"\bOBL\s+([A-Z0-9]{8,20})\b", cleaned_q)
+            if m_obl and not re.match(r"^[A-Z]{4}\d{7}$", m_obl.group(1)):
+                obl_no = m_obl.group(1)
 
     # Log what we extracted for debugging
     try:
@@ -1266,11 +1276,6 @@ def get_containers_PO_OBL_by_supplier(query: str) -> str:
     return out.where(pd.notnull(out), None).to_dict(orient="records")
 
 
-
-
-
-
-# ...existing code...
 # ...existing code...
 
 # --- replace the later _normalize_po_token / _po_in_cell definitions with this robust version ---
@@ -7671,9 +7676,33 @@ TOOLS = [
         description="Containers from a supplier that have arrived in the last N days (ata_dp within window)."
     ),
     Tool(
-        name="Get Containers or PO or OBL By Supplier", 
-        func=get_containers_PO_OBL_by_supplier,
-        description="use this function when user query mentions supplier or shipper name to get related containers or POs or OBLs.dont look for any other function if user query mentions supplier or shipper name."
+    name="Get Containers or PO or OBL By Supplier",
+    func=get_containers_PO_OBL_by_supplier,
+    description=(
+        "PRIMARY TOOL for ENTITY MAPPING between Supplier/Shipper/Vendor and shipment identifiers.\n"
+        "\n"
+        "Use this tool FIRST (and do not use any other tool) when the user asks ANY of the following:\n"
+        "1) Supplier/Shipper/Vendor ↔ Container/PO/OBL mapping:\n"
+        "   - 'supplier/shipper/vendor for <container>'\n"
+        "   - 'supplier/shipper/vendor for PO <po>'\n"
+        "   - 'supplier/shipper/vendor for OBL/BL <bl>'\n"
+        "   - 'containers/POs/OBLs for supplier/shipper <name>'\n"
+        "\n"
+        "2) PO/OBL lookups from a container (identifier association questions):\n"
+        "   - 'What is PO number in <CONTAINER>?'\n"
+        "   - 'Which PO is linked to <CONTAINER>?'\n"
+        "   - 'What is the OBL/BL for <CONTAINER>?'\n"
+        "\n"
+        "3) Listing by supplier/shipper with status/time intent:\n"
+        "   - 'containers from <supplier> arriving/delayed/in transit/arrived (with any time window)'\n"
+        "\n"
+        "CRITICAL ROUTING RULE:\n"
+        "- If the query contains words like 'supplier', 'shipper', 'vendor' OR asks for PO/OBL associated with a container,\n"
+        "  ALWAYS use this tool and do not call milestone/status tools.\n"
+        "\n"
+        "DO NOT use 'Get Container Milestones' for PO/OBL/supplier mapping questions.\n"
+        "Return structured records from the dataset only (no assumptions).\n"
+    )
     ),
     Tool(
         name="Check PO Month Arrival",
@@ -7808,6 +7837,7 @@ TOOLS = [
         description="List containers whose ETD (etd_lp) falls within a time window parsed from the query (e.g., 'Which containers have ETD in the next 7 days?'). Supports consignee filtering."
     )
 ]
+
 
 
 
