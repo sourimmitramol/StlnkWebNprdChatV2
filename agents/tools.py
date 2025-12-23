@@ -8307,9 +8307,33 @@ TOOLS = [
         description="Get ETA for a PO (prefers revised_eta over eta_dp )."
     ),
 	Tool(
-        name="Get Containers or PO or OBL By Supplier", 
-        func=get_containers_PO_OBL_by_supplier,
-        description="use this function when user query mentions supplier or shipper name to get related containers or POs or OBLs.dont look for any other function if user query mentions supplier or shipper name."
+    name="Get Containers or PO or OBL By Supplier",
+    func=get_containers_PO_OBL_by_supplier,
+    description=(
+        "PRIMARY TOOL for ENTITY MAPPING between Supplier/Shipper/Vendor and shipment identifiers.\n"
+        "\n"
+        "Use this tool FIRST (and do not use any other tool) when the user asks ANY of the following:\n"
+        "1) Supplier/Shipper/Vendor ↔ Container/PO/OBL mapping:\n"
+        "   - 'supplier/shipper/vendor for <container>'\n"
+        "   - 'supplier/shipper/vendor for PO <po>'\n"
+        "   - 'supplier/shipper/vendor for OBL/BL <bl>'\n"
+        "   - 'containers/POs/OBLs for supplier/shipper <name>'\n"
+        "\n"
+        "2) PO/OBL lookups from a container (identifier association questions):\n"
+        "   - 'What is PO number in <CONTAINER>?'\n"
+        "   - 'Which PO is linked to <CONTAINER>?'\n"
+        "   - 'What is the OBL/BL for <CONTAINER>?'\n"
+        "\n"
+        "3) Listing by supplier/shipper with status/time intent:\n"
+        "   - 'containers from <supplier> arriving/delayed/in transit/arrived (with any time window)'\n"
+        "\n"
+        "CRITICAL ROUTING RULE:\n"
+        "- If the query contains words like 'supplier', 'shipper', 'vendor' OR asks for PO/OBL associated with a container,\n"
+        "  ALWAYS use this tool and do not call milestone/status tools.\n"
+        "\n"
+        "DO NOT use 'Get Container Milestones' for PO/OBL/supplier mapping questions.\n"
+        "Return structured records from the dataset only (no assumptions).\n"
+    ),
     ),
 	Tool(
     name="Get Containers Departing From Load Port", 
@@ -8401,6 +8425,7 @@ TOOLS = [
         description="List containers whose ETD (etd_lp) falls within a time window parsed from the query (e.g., 'Which containers have ETD in the next 7 days?'). Supports consignee filtering."
     )
 ]  
+
 
 
 
