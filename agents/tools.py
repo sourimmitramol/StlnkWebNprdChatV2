@@ -1680,6 +1680,7 @@ def ensure_datetime(df: pd.DataFrame, columns: list) -> pd.DataFrame:
 
 # ...existing code...
 
+
 def get_containers_PO_OBL_by_supplier(query: str) -> str:
     """
     Handle supplier/shipper-related queries including:
@@ -1704,26 +1705,34 @@ def get_containers_PO_OBL_by_supplier(query: str) -> str:
     except Exception:
         raw_obl = None
 
-    # Fallback: if query is just an alphanumeric string (8-20 chars), treat as OBL if not PO/Container
-    if not raw_obl and not raw_po and not raw_container:
-         # Check if query is a single token or "OBL <token>"
-         cleaned_q = query.strip().upper()
-         # Case 1: Just the token
-         if re.match(r'^[A-Z0-9]{8,20}$', cleaned_q):
-             raw_obl = cleaned_q
-         # Case 2: "OBL <token>"
-         else:
-             m_obl = re.search(r'\bOBL\s+([A-Z0-9]{8,20})\b', cleaned_q)
-             if m_obl:
-                 raw_obl = m_obl.group(1)
+    # --- CRITICAL FIX: Always honor a true container token, even if query mentions "PO" ---
+    # Some queries like "What is PO number in <CONTAINER>?" include "PO" but are container-mapping intents.
+    m_true_container = re.search(r"\b([A-Z]{4}\d{7})\b", q_upper)
+    true_container = m_true_container.group(1) if m_true_container else None
 
-    # Did user explicitly say PO / purchase order?
-    mentions_po = bool(re.search(r'\b(po|purchase\s+order)\b', q_lower))
-
-    # If the user explicitly says PO, we should **not** treat a pure number as container
-    container_no = raw_container if (raw_container and not mentions_po) else None
+    container_no = true_container or raw_container
     po_no = raw_po
     obl_no = raw_obl
+
+    # If BL extractor mistakenly captured a container-looking token, prefer container semantics
+    if container_no and obl_no:
+        try:
+            if _normalize_bl_token(obl_no) == clean_container_number(container_no):
+                obl_no = None
+        except Exception:
+            pass
+
+    # Fallback: treat as OBL only when it does NOT look like a container/PO
+    # (prevents "TCKU1255049" being misrouted as OBL)
+    if not obl_no and not po_no and not container_no:
+        cleaned_q = query.strip().upper()
+        # Only accept single-token OBL fallback if it is NOT a container pattern
+        if re.match(r"^[A-Z0-9]{8,20}$", cleaned_q) and not re.match(r"^[A-Z]{4}\d{7}$", cleaned_q):
+            obl_no = cleaned_q
+        else:
+            m_obl = re.search(r"\bOBL\s+([A-Z0-9]{8,20})\b", cleaned_q)
+            if m_obl and not re.match(r"^[A-Z]{4}\d{7}$", m_obl.group(1)):
+                obl_no = m_obl.group(1)
 
     # Log what we extracted for debugging
     try:
@@ -2154,6 +2163,8 @@ def get_containers_PO_OBL_by_supplier(query: str) -> str:
         if dcol in out.columns and pd.api.types.is_datetime64_any_dtype(out[dcol]):
             out[dcol] = out[dcol].dt.strftime("%Y-%m-%d")
     return out.where(pd.notnull(out), None).to_dict(orient="records")
+
+
 
 def get_delayed_containers(question: str = None, consignee_code: str = None, **kwargs) -> str:
     """
@@ -8425,6 +8436,7 @@ TOOLS = [
         description="List containers whose ETD (etd_lp) falls within a time window parsed from the query (e.g., 'Which containers have ETD in the next 7 days?'). Supports consignee filtering."
     )
 ]  
+
 
 
 
