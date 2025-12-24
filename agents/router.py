@@ -5,7 +5,6 @@ from agents.prompts import map_synonym_to_column
 from agents.tools import (
     sql_query_tool,
     get_container_milestones,
-    get_pos_milestone,
     get_container_carrier,
     check_arrival_status,
     get_delayed_containers,
@@ -26,8 +25,7 @@ from agents.tools import (
     # Add the missing functions
     check_transit_status,
     get_containers_by_carrier,
-    get_containers_departing_from_load_port,
-    get_containers_departed_from_load_port,
+    get_containers_PO_OBL_by_supplier,
     get_hot_upcoming_arrivals,
     check_po_month_arrival,
     get_weekly_status_changes,
@@ -35,10 +33,14 @@ from agents.tools import (
     get_eta_for_po,
     get_upcoming_bls,
     get_containers_by_etd_window,
-    get_containers_PO_OBL_by_supplier,
+    get_containers_departing_from_load_port,
+    get_containers_departed_from_load_port,
+    get_container_transit_analysis,
+    get_bulk_container_transit_analysis,
+    get_po_transit_analysis,
     get_eta_for_booking,
     get_booking_details,
-
+    get_bl_transit_analysis,
     _df,  # Import the DataFrame function to test filtering
 )
 
@@ -101,80 +103,39 @@ def route_query(query: str, consignee_codes: list = None) -> str:
         q = query.lower()
         
         # Enhanced container/PO/OBL/Booking detection (do this early)
-        from utils.container import extract_container_number, extract_po_number, extract_ocean_bl_number
+        from utils.container import extract_container_number, extract_po_number,extract_ocean_bl_number
         container_no = extract_container_number(query)
         po_no = extract_po_number(query) 
-        #obl_no = extract_ocean_bl_number(query)
-
-        # Raju's statement starts from here...
-        # ========== PRIORITY 0: SQL Queries for complex analytical questions ==========
-        sql_trigger_phrases = [
-            "how many", "count of", "list all", "show me", "display", "get me",
-            "which", "what is the", "find all", "statistics", "analytics",
-            "average", "total", "sum of", "maximum", "minimum", "highest", "lowest",
-            "group by", "order by", "sort by", "filter by", "where", "select",
-            "group", "aggregate", "categorize", "break down by", "by mode", "by type"
-        ]
- 
-        sql_exclude_phrases = [
-            "status of", "track container", "milestone", "carrier for po",
-            "carrier for container", "supplier for", "hot container status",
-            "delay status", "where is container", "current location"
-        ]
-       
- 
-        # Check if query should use SQL tool
-        use_sql_tool = (
-            any(phrase in q for phrase in sql_trigger_phrases) and
-            not any(exclude in q for exclude in sql_exclude_phrases)
-        )
- 
-        # Also use SQL for general data exploration queries
-        if any(explore_phrase in q for explore_phrase in [
-            "containers at", "containers from", "containers in", "containers arriving",
-            "containers coming", "shipments from", "shipments to", "data for", "records of",
-            "group by", "categorize", "breakdown"
-        ]):
-            use_sql_tool = True
- 
-        # FORCE SQL for analytical operations
-        if any(force_sql in q for force_sql in ["select", "show me", "get me", "group by", "count", "sum", "average", "aggregate"]):
-            use_sql_tool = True
- 
-        if use_sql_tool:
-            try:
-                result = sql_query_tool(query)
-                # If SQL tool returns a valid response, use it
-                if result and "No matching data" not in result and "failed" not in result.lower():
-                    logger.info(f"Result: {result}")
-                    return result
-                # If SQL fails, continue to specific tools
-            except Exception as e:
-                logger.warning(f"SQL tool failed, falling back: {e}")              
-        # my statement ends here...
-        
-        if "eta" in q and (po_no or re.search(r'\bpo\b', q)):
-            return get_eta_for_po(query)
-
+        try:
+            obl_no = extract_ocean_bl_number(query)
+        except Exception:
+            obl_no = None
 
         # ========== NEW: BL/OBL upcoming/delayed queries ==========
         # Route BL queries with time windows or delay keywords to get_upcoming_bls
+        # BUT NOT if query asks for transit/delay analysis (those go to get_bl_transit_analysis)
         bl_keywords = ["obl", "ocean bl", "bill of lading", "bl ", " bl", "bill"]
         has_bl_keyword = any(kw in q for kw in bl_keywords) or obl_no
+        
+        # Check if this is a TRANSIT/ANALYSIS query (should NOT route to upcoming/delayed BLs)
+        is_analysis_query = any(kw in q for kw in ["transit", "transit time", "transit analysis", "transit performance", "journey", "delay analysis", "analysis"])
        
-        if has_bl_keyword and (
+        if has_bl_keyword and not is_analysis_query and (
             # Upcoming BLs
             re.search(r"(?:upcoming|arriving|arrive|expected|coming|next|within)\s+\d{1,3}\s+days?", q) or
             "arriving" in q or "upcoming" in q or "expected" in q or
-            # Delayed BLs
-            any(w in q for w in ["delay", "late", "overdue", "behind", "missed"]) or
+            # Delayed BLs (but NOT "delay analysis")
+            any(w in q for w in ["delayed", "late", "overdue", "behind", "missed"]) or
             # Hot BLs
             "hot" in q
             ):
             logger.info(f"Router: Upcoming/Delayed BLs route for query: {query}")
             return get_upcoming_bls(query)
 
-
+                
+        if "eta" in q and (po_no or re.search(r'\bpo\b', q)):
+            return get_eta_for_po(query)
+        
         # ========== PRIORITY 1: Handle port/location queries ==========
         if any(phrase in q for phrase in ["list containers from", "containers from", "from port"]):
             return get_arrivals_by_port(query)
@@ -234,7 +195,47 @@ def route_query(query: str, consignee_codes: list = None) -> str:
         
         # ========== PRIORITY 11: Question 27 - Weekly status changes ==========
         if "status" in q and ("week" in q or "change" in q):
-            return get_weekly_status_changes(query)       
+            return get_weekly_status_changes(query)  
+
+        # ========== PRIORITY 11-2: Container by final destination queries ==========
+        if (("container" in q or "containers" in q) and
+           (("final destination" in q) or ("fd " in q + " ") or ("dc " in q + " ") or ("distribution center" in q))):
+            from agents.tools import get_containers_by_final_destination
+            return get_containers_by_final_destination(query)
+        
+        # ========== PRIORITY 12: Transit Analysis Queries ==========
+        # Single container transit analysis with optional filters
+        if container_no and any(keyword in q for keyword in [
+            "transit", "journey", "delay", "transit time", "actual transit", 
+            "estimated transit", "transit analysis", "transit performance",
+            "how long", "take to arrive"
+        ]):
+            logger.info(f"Router: Single container transit analysis route for: {query}")
+            return get_container_transit_analysis(query)
+        
+        # PO transit analysis (multi-container)
+        if po_no and any(keyword in q for keyword in [
+            "transit", "transit time", "transit analysis", "transit performance",
+            "how are containers", "container performance"
+        ]):
+            logger.info(f"Router: PO transit analysis route for: {query}")
+            return get_po_transit_analysis(query)
+        
+        # BL transit analysis (multi-container)
+        if (obl_no or any(bl_kw in q for bl_kw in ["bl ", " bl", "ocean bl", "bill of lading", "obl"])) and any(keyword in q for keyword in [
+            "transit", "transit time", "transit analysis", "transit performance",
+            "journey", "delay analysis", "how are containers", "performing"
+        ]):
+            logger.info(f"Router: BL transit analysis route for: {query}")
+            return get_bl_transit_analysis(query)
+        
+        # Bulk container transit analysis (route-based, time-based)
+        if ("transit" in q or "journey" in q) and not container_no and not po_no and (
+            any(port_kw in q for port_kw in ["from", "to", "shanghai", "rotterdam", "port"]) or
+            any(time_kw in q for time_kw in ["this month", "last month", "average"])
+        ):
+            logger.info(f"Router: Bulk container transit analysis route for: {query}")
+            return get_bulk_container_transit_analysis(query)
         
         # ========== PRIORITY 13: Upcoming arrivals ==========
         if ("arriving" in q or "arrive" in q) and ("next" in q or "coming" in q):
@@ -248,27 +249,41 @@ def route_query(query: str, consignee_codes: list = None) -> str:
         ]):
             return get_field_info(query)
         
-        
-        # ========== PRIORITY 11-2: Container by final destination queries ==========
-        #if (("container" in q or "containers" in q) and
-        #   (("final destination" in q) or ("fd " in q + " ") or ("dc " in q + " ") or ("distribution center" in q))):
-        #    from agents.tools import get_containers_by_final_destination
-        #    return get_containers_by_final_destination(query)
-
-        
         # Default fallback
-        #return "I couldn't understand your query. Please try rephrasing or provide more specific information."
-        return handle_non_shipping_queries(query)
+        return "I couldn't understand your query. Please try rephrasing or provide more specific information."
         
     except Exception as e:
         logger.error(f"Error in route_query: {e}", exc_info=True)
-        #return f"Error processing your query: {str(e)}"
-        return handle_non_shipping_queries(query)
+        return f"Error processing your query: {str(e)}"
     finally:
         # ========== ALWAYS CLEAN UP CONSIGNEE CONTEXT ==========
         if consignee_codes and hasattr(threading.current_thread(), 'consignee_codes'):
             delattr(threading.current_thread(), 'consignee_codes')
             logger.debug("Cleaned up consignee codes from thread context")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
