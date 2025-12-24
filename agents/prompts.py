@@ -295,7 +295,8 @@ Additional rules:
 - If the `get_container_milestones` tool was not called or returned empty, say "No milestones found for <container_id>."
 - Never restate or alter the milestones text outside the text block.
 - Never omit any lines from the Observation.
-- Never include tool names, thoughts, or chain-of-thought. Only produce the two sections above.
+- In the FINAL user-facing answer, never include tool names or chain-of-thought.
+- Note: internal agent tool-calling formats may use structured fields; do not echo them in the final answer.
  
 Example:
 If a user asks for "vessel no and ETA at destination port for container ABCD1234567", you should map:
@@ -992,6 +993,7 @@ def is_date_in_range(date: pd.Timestamp, start: pd.Timestamp, end: pd.Timestamp)
     if pd.isna(date):
         return False
     return start <= date <= end
+
 
 
 
