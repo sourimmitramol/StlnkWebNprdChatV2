@@ -5735,67 +5735,80 @@ def is_bl_hot(query: str) -> str:
 def get_containers_by_etd_window(question: str = None, consignee_code: str = None, **kwargs) -> str:
     """
     List containers whose ETD (etd_lp) falls within the requested time window.
-    - Uses parse_time_period(question) for the time window (today, next 7 days, ranges, etc.)
-    - Uses etd_lp only (ETD). Does not exclude rows with ATD.
-    - Optional filters inferred from the query:
-        * load_port (port name or code in parentheses, e.g. SHANGHAI or (CNSHA))
+
+    Fixes / guardrails:
+    - Prevents accidental port extraction from time phrases like "in the next 7 days"
+      (e.g., wrongly treating "THE" as a port).
+    - Only applies load_port filtering when the query clearly contains port/origin context
+      (e.g., "from <port>", "load port <port>", "(CNSHA)").
+    - Consignee filtering via consignee_code parameter (in addition to thread-local scoping via _df()).
+    - Optional filters:
+        * load_port (only when explicit port context is present)
         * hot containers (if 'hot' is mentioned)
         * transport mode (sea/air/road/rail/courier via extract_transport_modes)
-    - Optional consignee filtering via parameter (consignee_code)
-    Returns list[dict] with container_number, load_port, etd_lp, and context.
+
+    Returns:
+      - list[dict] records (up to 200), OR
+      - string message when nothing matched.
     """
     import re
     import pandas as pd
 
-    query = (question or "").strip()
+    # ---- 0) Normalize inbound text (agent sometimes passes query/input/question) ----
+    query = (question or kwargs.get("query") or kwargs.get("input") or kwargs.get("question") or "").strip()
     q_up = query.upper()
 
     try:
-        logger.info(f"[get_containers_by_etd_window] Processing query: {query}")
-    except:
+        logger.info(f"[get_containers_by_etd_window] query={query!r} consignee_code={consignee_code!r}")
+    except Exception:
         pass
 
-    # 1) Parse time window
+    # ---- 1) Parse time window (use original query) ----
     start_date, end_date, period_desc = parse_time_period(query)
+    start_date = pd.Timestamp(start_date).normalize()
+    end_date = pd.Timestamp(end_date).normalize()
 
     try:
-        logger.info(f"[get_containers_by_etd_window] Parsed time window: {start_date} to {end_date} ({period_desc})")
-    except:
+        logger.info(
+            f"[get_containers_by_etd_window] window={start_date.strftime('%Y-%m-%d')}..{end_date.strftime('%Y-%m-%d')} ({period_desc})"
+        )
+    except Exception:
         pass
 
-    # 2) Load dataset (thread-local consignee restriction already applied)
+    # ---- 2) Load dataset (thread-local consignee restriction already applied) ----
     df = _df()
-    if df.empty:
+    if df is None or getattr(df, "empty", True):
         return "No container records available."
 
-    try:
-        logger.info(f"[get_containers_by_etd_window] Initial dataset size: {len(df)} rows")
-    except:
-        pass
-
-    # 3) Optional explicit consignee filter (codes like 0000866)
+    # ---- 3) Optional explicit consignee filter (codes like 0000866) ----
     if consignee_code and "consignee_code_multiple" in df.columns:
         codes = [c.strip().upper() for c in str(consignee_code).split(",") if c.strip()]
         code_set = set(codes) | {c.lstrip("0") for c in codes}
 
-        def row_has_code(cell):
+        def _row_has_code(cell) -> bool:
             if pd.isna(cell):
                 return False
             s = str(cell).upper()
-            if any(re.search(rf"\({re.escape(c)}\)", s) for c in code_set):
-                return True
-            return any(re.search(rf"\b{re.escape(c)}\b", s) for c in code_set)
+            # Prefer "(0000866)" style matches
+            for c in code_set:
+                if c and re.search(rf"\(\s*{re.escape(c)}\s*\)", s):
+                    return True
+            # Fallback to word boundary
+            for c in code_set:
+                if c and re.search(rf"\b{re.escape(c)}\b", s):
+                    return True
+            return False
 
-        df = df[df["consignee_code_multiple"].apply(row_has_code)].copy()
+        df = df[df["consignee_code_multiple"].apply(_row_has_code)].copy()
         if df.empty:
             return f"No containers found for consignee code(s) {', '.join(codes)}."
 
         try:
-            logger.info(f"[get_containers_by_etd_window] After consignee filter: {len(df)} rows")
-        except:
+            logger.info(f"[get_containers_by_etd_window] after consignee filter rows={len(df)}")
+        except Exception:
             pass
 
-    # 4) Validate columns and parse dates
+    # ---- 4) Validate columns & parse dates ----
     if "etd_lp" not in df.columns:
         return "No ETD column (etd_lp) found to compute the ETD window."
 
@@ -5805,161 +5818,128 @@ def get_containers_by_etd_window(question: str = None, consignee_code: str = Non
 
     df = ensure_datetime(df, date_cols)
 
-    # 8) load_port (origin) filtering from query (code or name)
-    # **CRITICAL FIX**: Improved port extraction to avoid capturing too much text
+    # ---- 5) Optional load_port filtering (ONLY when explicit port/origin context exists) ----
     lp_col = "load_port" if "load_port" in df.columns else None
     if lp_col:
+        # Only attempt port extraction if query contains port context.
+        # This prevents "in the next 7 days" from producing a fake port "THE".
+        has_port_context = bool(
+            re.search(r"\b(from|load\s+port|origin|origin\s+port)\b", query, flags=re.IGNORECASE)
+            or re.search(r"\([A-Z0-9]{3,6}\)", q_up)  # explicit code like (CNSHA)
+        )
+
         port_code = None
-        name_phrase = None
+        port_name = None
 
-        # Pattern 1: Code in parentheses like (CNSHA)
-        m_code = re.search(r"\(([A-Z0-9]{3,6})\)", q_up)
-        if m_code:
-            port_code = m_code.group(1).strip().upper()
+        if has_port_context:
+            # A) explicit code like (CNSHA)
+            m_code = re.search(r"\(([A-Z0-9]{3,6})\)", q_up)
+            if m_code:
+                port_code = m_code.group(1).strip().upper()
 
-        # Pattern 2: Port code after "FROM" - FIXED to capture only port code/name
-        if not port_code:
-            # Match "FROM CNSHA" or "FROM SHANGHAI" - stop at common boundary words
-            m_name = re.search(
-                r"\bFROM\s+(?:LOAD\s+PORT\s+)?([A-Z][A-Z0-9\s\.\-]{2,15}?)(?=\s+(?:FOR|IN|ON|AT|WITH|TO|ETD|TODAY|TOMORROW|NEXT|WITHIN|YESTERDAY|LAST|THIS|CONSIGNEE|\d+)|[\?\.\,]|\s*$)",
-                q_up
-            )
-            if m_name:
-                cand = m_name.group(1).strip()
-                # Clean up any trailing noise
-                cand = re.sub(r"(?:ETD|TODAY|TOMORROW|NEXT|WITHIN|FOR|CONSIGNEE).*$", "", cand).strip()
-                if len(cand) >= 3:
-                    name_phrase = cand
+            # B) name after "FROM" / "FROM LOAD PORT" / "LOAD PORT"
+            if not port_code:
+                m_from = re.search(
+                    r"\bFROM\s+(?:LOAD\s+PORT\s+|ORIGIN\s+PORT\s+|ORIGIN\s+)?([A-Z][A-Z0-9\s,\.\-]{2,40}?)(?=\s+(?:IN|ON|AT|WITHIN|NEXT|LAST|THIS|TODAY|TOMORROW|YESTERDAY|ETD|CONSIGNEE|\d+)\b|[\?\.\,]|\s*$)",
+                    q_up,
+                )
+                if m_from:
+                    port_name = m_from.group(1).strip()
 
-        # Pattern 3: "AT|IN|TO PORT_NAME" - similar fix
-        if not port_code and not name_phrase:
-            m_name = re.search(
-                r"\b(?:AT|IN|TO)\s+(?:LOAD\s+PORT\s+)?([A-Z][A-Z0-9\s\.\-]{2,15}?)(?=\s+(?:FOR|FROM|WITH|ETD|TODAY|TOMORROW|NEXT|WITHIN|YESTERDAY|LAST|THIS|CONSIGNEE|\d+)|[\?\.\,]|\s*$)",
-                q_up
-            )
-            if m_name:
-                cand = m_name.group(1).strip()
-                cand = re.sub(r"(?:ETD|TODAY|TOMORROW|NEXT|WITHIN|FOR|CONSIGNEE).*$", "", cand).strip()
-                if len(cand) >= 3:
-                    name_phrase = cand
+            if not port_code and not port_name:
+                m_lp = re.search(
+                    r"\bLOAD\s+PORT\s+([A-Z][A-Z0-9\s,\.\-]{2,40}?)(?=\s+(?:IN|ON|AT|WITHIN|NEXT|LAST|THIS|TODAY|TOMORROW|YESTERDAY|ETD|CONSIGNEE|\d+)\b|[\?\.\,]|\s*$)",
+                    q_up,
+                )
+                if m_lp:
+                    port_name = m_lp.group(1).strip()
 
-        # Pattern 4: Bare port code (3-6 uppercase letters) - validate against known codes
-        if not port_code and not name_phrase:
-            # Extract known port codes from dataset
-            known_codes = set()
+            # Final cleanup / reject obvious non-port tokens
+            stop = {"THE", "NEXT", "LAST", "THIS", "CURRENT", "WEEK", "MONTH", "DAY", "DAYS"}
+            if port_name and port_name.strip().upper() in stop:
+                port_name = None
+
             try:
-                sample_ports = df[lp_col].dropna().astype(str).head(1000)
-                for port_str in sample_ports:
-                    codes_in_port = re.findall(r'\(([A-Z0-9]{3,6})\)', str(port_str).upper())
-                    known_codes.update(codes_in_port)
-            except:
+                logger.info(f"[get_containers_by_etd_window] port_context={has_port_context} port_code={port_code} port_name={port_name}")
+            except Exception:
                 pass
 
-            # Look for standalone port codes in query
-            candidate_codes = re.findall(r'\b([A-Z]{3,6})\b', q_up)
-            skip_words = {"ETD", "TODAY", "TOMORROW", "NEXT", "DAYS", "FROM", "LOAD", "PORT", "WITH", "FOR", "CONSIGNEE"}
-            
-            for code in candidate_codes:
-                if code not in skip_words and (not known_codes or code in known_codes):
-                    port_code = code
-                    break
+            if port_code or port_name:
+                def _norm_port(s: str) -> str:
+                    if pd.isna(s):
+                        return ""
+                    t = str(s).upper()
+                    t = re.sub(r"\([^)]*\)", "", t)  # remove (CNSHA)
+                    t = t.replace(",", " ")
+                    return re.sub(r"\s+", " ", t).strip()
 
-        try:
-            logger.info(f"[get_containers_by_etd_window] Port extraction: code={port_code}, name={name_phrase}")
-        except:
-            pass
+                lp_series = df[lp_col].astype(str)
 
-        if port_code or name_phrase:
-            def _norm_port(s):
-                if pd.isna(s):
-                    return ""
-                t = str(s).upper()
-                t = re.sub(r"\([^)]*\)", "", t)
-                t = t.replace(",", " ")
-                return re.sub(r"\s+", " ", t).strip()
-
-            lp_series = df[lp_col].astype(str)
-            
-            if port_code:
-                # Try matching port code in parentheses first
-                lp_mask = lp_series.str.upper().str.contains(rf"\({re.escape(port_code)}\)", na=False)
-                
-                # If no match, try matching bare code
-                if not lp_mask.any():
-                    lp_mask = lp_series.str.upper().str.contains(rf"\b{re.escape(port_code)}\b", na=False)
-            else:
-                lp_norm = lp_series.apply(_norm_port)
-                phrase_norm = re.sub(r"\s+", " ", name_phrase or "").strip()
-
-                # Try exact match first
-                exact = (lp_norm == phrase_norm)
-                if exact.any():
-                    lp_mask = exact
+                if port_code:
+                    # Prefer strict "(CODE)" match
+                    lp_mask = lp_series.str.upper().str.contains(rf"\({re.escape(port_code)}\)", na=False)
+                    if not lp_mask.any():
+                        lp_mask = lp_series.str.upper().str.contains(rf"\b{re.escape(port_code)}\b", na=False)
                 else:
-                    # Try word-by-word matching
-                    words = [w for w in phrase_norm.split() if len(w) >= 3]
-                    if words:
-                        cond = pd.Series(True, index=df.index)
-                        for w in words:
-                            cond &= lp_norm.str.contains(re.escape(w), na=False)
-                        lp_mask = cond
-                    else:
-                        # Fallback to substring match
-                        lp_mask = lp_norm.str.contains(re.escape(phrase_norm), na=False)
-                
-                # Final fallback: raw substring match on original column
-                if not lp_mask.any():
-                    lp_mask = lp_series.str.upper().str.contains(re.escape(phrase_norm), na=False)
+                    phrase_norm = _norm_port(port_name)
+                    lp_norm = lp_series.apply(_norm_port)
 
-            df = df[lp_mask].copy()
+                    # Exact normalized match first
+                    lp_mask = (lp_norm == phrase_norm)
 
-            try:
-                logger.info(f"[get_containers_by_etd_window] After port filter: {len(df)} rows matched")
-                if len(df) > 0:
-                    sample_ports = df[lp_col].head(5).tolist()
-                    logger.info(f"[get_containers_by_etd_window] Sample matching ports: {sample_ports}")
-            except:
-                pass
+                    # If no exact match, require all meaningful words
+                    if not lp_mask.any():
+                        words = [w for w in phrase_norm.split() if len(w) >= 3]
+                        if words:
+                            cond = pd.Series(True, index=df.index)
+                            for w in words:
+                                cond &= lp_norm.str.contains(rf"\b{re.escape(w)}\b", na=False, regex=True)
+                            lp_mask = cond
+                        else:
+                            lp_mask = lp_norm.str.contains(re.escape(phrase_norm), na=False)
 
-            if df.empty:
-                return f"No containers found from port {port_code or name_phrase}."
+                df = df[lp_mask].copy()
+                if df.empty:
+                    return f"No containers found from port {port_code or port_name}."
 
-    # 5) Base date mask: ETD inside window
+    # ---- 6) Base date mask: ETD inside window ----
     etd_norm = df["etd_lp"].dt.normalize()
     mask = df["etd_lp"].notna() & (etd_norm >= start_date) & (etd_norm <= end_date)
 
-    # 6) Hot containers filter
+    # ---- 7) Hot containers filter (optional) ----
     if re.search(r"\bHOT\b", q_up):
-        hot_cols = [c for c in df.columns if 'hot_container_flag' in c.lower()] or \
-                   [c for c in df.columns if 'hot_container' in c.lower()]
+        hot_cols = [c for c in df.columns if "hot_container_flag" in c.lower()] or \
+                   [c for c in df.columns if "hot_container" in c.lower()]
         if not hot_cols:
             return "Hot container flag column not found in the data."
         hot_col = hot_cols[0]
 
-        def _is_hot(v):
+        def _is_hot(v) -> bool:
             if pd.isna(v):
                 return False
+            if isinstance(v, bool):
+                return v is True
             s = str(v).strip().upper()
-            return s in {"Y", "YES", "TRUE", "1", "HOT"} or v is True or v == 1
+            return s in {"Y", "YES", "TRUE", "1", "HOT", "T"}
 
         mask &= df[hot_col].apply(_is_hot)
 
-    # 7) Transport mode filter
+    # ---- 8) Transport mode filter (optional) ----
     try:
-        modes = extract_transport_modes(query)
+        modes = extract_transport_modes(query) or set()
     except Exception:
         modes = set()
+
     if modes and "transport_mode" in df.columns:
         mode_mask = df["transport_mode"].astype(str).str.lower().apply(lambda s: any(m in s for m in modes))
         mask &= mode_mask
 
-    # 9) Apply mask
+    # ---- 9) Apply mask ----
     result = df[mask].copy()
-
     if result.empty:
         return f"No containers with ETD between {start_date.strftime('%Y-%m-%d')} and {end_date.strftime('%Y-%m-%d')}."
 
-    # 10) Prepare output
+    # ---- 10) Output shaping ----
     out_cols = [
         "container_number",
         "load_port",
@@ -5985,6 +5965,8 @@ def get_containers_by_etd_window(question: str = None, consignee_code: str = Non
             out[dcol] = out[dcol].dt.strftime("%Y-%m-%d")
 
     return out.where(pd.notnull(out), None).to_dict(orient="records")
+
+# ...existing code...
 
 
 
@@ -8538,6 +8520,7 @@ TOOLS = [
         description="List containers whose ETD (etd_lp) falls within a time window parsed from the query (e.g., 'Which containers have ETD in the next 7 days?'). Supports consignee filtering."
     )
 ]  
+
 
 
 
