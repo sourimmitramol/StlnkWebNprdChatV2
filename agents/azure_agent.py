@@ -2,10 +2,11 @@
 import logging
 from typing import List, Tuple
 
-from langchain.agents import initialize_agent, AgentType, Tool
+from langchain.agents import AgentExecutor, Tool, create_structured_chat_agent
+from langchain.agents.structured_chat.prompt import FORMAT_INSTRUCTIONS, PREFIX
+from langchain.prompts import ChatPromptTemplate
 from langchain_community.agent_toolkits import create_sql_agent
-from langchain_community.chat_models import AzureChatOpenAI
-from langchain_community.embeddings import AzureOpenAIEmbeddings
+from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
 from agents.prompts import ROBUST_COLUMN_MAPPING_PROMPT
 from agents.tools import get_blob_sql_engine
 
@@ -16,7 +17,13 @@ logger = logging.getLogger("shipping_chatbot")
 
 
 def initialize_azure_agent(tools: List[Tool] | None = None) -> Tuple[object, AzureChatOpenAI]:
-    """Build the Zero‑Shot React agent with Azure OpenAI."""
+    """Build the chat agent with Azure OpenAI.
+
+    Notes:
+    - Uses the non-deprecated `langchain_openai.AzureChatOpenAI`.
+    - Uses the non-deprecated `create_structured_chat_agent` + `AgentExecutor`.
+    - Preserves the previous return type/shape and `return_intermediate_steps=True` behavior.
+    """
     if tools is None:
         tools = TOOLS
 
@@ -25,22 +32,31 @@ def initialize_azure_agent(tools: List[Tool] | None = None) -> Tuple[object, Azu
         api_key=settings.AZURE_OPENAI_API_KEY,
         api_version=settings.AZURE_OPENAI_API_VERSION,
         azure_deployment=settings.AZURE_OPENAI_DEPLOYMENT,
-        temperature=0.35  # Adjust temperature for creativity (0.0 = deterministic, 1.0 = creative)
+        temperature=0.03  # Adjust temperature for creativity (0.0 = deterministic, 1.0 = creative)
     )
-    # Pass system prompt as a message if needed
-    system_message = {"role": "system", "content": ROBUST_COLUMN_MAPPING_PROMPT}
-    # ...initialize your agent with system_message if supported...
-    # For LangChain, you may need to use a custom prompt template or set system_message in the chain/tools
-    agent = initialize_agent(
-        tools or TOOLS,
-        llm,
-        agent_type=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+    # Build a structured-chat agent prompt (offline, no LangChain Hub dependency)
+    # Required variables for create_structured_chat_agent: tools, tool_names, input, agent_scratchpad
+    system_instructions = (
+        f"{ROBUST_COLUMN_MAPPING_PROMPT}\n\n"
+        f"{PREFIX}\n\n"
+        "{tools}\n\n"
+        f"{FORMAT_INSTRUCTIONS}"
+    )
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", system_instructions),
+            # Structured chat agent expects `agent_scratchpad` as a STRING (not messages).
+            ("human", "{input}\n\n{agent_scratchpad}"),
+        ]
+    )
+
+    runnable_agent = create_structured_chat_agent(llm=llm, tools=tools or TOOLS, prompt=prompt)
+    agent = AgentExecutor(
+        agent=runnable_agent,
+        tools=tools or TOOLS,
         verbose=True,
         handle_parsing_errors=True,
         return_intermediate_steps=True,
-        system_message=ROBUST_COLUMN_MAPPING_PROMPT  # <-- Add this argument
-        # If using custom prompt, set it here
-        #prompt=CustomPromptTemplate.from_messages([system_message])
     )
     logger.info("AzureChatOpenAI ready")
     logger.info("Agent created with %d tools", len(tools))
@@ -79,9 +95,6 @@ def initialize_sql_agent():
     )
     return sql_agent_executor
 
-# Example usage:
-# sql_agent = initialize_sql_agent()
-# result = sql_agent.run("Show me all containers delayed by more than 5 days")
 
 
 
