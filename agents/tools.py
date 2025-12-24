@@ -6573,8 +6573,65 @@ def get_booking_details(question: str = None, consignee_code: str = None, **kwar
     return "Please ask a booking-related question (booking number of PO/container/BL, ETA of booking, or PO/container/BL of booking)."
 
 
+# ...existing code...
+def _normalize_agent_timephrase_for_week(query: str) -> str:
+    """
+    Agent sometimes rewrites user intent "this week" into: 'consignee_code=XXXX next 7 days departing'.
+    This helper converts ONLY that agent-shaped input back into 'this week' so parse_time_period()
+    applies calendar week (Mon–Sun).
 
+    Guardrails (to avoid impacting other queries):
+    - Require 'consignee_code=' prefix
+    - Require literal 'next 7 days'
+    - Require 'departing' or 'departed' keyword
+    - Do NOT change if query already contains explicit week/month/range/day terms
+    """
+    q = (query or "").strip()
+    if not q:
+        return q
 
+    q_low = q.lower()
+
+    # If the query already contains an explicit calendar phrase or explicit range/date, do nothing
+    if re.search(r"\b(this|current|next|last|previous)\s+(week|wk|month)\b", q_low):
+        return q
+    if re.search(r"\b(today|tomorrow|yesterday)\b", q_low):
+        return q
+    if re.search(r"\b(from|between)\b", q_low):
+        return q
+    if re.search(r"\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}\b|\b\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}\b", q_low):
+        return q
+
+    # Only rewrite the known agent-shape
+    if (
+        re.search(r"\bconsignee_code\s*=\s*\d{5,10}\b", q_low)
+        and re.search(r"\bnext\s+7\s+days\b", q_low)
+        and re.search(r"\bdepart(?:ing|ed)\b", q_low)
+    ):
+        # Replace only the time phrase; keep the rest intact
+        q2 = re.sub(r"\bnext\s+7\s+days\b", "this week", q, flags=re.IGNORECASE)
+        # Normalize whitespace
+        q2 = re.sub(r"\s+", " ", q2).strip()
+        return q2
+
+    return q
+def _strip_consignee_noise(text: str) -> str:
+    """
+    Remove agent-injected consignee phrases that must NOT become part of port names.
+    Examples removed:
+      - "for consignee 0000866"
+      - "consignee code 0000866"
+      - "consignee_code=0000866"
+    """
+    s = (text or "").strip()
+    if not s:
+        return s
+
+    s = re.sub(r"\bconsignee_code\s*=\s*\d{5,10}\b", "", s, flags=re.IGNORECASE)
+    s = re.sub(r"\bconsignee\s*code\s*[:=]?\s*\d{5,10}\b", "", s, flags=re.IGNORECASE)
+    s = re.sub(r"\bfor\s+consignee\s+\d{5,10}\b", "", s, flags=re.IGNORECASE)
+    s = re.sub(r"\s+", " ", s).strip()
+    return s
 def get_containers_departing_from_load_port(query: str) -> str:
     """
     Get containers/POs/OBLs scheduled to depart from specific load ports in upcoming time periods.
@@ -6592,15 +6649,29 @@ def get_containers_departing_from_load_port(query: str) -> str:
     Returns list[dict] with container/PO/OBL info and departure details.
     """
 
-    query = (query or "").strip()
+    # query = (query or "").strip()
+    # query_upper = query.upper()
+    # query_lower = query.lower()
+    # Fix agent-injected time phrase issue (already present in your file)
+    query = _normalize_agent_timephrase_for_week(query)
+
+    # NEW: strip consignee noise so port extraction doesn't capture "FOR CONSIGNEE 0000866"
+    query_raw = (query or "").strip()
+    query = _strip_consignee_noise(query_raw)
+
     query_upper = query.upper()
     query_lower = query.lower()
 
     # ========== 1) EXTRACT IDENTIFIERS (Container/PO/OBL) ==========
     # **CRITICAL FIX**: Remove consignee code mentions before extraction to avoid false positives
     query_for_extraction = query
-    # Remove phrases like "for consignee 0028664", "consignee code 0028664", "user 0028664"
-    query_for_extraction = re.sub(r'\b(?:for\s+)?(?:consignee|user)(?:\s+code)?\s+\d{7}', '', query_for_extraction, flags=re.IGNORECASE)
+    # Remove phrases like "for consignee 0028664", "consignee code 0028664", "consignee_code: 0028664", "user 0028664"
+    query_for_extraction = re.sub(
+        r'\b(?:for\s+)?(?:consignee|user)(?:\s*[_\-]?\s*code)?\s*[:=]?\s*\d{7}\b',
+        '',
+        query_for_extraction,
+        flags=re.IGNORECASE,
+    )
     
     container_no = extract_container_number(query_for_extraction)
     po_no = extract_po_number(query_for_extraction)
@@ -6620,30 +6691,43 @@ def get_containers_departing_from_load_port(query: str) -> str:
     
     # Pattern 1: "from load port PORTNAME" or "from PORTNAME"
     match = re.search(
-        r'from\s+(?:load\s+port\s+)?([A-Za-z0-9\s,\-\(\)]+?)(?=\s+in\s+|\s+next\s+|\s+this\s+|\s+within\s+|\s+on\s+|\s+by\s+|[\?\.\,]|$)',
-        query, re.IGNORECASE)
+        r"from\s+(?:load\s+port\s+)?([A-Za-z0-9\s,\-\(\)]+?)"
+        r"(?=\s+for\b|\s+in\s+|\s+next\s+|\s+this\s+|\s+within\s+|\s+on\s+|\s+by\s+|[\?\.\,]|$)",
+        query,
+        re.IGNORECASE,
+    )
     if match:
         cand = match.group(1).strip()
         # Exclude common noise words
-        if cand and cand.upper() not in ['CONSIGNEE', 'IN', 'NEXT', 'THE', 'DAYS', 'THIS', 'WEEK', 'SEA', 'AIR', 'ROAD', 'ON']:
+        if cand and cand.upper() not in [
+            "CONSIGNEE", "FOR", "IN", "NEXT", "THE", "DAYS", "THIS", "WEEK", "SEA", "AIR", "ROAD", "ON"
+        ]:
             load_port = cand.upper()
 
     # Pattern 2: "load port PORTNAME"
     if not load_port:
         match = re.search(
-            r'load\s+port\s+([A-Za-z0-9\s,\-\(\)]+?)(?=\s+in\s+|\s+next\s+|\s+this\s+|\s+within\s+|\s+on\s+|\s+by\s+|[\?\.\,]|$)',
-            query, re.IGNORECASE)
+            r"load\s+port\s+([A-Za-z0-9\s,\-\(\)]+?)"
+            r"(?=\s+for\b|\s+in\s+|\s+next\s+|\s+this\s+|\s+within\s+|\s+on\s+|\s+by\s+|[\?\.\,]|$)",
+            query,
+            re.IGNORECASE,
+        )
         if match:
             load_port = match.group(1).strip().upper()
 
     # Pattern 3: "will depart/leaving from PORTNAME"
     if not load_port:
         match = re.search(
-            r'(?:will\s+depart|departing|leaving|scheduled\s+to\s+leave)\s+(?:from\s+)?([A-Za-z0-9\s,\-\(\)]+?)(?=\s+in\s+|\s+next\s+|\s+this\s+|\s+within\s+|\s+on\s+|\s+by\s+|[\?\.\,]|$)',
-            query, re.IGNORECASE)
+            r"(?:will\s+depart|departing|leaving|scheduled\s+to\s+leave)\s+(?:from\s+)?([A-Za-z0-9\s,\-\(\)]+?)"
+            r"(?=\s+for\b|\s+in\s+|\s+next\s+|\s+this\s+|\s+within\s+|\s+on\s+|\s+by\s+|[\?\.\,]|$)",
+            query,
+            re.IGNORECASE,
+        )
         if match:
             cand = match.group(1).strip()
-            if cand and cand.upper() not in ['CONSIGNEE', 'IN', 'NEXT', 'THE', 'DAYS', 'THIS', 'WEEK', 'SEA', 'AIR', 'ROAD', 'ON']:
+            if cand and cand.upper() not in [
+                "CONSIGNEE", "FOR", "IN", "NEXT", "THE", "DAYS", "THIS", "WEEK", "SEA", "AIR", "ROAD", "ON"
+            ]:
                 load_port = cand.upper()
 
     # Pattern 4: Port with code in parentheses like "SHANGHAI(CNSHA)"
@@ -6909,15 +6993,31 @@ def get_containers_departing_from_load_port(query: str) -> str:
     
     df = ensure_datetime(df, needed_cols)
 
-    # ========== 8) FILTER FOR UPCOMING DEPARTURES ==========
-    # Only include containers that:
-    # 1. Have ETD within the time window
-    # 2. Haven't departed yet (atd_lp is null)
-    
-    date_mask = df['etd_lp'].notna() & (df['etd_lp'].dt.normalize() >= start_date) & (df['etd_lp'].dt.normalize() <= end_date)
-    
-    # Exclude already departed containers
-    if 'atd_lp' in df.columns:
+    # ========== 8) FILTER BY ETD WINDOW (+ optional ATD exclusion) ==========
+    # Base: ETD within the requested window (calendar-aware for 'this week').
+    date_mask = (
+        df['etd_lp'].notna()
+        & (df['etd_lp'].dt.normalize() >= start_date)
+        & (df['etd_lp'].dt.normalize() <= end_date)
+    )
+
+    # IMPORTANT:
+    # - For calendar phrases like "this week" (Mon–Sun), users often mean the *full* week window
+    #   even if some ETDs are earlier than today.
+    # - For explicitly future-looking phrases (next X days / tomorrow / upcoming), keep the
+    #   original behavior and exclude already-departed containers.
+    include_already_departed = False
+    try:
+        if start_date < today:
+            if re.search(r"\b(this|current)\s+(week|wk)\b", query_lower) or re.search(r"\bthisweek\b", query_lower):
+                include_already_departed = True
+            # Explicit date ranges like "from 22/12/2025 to 28/12/2025" should also include the full window.
+            if re.search(r"\b(from|between)\b", query_lower):
+                include_already_departed = True
+    except Exception:
+        include_already_departed = False
+
+    if 'atd_lp' in df.columns and not include_already_departed:
         date_mask &= df['atd_lp'].isna()
     
     results = df[date_mask].copy()
@@ -6934,6 +7034,8 @@ def get_containers_departing_from_load_port(query: str) -> str:
 
     # ========== 10) PREPARE OUTPUT COLUMNS ==========
     output_cols = ['container_number', 'load_port', 'etd_lp']
+    if 'atd_lp' in results.columns:
+        output_cols.append('atd_lp')
     
     # Add PO/OBL columns if relevant
     if identifier_type == "PO" or not identifier_type:
@@ -6962,7 +7064,7 @@ def get_containers_departing_from_load_port(query: str) -> str:
     out = results[output_cols].head(200).copy()
 
     # ========== 11) FORMAT DATES ==========
-    date_cols_to_format = ['etd_lp', 'eta_dp', 'revised_eta']
+    date_cols_to_format = ['etd_lp', 'atd_lp', 'eta_dp', 'revised_eta']
     for dcol in date_cols_to_format:
         if dcol in out.columns and pd.api.types.is_datetime64_any_dtype(out[dcol]):
             out[dcol] = out[dcol].dt.strftime('%Y-%m-%d')
@@ -8436,6 +8538,7 @@ TOOLS = [
         description="List containers whose ETD (etd_lp) falls within a time window parsed from the query (e.g., 'Which containers have ETD in the next 7 days?'). Supports consignee filtering."
     )
 ]  
+
 
 
 
