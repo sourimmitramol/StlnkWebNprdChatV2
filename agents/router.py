@@ -41,6 +41,7 @@ from agents.tools import (
     get_eta_for_booking,
     get_booking_details,
     get_bl_transit_analysis,
+    get_containers_missed_planned_etd,
     _df,  # Import the DataFrame function to test filtering
 )
 
@@ -260,6 +261,7 @@ def route_query(query: str, consignee_codes: list = None) -> str:
         if consignee_codes and hasattr(threading.current_thread(), 'consignee_codes'):
             delattr(threading.current_thread(), 'consignee_codes')
             logger.debug("Cleaned up consignee codes from thread context")
+
 
 
 
