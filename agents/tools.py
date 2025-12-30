@@ -5273,6 +5273,71 @@ def get_containers_departed_from_load_port(query: str) -> str:
 # ...existing code...
 
 
+def get_containers_missed_planned_etd(query: str) -> str:
+    """Get containers that missed their planned ETD from load port.
+
+    Business logic (as requested):
+    - atd_lp (actual departure from load port) is NULL
+    - etd_lp (estimated departure from load port) is < sysdate (today)
+
+    Notes:
+    - Respects consignee filtering via _df() (thread-local consignee codes)
+    - Returns list[dict] (up to 200 records)
+    """
+
+    _ = (query or "").strip()
+
+    df = _df()
+    if df.empty:
+        return "No data available for your authorized consignees."
+
+    if "etd_lp" not in df.columns:
+        return "ETD load port column (etd_lp) not found."
+    if "atd_lp" not in df.columns:
+        return "ATD load port column (atd_lp) not found."
+
+    df = ensure_datetime(df, ["etd_lp", "atd_lp"])
+    today = pd.Timestamp.today().normalize()
+
+    mask = (
+        df["etd_lp"].notna()
+        & df["atd_lp"].isna()
+        & (df["etd_lp"].dt.normalize() < today)
+    )
+    results = df[mask].copy()
+
+    if results.empty:
+        return "No containers have missed their planned ETD for your authorized consignees."
+
+    results = results.sort_values("etd_lp", ascending=True)
+
+    output_cols = [
+        "container_number",
+        "load_port",
+        "discharge_port",
+        "etd_lp",
+        "atd_lp",
+    ]
+    for col in [
+        "consignee_code_multiple",
+        "po_number_multiple",
+        "final_carrier_name",
+        "transport_mode",
+        "hot_container_flag",
+    ]:
+        if col in results.columns and col not in output_cols:
+            output_cols.append(col)
+
+    output_cols = [c for c in output_cols if c in results.columns]
+    out = results[output_cols].head(200).copy()
+
+    for dcol in ["etd_lp", "atd_lp"]:
+        if dcol in out.columns and pd.api.types.is_datetime64_any_dtype(out[dcol]):
+            out[dcol] = out[dcol].dt.strftime("%Y-%m-%d")
+
+    return out.where(pd.notnull(out), None).to_dict(orient="records")
+
+
 # ...existing code...
 def get_container_carrier(input_str: str) -> str:
     """
@@ -8527,6 +8592,15 @@ TOOLS = [
         func=get_containers_departed_from_load_port,
         description="Find containers or Shipments (consider container and shipment as same)that have departed from specific load ports within a time period. Handles queries about past departures like 'containers from load port QINGDAO in last 7 days', 'containers that departed from SHANGHAI yesterday', 'which containers left NINGBO last week'. Uses atd_lp (actual departure) and etd_lp (estimated departure) with load_port filtering."
     ),
+	Tool(
+        name="Get Containers Missed Planned ETD",
+        func=get_containers_missed_planned_etd,
+        description=(
+            "Use this tool when the user asks for containers that missed their planned/scheduled ETD, overdue ETD, missed departure, or did not depart as planned. "
+            "Logic: atd_lp (actual departure from load port) is NULL AND etd_lp (estimated departure from load port) is before today (sysdate). "
+            "Respects consignee filtering like other tools. Returns container list with etd_lp and related fields."
+        )
+    ),
     Tool(
         name="Keyword Lookup",
         func=lookup_keyword,
@@ -8867,6 +8941,7 @@ TOOLS = [
     ),
 
 ]
+
 
 
 
