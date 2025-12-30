@@ -4821,8 +4821,6 @@ def get_containers_departing_from_load_port(query: str) -> str:
 
 
 
-
-
 def get_containers_departed_from_load_port(query: str) -> str:
     """
     Get containers/POs/OBLs that have departed from specific load ports within a time period.
@@ -4877,7 +4875,7 @@ def get_containers_departed_from_load_port(query: str) -> str:
     if match:
         cand = match.group(1).strip()
         # Exclude common noise words
-        if cand and cand.upper() not in ['CONSIGNEE', 'IN', 'LAST', 'THE', 'DAYS', 'NEXT', 'THIS', 'SEA', 'AIR', 'ROAD']:
+        if cand and cand.upper() not in ['CONSIGNEE', 'IN', 'LAST', 'THE', 'DAY', 'DAYS', 'NEXT', 'THIS', 'TODAY', 'TOMORROW', 'YESTERDAY', 'WEEK', 'MONTH', 'YEAR', 'SEA', 'AIR', 'ROAD']:
             load_port = cand.upper()
 
     # Pattern 2: "load port PORTNAME"
@@ -4891,11 +4889,11 @@ def get_containers_departed_from_load_port(query: str) -> str:
     # Pattern 3: "departed/left from PORTNAME"
     if not load_port:
         match = re.search(
-            r'(?:departed|left)\s+(?:from\s+)?([A-Za-z0-9\s,\-\(\)]+?)(?=\s+in\s+|\s+last\s+|\s+during\s+|\s+for\s+|\s+by\s+|[\?\.\,]|$)',
+            r'(?:departed|left)\s+from\s+([A-Za-z0-9\s,\-\(\)]+?)(?=\s+in\s+|\s+last\s+|\s+during\s+|\s+for\s+|\s+by\s+|[\?\.\,]|$)',
             query, re.IGNORECASE)
         if match:
             cand = match.group(1).strip()
-            if cand and cand.upper() not in ['CONSIGNEE', 'IN', 'LAST', 'THE', 'DAYS', 'NEXT', 'THIS', 'SEA', 'AIR', 'ROAD']:
+            if cand and cand.upper() not in ['CONSIGNEE', 'IN', 'LAST', 'THE', 'DAY', 'DAYS', 'NEXT', 'THIS', 'TODAY', 'TOMORROW', 'YESTERDAY', 'WEEK', 'MONTH', 'YEAR', 'SEA', 'AIR', 'ROAD']:
                 load_port = cand.upper()
 
     # Pattern 4: Port with code in parentheses like "SHANGHAI(CNSHA)"
@@ -5165,26 +5163,24 @@ def get_containers_departed_from_load_port(query: str) -> str:
             return f"No {desc} found from load port {load_port}."
 
     # ========== 7) VALIDATE AND PARSE DATE COLUMNS ==========
-    needed_cols = [c for c in ['atd_lp', 'etd_lp'] if c in df.columns]
+    needed_cols = [c for c in ['atd_lp'] if c in df.columns]
     if not needed_cols:
-        return "No departure date columns (atd_lp, etd_lp) found."
+        return "No departure date columns (atd_lp) found."
     
     df = ensure_datetime(df, needed_cols)
 
     # ========== 8) CREATE DEPARTURE DATE (ATD else ETD) ==========
     df['dep_for_filter'] = None
-    if 'atd_lp' in df.columns and 'etd_lp' in df.columns:
-        df['dep_for_filter'] = df['atd_lp'].where(df['atd_lp'].notna(), df['etd_lp'])
-    elif 'atd_lp' in df.columns:
-        df['dep_for_filter'] = df['atd_lp']
-    else:
-        df['dep_for_filter'] = df['etd_lp']
+    if 'atd_lp' in df.columns:
+        df['dep_for_filter'] = df['atd_lp'].where(df['atd_lp'].notna())
+    
+    
 
     # Mark source (ATD vs ETD)
     df['departure_source'] = df.apply(
-        lambda r: 'ATD' if pd.notna(r.get('atd_lp')) else ('ETD' if pd.notna(r.get('etd_lp')) else None), 
-        axis=1
-    )
+        lambda r: 'ATD' if pd.notna(r.get('atd_lp')) else None, axis=1)
+        
+    
 
     # ========== 9) FILTER BY TIME WINDOW ==========
     try:
@@ -5223,7 +5219,7 @@ def get_containers_departed_from_load_port(query: str) -> str:
     results = results.sort_values('dep_for_filter', ascending=False)
 
     # ========== 11) PREPARE OUTPUT COLUMNS ==========
-    output_cols = ['container_number', 'load_port', 'atd_lp', 'etd_lp', 'dep_for_filter', 'departure_source']
+    output_cols = ['container_number', 'load_port', 'atd_lp', 'dep_for_filter', 'departure_source']
     
     # Add PO/OBL columns if relevant
     if identifier_type == "PO" or not identifier_type:
@@ -5237,7 +5233,7 @@ def get_containers_departed_from_load_port(query: str) -> str:
             output_cols.append(bl_col)
 
     # Add additional context columns
-    additional_cols = ['discharge_port', 'eta_dp', 'revised_eta', 'consignee_code_multiple', 'final_carrier_name']
+    additional_cols = ['discharge_port', 'revised_eta', 'consignee_code_multiple', 'final_carrier_name']
     
     # Add transport_mode if it was used in filtering
     if modes and 'transport_mode' in results.columns:
@@ -5258,7 +5254,7 @@ def get_containers_departed_from_load_port(query: str) -> str:
     out = results[output_cols].head(200).copy()
 
     # ========== 12) FORMAT DATES ==========
-    date_cols_to_format = ['atd_lp', 'etd_lp', 'dep_for_filter', 'eta_dp', 'revised_eta']
+    date_cols_to_format = ['atd_lp', 'dep_for_filter', 'revised_eta']
     for dcol in date_cols_to_format:
         if dcol in out.columns and pd.api.types.is_datetime64_any_dtype(out[dcol]):
             out[dcol] = out[dcol].dt.strftime('%Y-%m-%d')
@@ -8871,6 +8867,7 @@ TOOLS = [
     ),
 
 ]
+
 
 
 
