@@ -4371,6 +4371,8 @@ def _strip_consignee_noise(text: str) -> str:
     s = re.sub(r"\bfor\s+consignee\s+\d{5,10}\b", "", s, flags=re.IGNORECASE)
     s = re.sub(r"\s+", " ", s).strip()
     return s
+	
+
 def get_containers_departing_from_load_port(query: str) -> str:
     """
     Get containers/POs/OBLs scheduled to depart from specific load ports in upcoming time periods.
@@ -4388,13 +4390,10 @@ def get_containers_departing_from_load_port(query: str) -> str:
     Returns list[dict] with container/PO/OBL info and departure details.
     """
 
-    # query = (query or "").strip()
-    # query_upper = query.upper()
-    # query_lower = query.lower()
-    # Fix agent-injected time phrase issue (already present in your file)
+    # Fix agent-injected time phrase issue
     query = _normalize_agent_timephrase_for_week(query)
 
-    # NEW: strip consignee noise so port extraction doesn't capture "FOR CONSIGNEE 0000866"
+    # Strip consignee noise so port extraction doesn't capture "FOR CONSIGNEE 0000866"
     query_raw = (query or "").strip()
     query = _strip_consignee_noise(query_raw)
 
@@ -4402,9 +4401,8 @@ def get_containers_departing_from_load_port(query: str) -> str:
     query_lower = query.lower()
 
     # ========== 1) EXTRACT IDENTIFIERS (Container/PO/OBL) ==========
-    # **CRITICAL FIX**: Remove consignee code mentions before extraction to avoid false positives
+    # Remove consignee code mentions before extraction to avoid false positives
     query_for_extraction = query
-    # Remove phrases like "for consignee 0028664", "consignee code 0028664", "consignee_code: 0028664", "user 0028664"
     query_for_extraction = re.sub(
         r'\b(?:for\s+)?(?:consignee|user)(?:\s*[_\-]?\s*code)?\s*[:=]?\s*\d{7}\b',
         '',
@@ -4428,44 +4426,58 @@ def get_containers_departing_from_load_port(query: str) -> str:
     # ========== 2) EXTRACT LOAD PORT ==========
     load_port = None
     
+    # List of time-related words to exclude from port name
+    time_words = r"(?:tomorrow|today|yesterday|next|this|within|in|by|last|week|month|days?)"
+    
     # Pattern 1: "from load port PORTNAME" or "from PORTNAME"
+    # Stop before time-related words, "for", "in", "next", etc.
     match = re.search(
-        r"from\s+(?:load\s+port\s+)?([A-Za-z0-9\s,\-\(\)]+?)"
-        r"(?=\s+for\b|\s+in\s+|\s+next\s+|\s+this\s+|\s+within\s+|\s+on\s+|\s+by\s+|[\?\.\,]|$)",
+        rf"from\s+(?:load\s+port\s+)?([A-Za-z0-9\s,\-\(\)]+?)"
+        rf"(?=\s+for\b|\s+in\s+|\s+next\s+|\s+this\s+|\s+within\s+|\s+on\s+|\s+by\s+|\s+{time_words}\b|[\?\.\,]|$)",
         query,
         re.IGNORECASE,
     )
     if match:
         cand = match.group(1).strip()
+        # Remove any trailing time words that might have been captured
+        cand = re.sub(rf"\s+(?:tomorrow|today|yesterday|next|this|within|in|by)\b.*$", "", cand, flags=re.IGNORECASE).strip()
         # Exclude common noise words
         if cand and cand.upper() not in [
-            "CONSIGNEE", "FOR", "IN", "NEXT", "THE", "DAYS", "THIS", "WEEK", "SEA", "AIR", "ROAD", "ON"
+            "CONSIGNEE", "FOR", "IN", "NEXT", "THE", "DAYS", "THIS", "WEEK", "SEA", "AIR", "ROAD", "ON",
+            "TOMORROW", "TODAY", "YESTERDAY", "WITHIN", "BY"
         ]:
             load_port = cand.upper()
 
     # Pattern 2: "load port PORTNAME"
     if not load_port:
         match = re.search(
-            r"load\s+port\s+([A-Za-z0-9\s,\-\(\)]+?)"
-            r"(?=\s+for\b|\s+in\s+|\s+next\s+|\s+this\s+|\s+within\s+|\s+on\s+|\s+by\s+|[\?\.\,]|$)",
-            query,
-            re.IGNORECASE,
-        )
-        if match:
-            load_port = match.group(1).strip().upper()
-
-    # Pattern 3: "will depart/leaving from PORTNAME"
-    if not load_port:
-        match = re.search(
-            r"(?:will\s+depart|departing|leaving|scheduled\s+to\s+leave)\s+(?:from\s+)?([A-Za-z0-9\s,\-\(\)]+?)"
-            r"(?=\s+for\b|\s+in\s+|\s+next\s+|\s+this\s+|\s+within\s+|\s+on\s+|\s+by\s+|[\?\.\,]|$)",
+            rf"load\s+port\s+([A-Za-z0-9\s,\-\(\)]+?)"
+            rf"(?=\s+for\b|\s+in\s+|\s+next\s+|\s+this\s+|\s+within\s+|\s+on\s+|\s+by\s+|\s+{time_words}\b|[\?\.\,]|$)",
             query,
             re.IGNORECASE,
         )
         if match:
             cand = match.group(1).strip()
+            # Remove any trailing time words
+            cand = re.sub(rf"\s+(?:tomorrow|today|yesterday|next|this|within|in|by)\b.*$", "", cand, flags=re.IGNORECASE).strip()
+            if cand and cand.upper() not in ["TOMORROW", "TODAY", "YESTERDAY", "NEXT", "THIS", "WEEK"]:
+                load_port = cand.upper()
+
+    # Pattern 3: "will depart/leaving from PORTNAME"
+    if not load_port:
+        match = re.search(
+            rf"(?:will\s+depart|departing|leaving|scheduled\s+to\s+leave)\s+(?:from\s+)?([A-Za-z0-9\s,\-\(\)]+?)"
+            rf"(?=\s+for\b|\s+in\s+|\s+next\s+|\s+this\s+|\s+within\s+|\s+on\s+|\s+by\s+|\s+{time_words}\b|[\?\.\,]|$)",
+            query,
+            re.IGNORECASE,
+        )
+        if match:
+            cand = match.group(1).strip()
+            # Remove any trailing time words
+            cand = re.sub(rf"\s+(?:tomorrow|today|yesterday|next|this|within|in|by)\b.*$", "", cand, flags=re.IGNORECASE).strip()
             if cand and cand.upper() not in [
-                "CONSIGNEE", "FOR", "IN", "NEXT", "THE", "DAYS", "THIS", "WEEK", "SEA", "AIR", "ROAD", "ON"
+                "CONSIGNEE", "FOR", "IN", "NEXT", "THE", "DAYS", "THIS", "WEEK", "SEA", "AIR", "ROAD", "ON",
+                "TOMORROW", "TODAY", "YESTERDAY"
             ]:
                 load_port = cand.upper()
 
@@ -4475,8 +4487,17 @@ def get_containers_departing_from_load_port(query: str) -> str:
         if match:
             load_port = re.sub(r'\s+', ' ', match.group(1).strip()).upper()
 
-    # Clean up extracted port name
+    # Clean up extracted port name - remove time-related words
     if load_port:
+        load_port = re.sub(r'\s+', ' ', load_port).strip()
+        # Final cleanup: remove time words if they somehow got captured
+        load_port = re.sub(
+            r'\b(?:tomorrow|today|yesterday|next|this|last|within|in|by|days?|weeks?|months?)\b',
+            '',
+            load_port,
+            flags=re.IGNORECASE
+        ).strip()
+        # Remove extra whitespace
         load_port = re.sub(r'\s+', ' ', load_port).strip()
 
     try:
@@ -4503,6 +4524,14 @@ def get_containers_departing_from_load_port(query: str) -> str:
 
     # ========== 4) LOAD AND FILTER DATA ==========
     df = _df()  # Respects consignee filtering
+    
+    try:
+        logger.info(f"[get_containers_departing_from_load_port] After _df() consignee filter: {len(df)} rows")
+        if hasattr(threading.current_thread(), 'consignee_codes'):
+            codes = threading.current_thread().consignee_codes
+            logger.info(f"[get_containers_departing_from_load_port] Thread consignee codes: {codes}")
+    except:
+        pass
     
     if df.empty:
         return "No data available for your authorized consignees."
@@ -4566,7 +4595,7 @@ def get_containers_departing_from_load_port(query: str) -> str:
         if identifier_type:
             return f"No data found for {identifier_type} {container_no or po_no or obl_no}."
 
-    # ========== NEW: 5A) TRANSPORT MODE FILTER ==========
+    # ========== 5A) TRANSPORT MODE FILTER ==========
     modes = extract_transport_modes(query)
     if modes:
         try:
@@ -4593,7 +4622,7 @@ def get_containers_departing_from_load_port(query: str) -> str:
             except:
                 pass
 
-    # ========== NEW: 5B) HOT CONTAINER FLAG FILTER ==========
+    # ========== 5B) HOT CONTAINER FLAG FILTER ==========
     is_hot_query = bool(re.search(r'\bhot\b', query, re.IGNORECASE))
     if is_hot_query:
         try:
@@ -4630,8 +4659,19 @@ def get_containers_departing_from_load_port(query: str) -> str:
             except:
                 pass
 
-    # ========== 6) APPLY LOAD PORT FILTER (CRITICAL FIX - STRICT MATCHING) ==========
+    # ========== 6) APPLY LOAD PORT FILTER ==========
     if load_port:
+        try:
+            logger.info(f"[get_containers_departing_from_load_port] Before port filter: {len(df)} rows")
+            # Check if test containers exist before port filtering
+            test_containers = ['MRKU0662058', 'TTNU4392192']
+            for cont in test_containers:
+                if 'container_number' in df.columns and cont in df['container_number'].values:
+                    cont_row = df[df['container_number'] == cont].iloc[0]
+                    logger.info(f"[get_containers_departing_from_load_port] BEFORE PORT FILTER - Found {cont}: load_port={cont_row.get('load_port')}, etd_lp={cont_row.get('etd_lp')}")
+        except:
+            pass
+        
         if 'load_port' not in df.columns:
             return "Load port column not found in the dataset."
 
@@ -4684,14 +4724,13 @@ def get_containers_departing_from_load_port(query: str) -> str:
             except:
                 pass
 
-        # Strategy 3: Word-based contains - **CRITICAL FIX: ALL user words must be present as word boundaries**
+        # Strategy 3: Word-based contains - ALL user words must be present as word boundaries
         if not port_mask.any():
             user_words = [w for w in load_port_norm.split() if len(w) >= 2]
             if user_words:
-                # **NEW**: Each user word must exist in the port name as a separate word (word boundary matching)
+                # Each word must be present as a word boundary (not substring)
                 port_mask = pd.Series(True, index=df.index)
                 for user_word in user_words:
-                    # Each word must be present as a word boundary (not substring)
                     word_match = df['_norm_port'].str.contains(rf'\b{re.escape(user_word)}\b', na=False, regex=True, case=False)
                     port_mask &= word_match
                 
@@ -4714,6 +4753,12 @@ def get_containers_departing_from_load_port(query: str) -> str:
             if len(df) > 0:
                 sample_ports = df['load_port'].head(5).tolist()
                 logger.info(f"[get_containers_departing_from_load_port] Sample matched ports: {sample_ports}")
+                # Check for specific containers mentioned by user
+                test_containers = ['MRKU0662058', 'TTNU4392192']
+                for cont in test_containers:
+                    if cont in df['container_number'].values:
+                        cont_row = df[df['container_number'] == cont].iloc[0]
+                        logger.info(f"[get_containers_departing_from_load_port] Found {cont}: load_port={cont_row.get('load_port')}, etd_lp={cont_row.get('etd_lp')}, atd_lp={cont_row.get('atd_lp')}")
         except:
             pass
 
@@ -4733,24 +4778,45 @@ def get_containers_departing_from_load_port(query: str) -> str:
     df = ensure_datetime(df, needed_cols)
 
     # ========== 8) FILTER BY ETD WINDOW (+ optional ATD exclusion) ==========
-    # Base: ETD within the requested window (calendar-aware for 'this week').
+    try:
+        logger.info(f"[get_containers_departing_from_load_port] Before date filter: {len(df)} rows, start_date={start_date}, end_date={end_date}, today={today}")
+        if 'etd_lp' in df.columns:
+            etd_sample = df[['container_number', 'etd_lp']].head(10)
+            logger.info(f"[get_containers_departing_from_load_port] Sample ETD values:\n{etd_sample}")
+            
+            # Check for specific test containers
+            test_containers = ['MRKU0662058', 'TTNU4392192']
+            for cont in test_containers:
+                if cont in df['container_number'].values:
+                    cont_row = df[df['container_number'] == cont].iloc[0]
+                    etd_val = cont_row.get('etd_lp')
+                    etd_normalized = pd.to_datetime(etd_val).normalize() if pd.notna(etd_val) else None
+                    logger.info(f"[get_containers_departing_from_load_port] TEST CONTAINER {cont}: etd_lp={etd_val}, normalized={etd_normalized}, in_range={etd_normalized >= start_date and etd_normalized <= end_date if etd_normalized else False}")
+                else:
+                    logger.info(f"[get_containers_departing_from_load_port] TEST CONTAINER {cont}: NOT FOUND in {len(df)} rows")
+    except Exception as e:
+        logger.error(f"[get_containers_departing_from_load_port] Error in debug logging: {e}", exc_info=True)
+    
+    # Base: ETD within the requested window (calendar-aware for 'this week')
     date_mask = (
         df['etd_lp'].notna()
         & (df['etd_lp'].dt.normalize() >= start_date)
         & (df['etd_lp'].dt.normalize() <= end_date)
     )
 
-    # IMPORTANT:
-    # - For calendar phrases like "this week" (Mon–Sun), users often mean the *full* week window
-    #   even if some ETDs are earlier than today.
-    # - For explicitly future-looking phrases (next X days / tomorrow / upcoming), keep the
-    #   original behavior and exclude already-departed containers.
+    try:
+        logger.info(f"[get_containers_departing_from_load_port] After ETD date range filter: {date_mask.sum()} rows matched")
+    except:
+        pass
+
+    # For calendar phrases like "this week", users often mean the full week window
+    # even if some ETDs are earlier than today
     include_already_departed = False
     try:
         if start_date < today:
             if re.search(r"\b(this|current)\s+(week|wk)\b", query_lower) or re.search(r"\bthisweek\b", query_lower):
                 include_already_departed = True
-            # Explicit date ranges like "from 22/12/2025 to 28/12/2025" should also include the full window.
+            # Explicit date ranges like "from 22/12/2025 to 28/12/2025" should also include the full window
             if re.search(r"\b(from|between)\b", query_lower):
                 include_already_departed = True
     except Exception:
@@ -4758,6 +4824,10 @@ def get_containers_departing_from_load_port(query: str) -> str:
 
     if 'atd_lp' in df.columns and not include_already_departed:
         date_mask &= df['atd_lp'].isna()
+        try:
+            logger.info(f"[get_containers_departing_from_load_port] After ATD null filter: {date_mask.sum()} rows matched")
+        except:
+            pass
     
     results = df[date_mask].copy()
 
@@ -4815,8 +4885,6 @@ def get_containers_departing_from_load_port(query: str) -> str:
         pass
 
     return out.where(pd.notnull(out), None).to_dict(orient='records')
-
-
 
 
 
@@ -8941,6 +9009,7 @@ TOOLS = [
     ),
 
 ]
+
 
 
 
