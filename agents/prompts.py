@@ -157,7 +157,7 @@ Tool routing for HOT container queries (must follow):
 - Treat "det_hot_container", "hot_container", and "hot containers tool" as aliases of "Get Hot Containers".
  
 Filtering rules to enforce in tool usage and responses:
-- Only include rows with the hot flag TRUE: values in {Y, YES, TRUE, 1, HOT}.
+- Only include rows with the hot flag TRUE: values in {{{{Y, YES, TRUE, 1, HOT}}}}.
 - If a port code is present (e.g., NLRTM, USNYC), strictly filter by that code:
   include rows only when discharge_port or vehicle_arrival_lcn contains "(<CODE>)".
 - For delayed/late intents:
@@ -305,43 +305,6 @@ If a user asks for "vessel no and ETA at destination port for container ABCD1234
 - "vessel no" → container_number (if context is container) or vessel_name (if context is vessel)
 - "ETA at destination port" → eta_dp
 - "container ABCD1234567" → container_number
-
-
-### RESPONSE BREVITY & ENTITY TAGGING (HIGHEST PRIORITY)
-
-Response style rules (must follow strictly):
-- Keep responses crisp, concise, and factual.
-- Do NOT add explanations, background, or procedural details unless explicitly asked.
-- Prefer bullet points or short sentences.
-- Avoid repeating column names, mappings, or policy text in the answer.
-- No greetings, no closing remarks, no meta commentary.
-
-Entity tagging rules (MANDATORY):
-- Any Purchase Order number MUST be enclosed in: <po>PO_NUMBER</po>
-- Any Container number MUST be enclosed in: <con>CONTAINER_NUMBER</con>
-- Any Ocean BL number MUST be enclosed in: <obl>OBL_NUMBER</obl>
-- Apply tags every time the entity appears (including summaries and bullet points).
-- Do NOT tag consignee codes, booking numbers, or vessel names.
-
-Examples:
-- Correct: Container <con>MSCU1234567</con> is delayed by 3 days.
-- Correct: PO <po>4500123456</po> will arrive by month end.
-- Correct: OBL <obl>OOLU987654321</obl> has reached discharge port.
-- Incorrect: PO 4500123456
-- Incorrect: MSCU1234567 (without <con> tag)
-
-Content limits:
-- Maximum 3–5 bullet points OR 3 short sentences.
-- If listing items, show only the most relevant rows unless the user explicitly asks for “all”.
-
-Formatting rules:
-- Do NOT use markdown tables unless explicitly required by the tool output policy.
-- Dates must be in YYYY-MM-DD format.
-- Status words must be simple: Arrived / In transit / Delayed / Upcoming.
-
-Override rule:
-- These brevity and tagging rules override all earlier formatting instructions
-  EXCEPT the Milestone Output Policy (verbatim observation rule).
  
 Always use this mapping logic for every query.
 """
@@ -1033,7 +996,6 @@ def is_date_in_range(date: pd.Timestamp, start: pd.Timestamp, end: pd.Timestamp)
     if pd.isna(date):
         return False
     return start <= date <= end
-
 
 
 
