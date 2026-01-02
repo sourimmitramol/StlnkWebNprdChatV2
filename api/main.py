@@ -89,6 +89,8 @@ def check_container_authorization(df, container_numbers: List[str], consignee_co
     container_mask = authorized_df['container_number'].isin(container_numbers)
     return authorized_df[container_mask], not authorized_df[container_mask].empty
 
+# ...existing code...
+
 
 @app.post("/ask")
 def ask(body: QueryWithConsigneeBody):
@@ -203,9 +205,41 @@ def ask(body: QueryWithConsigneeBody):
         # ---- NEW: Fallback when agent stops due to iteration/time limit ----
         if re.search(r"Agent stopped due to iteration limit or time limit\.", output, re.IGNORECASE):
             fallback = route_query(q, consignee_codes)  # Pass consignee codes
+            
+            # Handle list/dict returns from transit analysis functions
+            if isinstance(fallback, list) and len(fallback) > 0 and isinstance(fallback[0], dict):
+                # Transit analysis functions return [{"summary": {...}, "container_details": [...}}]
+                item = fallback[0]
+                if "summary" in item and "container_details" in item:
+                    summary = item["summary"]
+                    containers = item["container_details"]
+                    
+                    # Format summary message
+                    if "ocean_bl_number" in summary:
+                        msg = f"Transit Analysis for Ocean BL: {summary['ocean_bl_number']}\n\n"
+                    elif "po_number" in summary:
+                        msg = f"Transit Analysis for PO: {summary['po_number']}\n\n"
+                    else:
+                        msg = "Transit Analysis Summary:\n\n"
+                    
+                    msg += f"Total Containers: {summary.get('total_containers', 0)}\n"
+                    msg += f"Arrived: {summary.get('arrived_containers', 0)}, In Transit: {summary.get('in_transit_containers', 0)}\n"
+                    msg += f"Average Transit Time: {summary.get('avg_transit_days', 'N/A')} days\n"
+                    msg += f"Average Delay: {summary.get('avg_delay_days', 'N/A')} days\n"
+                    msg += f"Delayed Containers: {summary.get('delayed_containers', 0)}\n"
+                    msg += f"On-Time/Early: {summary.get('on_time_or_early_containers', 0)}"
+                    
+                    return {
+                        "response": msg,
+                        "observation": msg,
+                        "table": containers,  # Container details as table
+                        "mode": "router-fallback"
+                    }
+            
+            # Default string response
             return {
-                "response": fallback,
-                "observation": fallback,
+                "response": str(fallback) if not isinstance(fallback, str) else fallback,
+                "observation": str(fallback) if not isinstance(fallback, str) else fallback,
                 "table": [],
                 "mode": "router-fallback"
             }
@@ -309,8 +343,40 @@ def ask(body: QueryWithConsigneeBody):
         # Try router fallback before failing
         try:
             fallback = route_query(q, consignee_codes)  # Pass consignee codes
+            
+            # Handle list/dict returns from transit analysis functions
+            if isinstance(fallback, list) and len(fallback) > 0 and isinstance(fallback[0], dict):
+                # Transit analysis functions return [{"summary": {...}, "container_details": [...}}]
+                item = fallback[0]
+                if "summary" in item and "container_details" in item:
+                    summary = item["summary"]
+                    containers = item["container_details"]
+                    
+                    # Format summary message
+                    if "ocean_bl_number" in summary:
+                        msg = f"Transit Analysis for Ocean BL: {summary['ocean_bl_number']}\n\n"
+                    elif "po_number" in summary:
+                        msg = f"Transit Analysis for PO: {summary['po_number']}\n\n"
+                    else:
+                        msg = "Transit Analysis Summary:\n\n"
+                    
+                    msg += f"Total Containers: {summary.get('total_containers', 0)}\n"
+                    msg += f"Arrived: {summary.get('arrived_containers', 0)}, In Transit: {summary.get('in_transit_containers', 0)}\n"
+                    msg += f"Average Transit Time: {summary.get('avg_transit_days', 'N/A')} days\n"
+                    msg += f"Average Delay: {summary.get('avg_delay_days', 'N/A')} days\n"
+                    msg += f"Delayed Containers: {summary.get('delayed_containers', 0)}\n"
+                    msg += f"On-Time/Early: {summary.get('on_time_or_early_containers', 0)}"
+                    
+                    return {
+                        "response": msg,
+                        "observation": "Fallback response due to agent error",
+                        "table": containers,  # Container details as table
+                        "mode": "router-fallback"
+                    }
+            
+            # Default string response
             return {
-                "response": fallback,
+                "response": str(fallback) if not isinstance(fallback, str) else fallback,
                 "observation": "Fallback response due to agent error",
                 "table": [],
                 "mode": "router-fallback"
@@ -318,7 +384,6 @@ def ask(body: QueryWithConsigneeBody):
         except Exception as fallback_exc:
             logger.error(f"Router fallback also failed: {fallback_exc}")
             raise HTTPException(status_code=500, detail=f"Agent failed: {exc}")
-
 
 
 
