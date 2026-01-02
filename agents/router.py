@@ -35,8 +35,13 @@ from agents.tools import (
     get_containers_by_etd_window,
     get_containers_departing_from_load_port,
     get_containers_departed_from_load_port,
+    get_container_transit_analysis,
+    get_bulk_container_transit_analysis,
+    get_po_transit_analysis,
     get_eta_for_booking,
     get_booking_details,
+    get_bl_transit_analysis,
+    get_containers_missed_planned_etd,
     _df,  # Import the DataFrame function to test filtering
 )
 
@@ -109,15 +114,19 @@ def route_query(query: str, consignee_codes: list = None) -> str:
 
         # ========== NEW: BL/OBL upcoming/delayed queries ==========
         # Route BL queries with time windows or delay keywords to get_upcoming_bls
+        # BUT NOT if query asks for transit/delay analysis (those go to get_bl_transit_analysis)
         bl_keywords = ["obl", "ocean bl", "bill of lading", "bl ", " bl", "bill"]
         has_bl_keyword = any(kw in q for kw in bl_keywords) or obl_no
+        
+        # Check if this is a TRANSIT/ANALYSIS query (should NOT route to upcoming/delayed BLs)
+        is_analysis_query = any(kw in q for kw in ["transit", "transit time", "transit analysis", "transit performance", "journey", "delay analysis", "analysis"])
        
-        if has_bl_keyword and (
+        if has_bl_keyword and not is_analysis_query and (
             # Upcoming BLs
             re.search(r"(?:upcoming|arriving|arrive|expected|coming|next|within)\s+\d{1,3}\s+days?", q) or
             "arriving" in q or "upcoming" in q or "expected" in q or
-            # Delayed BLs
-            any(w in q for w in ["delay", "late", "overdue", "behind", "missed"]) or
+            # Delayed BLs (but NOT "delay analysis")
+            any(w in q for w in ["delayed", "late", "overdue", "behind", "missed"]) or
             # Hot BLs
             "hot" in q
             ):
@@ -195,6 +204,40 @@ def route_query(query: str, consignee_codes: list = None) -> str:
             from agents.tools import get_containers_by_final_destination
             return get_containers_by_final_destination(query)
         
+        # ========== PRIORITY 12: Transit Analysis Queries ==========
+        # Single container transit analysis with optional filters
+        if container_no and any(keyword in q for keyword in [
+            "transit", "journey", "delay", "transit time", "actual transit", 
+            "estimated transit", "transit analysis", "transit performance",
+            "how long", "take to arrive"
+        ]):
+            logger.info(f"Router: Single container transit analysis route for: {query}")
+            return get_container_transit_analysis(query)
+        
+        # PO transit analysis (multi-container)
+        if po_no and any(keyword in q for keyword in [
+            "transit", "transit time", "transit analysis", "transit performance",
+            "how are containers", "container performance"
+        ]):
+            logger.info(f"Router: PO transit analysis route for: {query}")
+            return get_po_transit_analysis(query)
+        
+        # BL transit analysis (multi-container)
+        if (obl_no or any(bl_kw in q for bl_kw in ["bl ", " bl", "ocean bl", "bill of lading", "obl"])) and any(keyword in q for keyword in [
+            "transit", "transit time", "transit analysis", "transit performance",
+            "journey", "delay analysis", "how are containers", "performing"
+        ]):
+            logger.info(f"Router: BL transit analysis route for: {query}")
+            return get_bl_transit_analysis(query)
+        
+        # Bulk container transit analysis (route-based, time-based)
+        if ("transit" in q or "journey" in q) and not container_no and not po_no and (
+            any(port_kw in q for port_kw in ["from", "to", "shanghai", "rotterdam", "port"]) or
+            any(time_kw in q for time_kw in ["this month", "last month", "average"])
+        ):
+            logger.info(f"Router: Bulk container transit analysis route for: {query}")
+            return get_bulk_container_transit_analysis(query)
+        
         # ========== PRIORITY 13: Upcoming arrivals ==========
         if ("arriving" in q or "arrive" in q) and ("next" in q or "coming" in q):
             return get_upcoming_arrivals(query)
@@ -218,6 +261,34 @@ def route_query(query: str, consignee_codes: list = None) -> str:
         if consignee_codes and hasattr(threading.current_thread(), 'consignee_codes'):
             delattr(threading.current_thread(), 'consignee_codes')
             logger.debug("Cleaned up consignee codes from thread context")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
