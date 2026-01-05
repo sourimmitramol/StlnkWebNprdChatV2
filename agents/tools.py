@@ -1824,6 +1824,7 @@ def ensure_datetime(df: pd.DataFrame, columns: list) -> pd.DataFrame:
 # ...existing code...
 
 
+
 def get_delayed_containers(question: str = None, consignee_code: str = None, **kwargs) -> str:
     """
     Get containers that arrived delayed (ATA > ETA at discharge port).
@@ -1864,19 +1865,21 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
             apply_time_filter = True
             break
 
-    # **CRITICAL FIX**: Detect month names BEFORE port filtering
+    # Month parsing (applied to ATA window): handle both "in October" and "in October 2025".
+    # NOTE: parse_time_period("October 2025") returns a single day (Oct 1) by default, so we
+    # explicitly expand month+year to the full calendar month here.
     month_match = re.search(
-        r'\b(?:in|during)\s+('
-        r'jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|'
-        r'jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b',
+        r"\b(?:in|during|on)\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|"
+        r"jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)(?:\s+(\d{4}))?\b",
         query,
         re.IGNORECASE,
     )
     requested_month = None
     if month_match:
-        requested_month = month_match.group(1).lower()
+        requested_month = (month_match.group(1) or "").lower()
+        year_str = month_match.group(2)
         apply_time_filter = True
-        # Override start/end to "this year's <month>"
+
         today = pd.Timestamp.today().normalize()
         month_map = {
             'jan': 1, 'january': 1, 'feb': 2, 'february': 2, 'mar': 3, 'march': 3,
@@ -1886,13 +1889,17 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
         }
         m = month_map.get(requested_month)
         if m:
-            year = today.year
+            year = int(year_str) if year_str else today.year
             start_date = pd.Timestamp(year=year, month=m, day=1).normalize()
             if m == 12:
                 end_date = pd.Timestamp(year=year + 1, month=1, day=1).normalize() - pd.Timedelta(days=1)
             else:
                 end_date = pd.Timestamp(year=year, month=m + 1, day=1).normalize() - pd.Timedelta(days=1)
-            period_desc = f"{requested_month.capitalize()} {year}"
+
+            # Nice display: "October 2025" (or "Oct 2025")
+            month_disp = month_match.group(1)
+            month_disp = month_disp.capitalize() if month_disp else requested_month.capitalize()
+            period_desc = f"{month_disp} {year}"
 
     try:
         if apply_time_filter:
@@ -2079,6 +2086,7 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
             out[dcol] = out[dcol].dt.strftime("%Y-%m-%d")
 
     return out.where(pd.notnull(out), None).to_dict(orient="records")
+
 
 
 # ...existing code...
@@ -7170,7 +7178,7 @@ def get_booking_details(question: str = None, consignee_code: str = None, **kwar
     Booking-related lookup tool:
     - "booking number of PO <po>" / "booking number of <po>" -> booking_number_multiple
     - "booking number of container <container>" / "booking number of <container>" -> booking_number_multiple
-    - "booking number of BL/OBL <bl>" / "booking number of <bl>" -> booking_number_multiple  ✅ (added)
+    - "booking number of BL/OBL <bl>" / "booking number of <bl>" -> booking_number_multiple
     - "ETA of booking <booking>" -> delegates to get_eta_for_booking()
     - "PO of booking <booking>" / "container of booking <booking>" / "BL of booking <booking>" -> mapping outputs
     Notes:
@@ -7210,20 +7218,48 @@ def get_booking_details(question: str = None, consignee_code: str = None, **kwar
     except Exception:
         obl_no = None
 
-    # Only extract booking number when query is actually about a booking.
-    # (Prevents PO5300008696 / container IDs being mis-read as a booking number.)
-    booking_no = _extract_booking_number(q_extract) if re.search(r"\bbooking\b", q_lower) else None
+    # **CRITICAL FIX**: Extract booking number more reliably
+    booking_no = None
+    
+    # Pattern 1: Explicit "booking number X" or "booking X"
+    m_booking = re.search(r'\b(?:booking\s+(?:number\s+)?|booking\s+#\s*)([A-Z0-9]{6,20})\b', q_upper)
+    if m_booking:
+        booking_no = m_booking.group(1)
+    
+    # Pattern 2: "of booking X" (for queries like "PO of booking VN2084805")
+    if not booking_no:
+        m_of_booking = re.search(r'\bof\s+booking\s+(?:number\s+)?([A-Z0-9]{6,20})\b', q_upper)
+        if m_of_booking:
+            booking_no = m_of_booking.group(1)
+    
+    # Pattern 3: Fallback - only extract if query contains "booking" keyword
+    if not booking_no and re.search(r"\bbooking\b", q_lower):
+        booking_no = _extract_booking_number(q_extract)
+
+    # Agent/tool retries often pass a bare booking token (e.g., "VN2084805") without the word "booking".
+    # If the input isn't clearly a PO/container/BL, treat booking-like tokens as booking numbers.
+    if not booking_no and not (po_no or container_no or obl_no):
+        booking_no = _extract_booking_number(q_extract)
 
     # Guard: if BL extractor grabbed a container-like token, prefer container semantics
     if obl_no and re.fullmatch(r"[A-Z]{4}\d{7}", str(obl_no).upper().strip()):
         obl_no = None
 
     # Intent flags
-    wants_booking_number = bool(re.search(r"\bbooking\s+number\b", q_lower))
-    wants_eta = bool(re.search(r"\beta\b", q_lower)) and ("booking" in q_lower)
-    wants_po_of_booking = bool(re.search(r"\bpo\b", q_lower) and ("booking" in q_lower))
-    wants_container_of_booking = bool(re.search(r"\bcontainer\b", q_lower) and ("booking" in q_lower))
-    wants_bl_of_booking = bool(re.search(r"\b(?:bl|obl|bill\s+of\s+lading)\b", q_lower) and ("booking" in q_lower))
+    wants_booking_number = bool(re.search(r"\bbooking\s+number\b", q_lower)) and not booking_no
+    wants_eta = bool(re.search(r"\beta\b", q_lower)) and booking_no
+    wants_po_of_booking = bool(re.search(r"\bpo\b", q_lower) and booking_no)
+    wants_container_of_booking = bool(re.search(r"\bcontainer\b", q_lower) and booking_no)
+    wants_bl_of_booking = bool(re.search(r"\b(?:bl|obl|bill\s+of\s+lading)\b", q_lower) and booking_no)
+
+    # **CRITICAL FIX**: If user asks "X of booking Y", set the appropriate flag
+    if booking_no and not (wants_eta or wants_po_of_booking or wants_container_of_booking or wants_bl_of_booking):
+        if re.search(r'\bpo\s+of\s+booking\b', q_lower):
+            wants_po_of_booking = True
+        elif re.search(r'\bcontainer\s+of\s+booking\b', q_lower):
+            wants_container_of_booking = True
+        elif re.search(r'\b(?:bl|obl)\s+of\s+booking\b', q_lower):
+            wants_bl_of_booking = True
 
     # If caller passes a bare identifier (PO/container/BL) without intent words,
     # interpret it as "booking number lookup" so agent/tool retries succeed.
@@ -7247,13 +7283,35 @@ def get_booking_details(question: str = None, consignee_code: str = None, **kwar
             if df.empty:
                 return "No records found for provided consignee code(s)."
 
+    # Agent retries sometimes pass only the raw identifier (e.g., "VN2084805")
+    # without the word "booking". If it exists in booking_number_multiple, treat it
+    # as a booking number so we can return PO/container/BL mapping in one call.
+    if not booking_no and "booking_number_multiple" in df.columns:
+        m_code = re.search(r"\b[A-Z0-9]{6,20}\b", q_upper)
+        if m_code:
+            cand = m_code.group(0)
+            if not re.fullmatch(r"\d{5,}", cand) and not re.fullmatch(r"[A-Z]{4}\d{7}", cand):
+                cand_norm = _normalize_booking_token(cand)
+                try:
+                    mask_cand = df["booking_number_multiple"].apply(lambda cell: _booking_in_cell(cell, cand_norm))
+                    if mask_cand.any():
+                        booking_no = cand
+                except Exception:
+                    pass
+
     if "booking_number_multiple" not in df.columns:
         return "Booking number column (booking_number_multiple) not found in the dataset."
 
+    # If a booking number was provided (or inferred) but the user/agent didn't specify
+    # PO/container/BL explicitly, default to returning the mapping for that booking.
+    # This avoids multi-turn retries like: tool_input="VN2084805" -> "booking number VN2084805" -> ...
+    if booking_no and not (wants_eta or wants_po_of_booking or wants_container_of_booking or wants_bl_of_booking):
+        wants_po_of_booking = True
+
     # -------------------------
-    # A) "PO/container/BL of booking <booking>"
+    # A) "PO/container/BL of booking <booking>" - **ENHANCED**
     # -------------------------
-    if booking_no and (wants_po_of_booking or wants_container_of_booking or wants_bl_of_booking or ("booking" in q_lower and not wants_booking_number)):
+    if booking_no and (wants_po_of_booking or wants_container_of_booking or wants_bl_of_booking):
         booking_norm = _normalize_booking_token(booking_no)
         mask = df["booking_number_multiple"].apply(lambda cell: _booking_in_cell(cell, booking_norm))
         matches = df[mask].copy()
@@ -9009,6 +9067,7 @@ TOOLS = [
     ),
 
 ]
+
 
 
 
