@@ -7165,12 +7165,13 @@ def get_eta_for_booking(question: str = None, consignee_code: str = None, **kwar
 
 # ...existing code...
 
+
 def get_booking_details(question: str = None, consignee_code: str = None, **kwargs):
     """
     Booking-related lookup tool:
     - "booking number of PO <po>" / "booking number of <po>" -> booking_number_multiple
     - "booking number of container <container>" / "booking number of <container>" -> booking_number_multiple
-    - "booking number of BL/OBL <bl>" / "booking number of <bl>" -> booking_number_multiple  ✅ (added)
+    - "booking number of BL/OBL <bl>" / "booking number of <bl>" -> booking_number_multiple
     - "ETA of booking <booking>" -> delegates to get_eta_for_booking()
     - "PO of booking <booking>" / "container of booking <booking>" / "BL of booking <booking>" -> mapping outputs
     Notes:
@@ -7210,20 +7211,48 @@ def get_booking_details(question: str = None, consignee_code: str = None, **kwar
     except Exception:
         obl_no = None
 
-    # Only extract booking number when query is actually about a booking.
-    # (Prevents PO5300008696 / container IDs being mis-read as a booking number.)
-    booking_no = _extract_booking_number(q_extract) if re.search(r"\bbooking\b", q_lower) else None
+    # **CRITICAL FIX**: Extract booking number more reliably
+    booking_no = None
+    
+    # Pattern 1: Explicit "booking number X" or "booking X"
+    m_booking = re.search(r'\b(?:booking\s+(?:number\s+)?|booking\s+#\s*)([A-Z0-9]{6,20})\b', q_upper)
+    if m_booking:
+        booking_no = m_booking.group(1)
+    
+    # Pattern 2: "of booking X" (for queries like "PO of booking VN2084805")
+    if not booking_no:
+        m_of_booking = re.search(r'\bof\s+booking\s+(?:number\s+)?([A-Z0-9]{6,20})\b', q_upper)
+        if m_of_booking:
+            booking_no = m_of_booking.group(1)
+    
+    # Pattern 3: Fallback - only extract if query contains "booking" keyword
+    if not booking_no and re.search(r"\bbooking\b", q_lower):
+        booking_no = _extract_booking_number(q_extract)
+
+    # Agent/tool retries often pass a bare booking token (e.g., "VN2084805") without the word "booking".
+    # If the input isn't clearly a PO/container/BL, treat booking-like tokens as booking numbers.
+    if not booking_no and not (po_no or container_no or obl_no):
+        booking_no = _extract_booking_number(q_extract)
 
     # Guard: if BL extractor grabbed a container-like token, prefer container semantics
     if obl_no and re.fullmatch(r"[A-Z]{4}\d{7}", str(obl_no).upper().strip()):
         obl_no = None
 
     # Intent flags
-    wants_booking_number = bool(re.search(r"\bbooking\s+number\b", q_lower))
-    wants_eta = bool(re.search(r"\beta\b", q_lower)) and ("booking" in q_lower)
-    wants_po_of_booking = bool(re.search(r"\bpo\b", q_lower) and ("booking" in q_lower))
-    wants_container_of_booking = bool(re.search(r"\bcontainer\b", q_lower) and ("booking" in q_lower))
-    wants_bl_of_booking = bool(re.search(r"\b(?:bl|obl|bill\s+of\s+lading)\b", q_lower) and ("booking" in q_lower))
+    wants_booking_number = bool(re.search(r"\bbooking\s+number\b", q_lower)) and not booking_no
+    wants_eta = bool(re.search(r"\beta\b", q_lower)) and booking_no
+    wants_po_of_booking = bool(re.search(r"\bpo\b", q_lower) and booking_no)
+    wants_container_of_booking = bool(re.search(r"\bcontainer\b", q_lower) and booking_no)
+    wants_bl_of_booking = bool(re.search(r"\b(?:bl|obl|bill\s+of\s+lading)\b", q_lower) and booking_no)
+
+    # **CRITICAL FIX**: If user asks "X of booking Y", set the appropriate flag
+    if booking_no and not (wants_eta or wants_po_of_booking or wants_container_of_booking or wants_bl_of_booking):
+        if re.search(r'\bpo\s+of\s+booking\b', q_lower):
+            wants_po_of_booking = True
+        elif re.search(r'\bcontainer\s+of\s+booking\b', q_lower):
+            wants_container_of_booking = True
+        elif re.search(r'\b(?:bl|obl)\s+of\s+booking\b', q_lower):
+            wants_bl_of_booking = True
 
     # If caller passes a bare identifier (PO/container/BL) without intent words,
     # interpret it as "booking number lookup" so agent/tool retries succeed.
@@ -7247,13 +7276,35 @@ def get_booking_details(question: str = None, consignee_code: str = None, **kwar
             if df.empty:
                 return "No records found for provided consignee code(s)."
 
+    # Agent retries sometimes pass only the raw identifier (e.g., "VN2084805")
+    # without the word "booking". If it exists in booking_number_multiple, treat it
+    # as a booking number so we can return PO/container/BL mapping in one call.
+    if not booking_no and "booking_number_multiple" in df.columns:
+        m_code = re.search(r"\b[A-Z0-9]{6,20}\b", q_upper)
+        if m_code:
+            cand = m_code.group(0)
+            if not re.fullmatch(r"\d{5,}", cand) and not re.fullmatch(r"[A-Z]{4}\d{7}", cand):
+                cand_norm = _normalize_booking_token(cand)
+                try:
+                    mask_cand = df["booking_number_multiple"].apply(lambda cell: _booking_in_cell(cell, cand_norm))
+                    if mask_cand.any():
+                        booking_no = cand
+                except Exception:
+                    pass
+
     if "booking_number_multiple" not in df.columns:
         return "Booking number column (booking_number_multiple) not found in the dataset."
 
+    # If a booking number was provided (or inferred) but the user/agent didn't specify
+    # PO/container/BL explicitly, default to returning the mapping for that booking.
+    # This avoids multi-turn retries like: tool_input="VN2084805" -> "booking number VN2084805" -> ...
+    if booking_no and not (wants_eta or wants_po_of_booking or wants_container_of_booking or wants_bl_of_booking):
+        wants_po_of_booking = True
+
     # -------------------------
-    # A) "PO/container/BL of booking <booking>"
+    # A) "PO/container/BL of booking <booking>" - **ENHANCED**
     # -------------------------
-    if booking_no and (wants_po_of_booking or wants_container_of_booking or wants_bl_of_booking or ("booking" in q_lower and not wants_booking_number)):
+    if booking_no and (wants_po_of_booking or wants_container_of_booking or wants_bl_of_booking):
         booking_norm = _normalize_booking_token(booking_no)
         mask = df["booking_number_multiple"].apply(lambda cell: _booking_in_cell(cell, booking_norm))
         matches = df[mask].copy()
@@ -7357,6 +7408,9 @@ def get_booking_details(question: str = None, consignee_code: str = None, **kwar
         return out.where(pd.notnull(out), None).to_dict(orient="records")
 
     return "Please ask a booking-related question (booking number of PO/container/BL, ETA of booking, or PO/container/BL of booking)."
+
+
+
 
 ################### fd related query strated from here #########################
 def get_containers_by_final_destination(query: str) -> str:
@@ -9009,6 +9063,7 @@ TOOLS = [
     ),
 
 ]
+
 
 
 
