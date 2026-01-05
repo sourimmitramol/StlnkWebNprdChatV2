@@ -1864,19 +1864,21 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
             apply_time_filter = True
             break
 
-    # **CRITICAL FIX**: Detect month names BEFORE port filtering
+    # Month parsing (applied to ATA window): handle both "in October" and "in October 2025".
+    # NOTE: parse_time_period("October 2025") returns a single day (Oct 1) by default, so we
+    # explicitly expand month+year to the full calendar month here.
     month_match = re.search(
-        r'\b(?:in|during)\s+('
-        r'jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|'
-        r'jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b',
+        r"\b(?:in|during|on)\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|"
+        r"jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)(?:\s+(\d{4}))?\b",
         query,
         re.IGNORECASE,
     )
     requested_month = None
     if month_match:
-        requested_month = month_match.group(1).lower()
+        requested_month = (month_match.group(1) or "").lower()
+        year_str = month_match.group(2)
         apply_time_filter = True
-        # Override start/end to "this year's <month>"
+
         today = pd.Timestamp.today().normalize()
         month_map = {
             'jan': 1, 'january': 1, 'feb': 2, 'february': 2, 'mar': 3, 'march': 3,
@@ -1886,13 +1888,17 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
         }
         m = month_map.get(requested_month)
         if m:
-            year = today.year
+            year = int(year_str) if year_str else today.year
             start_date = pd.Timestamp(year=year, month=m, day=1).normalize()
             if m == 12:
                 end_date = pd.Timestamp(year=year + 1, month=1, day=1).normalize() - pd.Timedelta(days=1)
             else:
                 end_date = pd.Timestamp(year=year, month=m + 1, day=1).normalize() - pd.Timedelta(days=1)
-            period_desc = f"{requested_month.capitalize()} {year}"
+
+            # Nice display: "October 2025" (or "Oct 2025")
+            month_disp = month_match.group(1)
+            month_disp = month_disp.capitalize() if month_disp else requested_month.capitalize()
+            period_desc = f"{month_disp} {year}"
 
     try:
         if apply_time_filter:
@@ -9063,6 +9069,7 @@ TOOLS = [
     ),
 
 ]
+
 
 
 
