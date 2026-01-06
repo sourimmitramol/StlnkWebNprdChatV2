@@ -4892,7 +4892,282 @@ def get_containers_departing_from_load_port(query: str) -> str:
 
     return out.where(pd.notnull(out), None).to_dict(orient='records')
 
+# ...existing code...
 
+def get_containers_still_at_load_port(question: str = None, consignee_code: str = None, **kwargs):
+    """
+    List containers that are STILL at a given load/origin port and have NOT yet departed.
+
+    Core business logic:
+      - atd_lp is NULL  => not departed from load port yet
+      - load_port matches the user-provided location (name or code)
+
+    Supports (query-driven) filters:
+      - consignee_code (parameter) in addition to thread-local consignee filtering via _df()
+      - hot containers: if query mentions hot/priority/urgent/rush/expedited
+      - transport_mode: "by sea/air/road/rail/courier/sea-air"
+      - optional ETD window ONLY if query explicitly mentions ETD/scheduled + a time phrase
+        (e.g., "still at Shanghai with ETD next 7 days")
+
+    Returns:
+      - list[dict] of up to 200 rows (or a single count dict for "how many" queries)
+    """
+    import re
+    import pandas as pd
+    from difflib import get_close_matches
+
+    query = (question or kwargs.get("query") or kwargs.get("input") or "").strip()
+    if not query:
+        return "Please provide a query like: 'Which containers are still at CHATTOGRAM and not yet departed?'"
+
+    q_lower = query.lower()
+    q_up = query.upper()
+
+    # 1) Load data (already thread-local consignee scoped by _df())
+    df = _df()
+    if df is None or getattr(df, "empty", True):
+        return "No data available for your authorized consignees."
+
+    # 2) Optional explicit consignee_code narrowing (in addition to thread-local)
+    if consignee_code and "consignee_code_multiple" in df.columns:
+        codes = [c.strip().upper() for c in str(consignee_code).split(",") if c.strip()]
+        code_set = set(codes) | {c.lstrip("0") for c in codes}
+
+        def row_has_code(cell) -> bool:
+            if pd.isna(cell):
+                return False
+            s = str(cell).upper()
+            return any(c in s for c in code_set)
+
+        df = df[df["consignee_code_multiple"].apply(row_has_code)].copy()
+        if df.empty:
+            return f"No containers found for consignee code(s) {', '.join(codes)}."
+
+    # 3) Validate required columns
+    if "load_port" not in df.columns:
+        return "Load port column (load_port) not found in the dataset."
+    if "atd_lp" not in df.columns:
+        return "ATD load port column (atd_lp) not found in the dataset."
+
+    # 4) Parse dates we may format/use
+    date_cols = ["atd_lp"]
+    if "etd_lp" in df.columns:
+        date_cols.append("etd_lp")
+    df = ensure_datetime(df, date_cols)
+
+    # 5) Base filter: NOT YET DEPARTED from load port
+    still_mask = df["atd_lp"].isna()
+    df = df[still_mask].copy()
+    if df.empty:
+        return "No containers are currently pending departure (atd_lp is null) for your authorized consignees."
+
+    # 6) Extract load port location (code or name) from query
+    def normalize_port_name(port_str: str) -> str:
+        if pd.isna(port_str):
+            return ""
+        s = str(port_str).upper()
+        s = re.sub(r"\s*\([^)]*\)\s*", "", s)  # remove "(CNSHA)" part
+        s = s.replace(",", " ")
+        s = re.sub(r"\s+", " ", s).strip()
+        return s
+
+    def extract_port_code(port_str: str) -> str | None:
+        if pd.isna(port_str):
+            return None
+        m = re.search(r"\(([A-Z0-9\-]{3,6})\)", str(port_str).upper())
+        return m.group(1) if m else None
+
+    # Create normalized helpers for matching
+    df["_port_name_norm"] = df["load_port"].apply(normalize_port_name)
+    df["_port_code"] = df["load_port"].apply(extract_port_code)
+
+    # (A) Explicit code like "(BDCGP)"
+    port_code = None
+    m_code = re.search(r"\(([A-Z0-9\-]{3,6})\)", q_up)
+    if m_code:
+        port_code = m_code.group(1).strip().upper()
+
+    # (B) Bare code token like "BDCGP" (only accept if it exists in dataset codes)
+    if not port_code:
+        cand_codes = set(re.findall(r"\b[A-Z0-9\-]{3,6}\b", q_up))
+        known_codes = set(df["_port_code"].dropna().astype(str).str.upper().unique().tolist())
+        for c in sorted(cand_codes, key=len, reverse=True):
+            if c in known_codes:
+                port_code = c
+                break
+
+    # (C) Name phrase after "at/in/from/origin/load port"
+    port_name = None
+    if not port_code:
+        patterns = [
+            r"\b(?:still\s+at|at|in)\s+(?:load\s+port\s+|origin\s+port\s+|origin\s+)?([A-Za-z0-9\s\.\-\,\(\)]+?)(?=\s+\b(?:and|but|not|yet|depart|departed|leave|left|sail|sailed|ship|shipped|etd|today|tomorrow|yesterday|next|last|this|within|in)\b|[?.!,]|$)",
+            r"\b(?:not\s+(?:yet\s+)?)?(?:departed|left|sailed)\s+from\s+([A-Za-z0-9\s\.\-\,\(\)]+?)(?=\s+\b(?:and|but|today|tomorrow|yesterday|next|last|this|within|in)\b|[?.!,]|$)",
+            r"\bload\s+port\s+([A-Za-z0-9\s\.\-\,\(\)]+?)(?=\s+\b(?:and|but|today|tomorrow|yesterday|next|last|this|within|in)\b|[?.!,]|$)",
+            r"\borigin\s+([A-Za-z0-9\s\.\-\,\(\)]+?)(?=\s+\b(?:and|but|today|tomorrow|yesterday|next|last|this|within|in)\b|[?.!,]|$)",
+        ]
+        for pat in patterns:
+            m = re.search(pat, query, re.IGNORECASE)
+            if m:
+                port_name = m.group(1).strip()
+                break
+
+        if port_name:
+            # Remove common trailing time words if captured
+            port_name = re.sub(
+                r"\b(?:today|tomorrow|yesterday|next|last|this|week|month|days?)\b.*$",
+                "",
+                port_name,
+                flags=re.IGNORECASE,
+            ).strip()
+
+    if not port_code and not port_name:
+        df.drop(columns=["_port_name_norm", "_port_code"], inplace=True, errors="ignore")
+        return "Please specify a load port/location (e.g., 'at CHATTOGRAM' or '(BDCGP)')."
+
+    # 7) Apply port filter (code > exact name > word-based > fuzzy)
+    port_mask = pd.Series(False, index=df.index)
+
+    if port_code:
+        code_mask = df["_port_code"].fillna("").str.upper() == port_code
+        port_mask |= code_mask
+        try:
+            logger.info(f"[get_containers_still_at_load_port] Code match '{port_code}': {int(code_mask.sum())} rows")
+        except Exception:
+            pass
+
+    if not port_mask.any() and port_name:
+        user_norm = normalize_port_name(port_name)
+        exact = df["_port_name_norm"] == user_norm
+        port_mask |= exact
+        try:
+            logger.info(f"[get_containers_still_at_load_port] Exact name match '{user_norm}': {int(exact.sum())} rows")
+        except Exception:
+            pass
+
+        if not port_mask.any():
+            words = [w for w in user_norm.split() if len(w) >= 3]
+            if words:
+                wmask = pd.Series(True, index=df.index)
+                for w in words:
+                    wmask &= df["_port_name_norm"].str.contains(rf"\b{re.escape(w)}\b", na=False, regex=True)
+                port_mask |= wmask
+                try:
+                    logger.info(f"[get_containers_still_at_load_port] Word-based match {words}: {int(wmask.sum())} rows")
+                except Exception:
+                    pass
+            else:
+                sub = df["_port_name_norm"].str.contains(re.escape(user_norm), na=False)
+                port_mask |= sub
+
+        if not port_mask.any():
+            # Fuzzy fallback over normalized unique names
+            candidates = df["_port_name_norm"].dropna().astype(str).unique().tolist()
+            best = get_close_matches(normalize_port_name(port_name), candidates, n=1, cutoff=0.85)
+            if best:
+                fuzzy = df["_port_name_norm"] == best[0]
+                port_mask |= fuzzy
+                try:
+                    logger.info(f"[get_containers_still_at_load_port] Fuzzy match '{best[0]}': {int(fuzzy.sum())} rows")
+                except Exception:
+                    pass
+
+    df = df[port_mask].copy()
+    df.drop(columns=["_port_name_norm", "_port_code"], inplace=True, errors="ignore")
+
+    if df.empty:
+        where = port_code or port_name
+        return f"No containers found still at load port '{where}' (atd_lp is null) for your authorized consignees."
+
+    # 8) Optional transport mode filter (query-driven)
+    try:
+        modes = extract_transport_modes(query)
+    except Exception:
+        modes = set()
+
+    if modes and "transport_mode" in df.columns:
+        mode_mask = df["transport_mode"].astype(str).str.lower().apply(lambda s: any(m in s for m in modes))
+        df = df[mode_mask].copy()
+        if df.empty:
+            where = port_code or port_name
+            return f"No containers found still at '{where}' by transport mode {', '.join(sorted(modes))}."
+
+    # 9) Optional hot filter (query-driven)
+    is_hot_query = bool(re.search(r"\b(hot|priority|urgent|rush|expedited)\b", q_lower))
+    hot_col = None
+    if is_hot_query:
+        hot_flag_cols = [c for c in df.columns if "hot_container_flag" in c.lower()] or \
+                        [c for c in df.columns if c.lower() in ("hot_container", "hot_flag")]
+        if hot_flag_cols:
+            hot_col = hot_flag_cols[0]
+
+            def _is_hot(v) -> bool:
+                if pd.isna(v):
+                    return False
+                return str(v).strip().upper() in {"Y", "YES", "TRUE", "1", "HOT"}
+
+            df = df[df[hot_col].apply(_is_hot)].copy()
+            if df.empty:
+                where = port_code or port_name
+                return f"No hot containers found still at '{where}' (atd_lp is null)."
+
+    # 10) Optional ETD window ONLY when query explicitly asks ETD/scheduled + time phrase
+    wants_etd_window = ("etd" in q_lower) or ("scheduled" in q_lower) or ("schedule" in q_lower)
+    mentions_time = bool(re.search(r"\b(today|tomorrow|yesterday|next|last|this|within|in)\b", q_lower))
+    if wants_etd_window and mentions_time and "etd_lp" in df.columns:
+        try:
+            start_date, end_date, period_desc = parse_time_period(query)
+            etd_norm = df["etd_lp"].dt.normalize()
+            df = df[df["etd_lp"].notna() & (etd_norm >= start_date) & (etd_norm <= end_date)].copy()
+            if df.empty:
+                where = port_code or port_name
+                return f"No not-yet-departed containers found at '{where}' with ETD in {period_desc}."
+        except Exception:
+            pass
+
+    # 11) Output shaping
+    output_cols = [
+        "container_number",
+        "load_port",
+        "etd_lp",
+        "atd_lp",
+        "discharge_port",
+        "po_number_multiple",
+        "final_carrier_name",
+        "transport_mode",
+        "consignee_code_multiple",
+    ]
+    if hot_col and hot_col in df.columns:
+        output_cols.append(hot_col)
+
+    output_cols = [c for c in output_cols if c in df.columns]
+    out = df[output_cols].drop_duplicates().copy()
+
+    # Sort by ETD if present (otherwise by container)
+    if "etd_lp" in out.columns:
+        out = safe_sort_dataframe(out, "etd_lp", ascending=True)
+    else:
+        out = safe_sort_dataframe(out, "container_number", ascending=True)
+
+    # Format dates
+    for dcol in ["etd_lp", "atd_lp"]:
+        if dcol in out.columns and pd.api.types.is_datetime64_any_dtype(out[dcol]):
+            out[dcol] = out[dcol].dt.strftime("%Y-%m-%d")
+
+    # 12) Count intent support
+    is_count_query = bool(re.search(r"\b(how\s+many|count|number\s+of|total)\b", q_lower))
+    if is_count_query:
+        where = port_code or port_name
+        sample = out["container_number"].dropna().astype(str).unique().tolist()[:50] if "container_number" in out.columns else []
+        return [{
+            "count": int(len(out)),
+            "load_port": where,
+            "logic": "atd_lp is null",
+            "sample_containers": sample,
+        }]
+
+    return out.head(200).where(pd.notnull(out), None).to_dict(orient="records")
+
+# ...existing code...
 
 
 def get_containers_departed_from_load_port(query: str) -> str:
@@ -9056,6 +9331,33 @@ TOOLS = [
             "DO NOT use Keyword Lookup / Container Milestones for booking-number mapping questions.\n"
         )
     ),
+	Tool(
+        name="Get Containers Still At Load Port (Not Yet Departed)",
+        func=get_containers_still_at_load_port,
+        description=(
+            "PRIMARY TOOL for queries asking which containers/shipments are STILL AT an origin/load port and have NOT departed yet.\n"
+            "\n"
+            "Use this tool when user asks variants like:\n"
+            "- 'Which containers are still at CHATTOGRAM and not yet departed?'\n"
+            "- 'containers not departed from Chattogram'\n"
+            "- 'shipments stuck at origin Chattogram'\n"
+            "- 'containers awaiting departure at BDCGP'\n"
+            "- 'how many containers are at SHANGHAI and haven't left?'\n"
+            "\n"
+            "Core logic (must follow):\n"
+            "- atd_lp is NULL => not departed\n"
+            "- Filter by load_port matching the user location (port name like 'CHATTOGRAM' OR code like '(BDCGP)' or 'BDCGP')\n"
+            "\n"
+            "Supported optional filters (only if user asks):\n"
+            "- Hot containers: if query includes hot/priority/urgent/rush/expedited (uses hot_container_flag column)\n"
+            "- Transport mode: sea/air/road/rail/courier/sea-air\n"
+            "- Consignee scope: honors thread-local consignee authorization via _df(); can also accept consignee_code parameter.\n"
+            "\n"
+            "Important:\n"
+            "- DO NOT use 'Get Containers Departing From Load Port' (that tool is ETD-window/upcoming departures).\n"
+            "- This tool is for 'still at X', 'not yet departed', 'awaiting departure', 'not left' semantics.\n"
+        ),
+    ),
     Tool(
     name="Get Bulk Container Transit Analysis",
     func=get_bulk_container_transit_analysis,
@@ -9069,6 +9371,7 @@ TOOLS = [
     ),
 
 ]
+
 
 
 
