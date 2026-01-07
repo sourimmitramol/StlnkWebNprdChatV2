@@ -4864,8 +4864,7 @@ def get_containers_departing_from_load_port(query: str) -> str:
             output_cols.append(bl_col)
 
     # Add additional context columns
-    additional_cols = ['discharge_port', 'eta_dp', 'revised_eta', 'consignee_code_multiple', 'final_carrier_name', 'hot_container_flag']
-    
+    additional_cols = ['discharge_port', 'eta_dp', 'revised_eta', 'consignee_code_multiple', 'final_carrier_name']   
     # Add transport_mode if it was used in filtering
     if modes and 'transport_mode' in results.columns:
         additional_cols.append('transport_mode')
@@ -9371,6 +9370,7 @@ TOOLS = [
     ),
 
 ]
+
 
 
 
