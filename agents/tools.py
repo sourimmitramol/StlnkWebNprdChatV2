@@ -1479,15 +1479,14 @@ def get_current_location(query: str) -> str:
 # ------------------------------------------------------------------
 # 1️⃣ Container Milestones
 # ------------------------------------------------------------------
+
 def get_container_milestones(input_str: str) -> str:
     """
     Retrieve all milestone events for a given container, PO, or OBL number.
     Search order:
       1. container_number
-      2. po_number_multiple
+      2. po_number_multiple (ENHANCED)
       3. ocean_bl_no_multiple
-    Output:
-      Returns a descriptive text block exactly in your desired format.
     """
     import pandas as pd
 
@@ -1512,12 +1511,50 @@ def get_container_milestones(input_str: str) -> str:
         header_text = ""
         row = match_container.iloc[0]
     else:
-        # 2) Try PO match
-        match_po = df[df["po_number_multiple"].str.contains(query, case=False, na=False)]
-        if not match_po.empty:
-            container_no = match_po.iloc[0]["container_number"]
-            header_text = f"The Container <con>{container_no}</con> is associated with the PO <po>{query}</po> . Status is in below : \n\n"
-            row = match_po.iloc[0]
+        # 2) **ENHANCED PO MATCH** - Extract and normalize PO number
+        po_no = extract_po_number(query)
+        
+        # Additional fallback for pure numeric PO (e.g., "5300009636")
+        if not po_no:
+            # Try to extract pure numeric sequence
+            m = re.search(r'\b(\d{6,})\b', query)
+            if m:
+                po_no = m.group(1)
+        
+        if po_no:
+            try:
+                logger.info(f"[get_container_milestones] Searching for PO: {po_no}")
+            except:
+                pass
+            
+            # **CRITICAL FIX**: Use robust PO matching with normalization
+            po_norm = _normalize_po_token(po_no)
+            
+            # Check if po_number_multiple column exists
+            if "po_number_multiple" in df.columns:
+                # Use the robust _po_in_cell matcher
+                match_po = df[df["po_number_multiple"].apply(lambda cell: _po_in_cell(cell, po_norm))]
+                
+                try:
+                    logger.info(f"[get_container_milestones] PO match results: {len(match_po)} rows found")
+                except:
+                    pass
+                
+                if not match_po.empty:
+                    container_no = match_po.iloc[0]["container_number"]
+                    header_text = f"The Container <con>{container_no}</con> is associated with the PO <po>{po_no}</po> . Status is in below : \n\n"
+                    row = match_po.iloc[0]
+                else:
+                    # **FALLBACK**: Try simple contains match (less strict)
+                    match_po_fallback = df[df["po_number_multiple"].str.upper().str.contains(po_no.upper(), na=False)]
+                    if not match_po_fallback.empty:
+                        container_no = match_po_fallback.iloc[0]["container_number"]
+                        header_text = f"The Container <con>{container_no}</con> is associated with the PO <po>{po_no}</po> . Status is in below : \n\n"
+                        row = match_po_fallback.iloc[0]
+                    else:
+                        return f"No record found for PO {po_no}."
+            else:
+                return "PO column (po_number_multiple) not found in dataset."
         else:
             # 3) Try OBL match
             match_obl = df[df["ocean_bl_no_multiple"].str.contains(query, case=False, na=False)]
@@ -1528,10 +1565,8 @@ def get_container_milestones(input_str: str) -> str:
             else:
                 return f"No record found for {query}."
 
-    # ---- milestone rows with priority (prevents bad data ordering from choosing wrong "latest") ----
-    # Higher rank = more final/completed status.
+    # ---- milestone rows with priority (prevents bad data ordering) ----
     milestone_defs = [
-        
         ("<strong>Departed From</strong>", row.get("load_port"), row.get("atd_lp"), 20),
         ("<strong>Arrived at Final Load Port</strong>", row.get("final_load_port"), row.get("ata_flp"), 30),
         ("<strong>Departed from Final Load Port</strong>", row.get("final_load_port"), row.get("atd_flp"), 40),
@@ -1563,9 +1598,6 @@ def get_container_milestones(input_str: str) -> str:
 
     milestones_df = pd.DataFrame(milestone_rows)
 
-    # Sort chronologically for display
-    # milestones_df = milestones_df.sort_values("_dt", ascending=True)
-
     # Pick "latest status" by (rank first, then date)
     last_row = max(milestone_rows, key=lambda x: (x["_rank"], x["_dt"]))
     latest_text = f"The Container <con>{container_no}</con> {last_row['event']} {last_row['location']} on {last_row['date']}"
@@ -1579,6 +1611,108 @@ def get_container_milestones(input_str: str) -> str:
         f" <MILESTONE> {milestone_text}."
     )
     return result
+# ...existing code...
+
+# def get_container_milestones(input_str: str) -> str:
+#     """
+#     Retrieve all milestone events for a given container, PO, or OBL number.
+#     Search order:
+#       1. container_number
+#       2. po_number_multiple
+#       3. ocean_bl_no_multiple
+#     Output:
+#       Returns a descriptive text block exactly in your desired format.
+#     """
+#     import pandas as pd
+
+#     query = str(input_str).strip()
+#     if not query:
+#         return "Please provide a container number, PO number, or OBL number."
+
+#     df = _df().copy()
+
+#     # Normalize required columns
+#     for col in ["container_number", "po_number_multiple", "ocean_bl_no_multiple"]:
+#         if col in df.columns:
+#             df[col] = df[col].astype(str).fillna("").str.strip()
+
+#     container_no = None
+#     header_text = ""
+
+#     # 1) Try direct container match
+#     match_container = df[df["container_number"].str.replace(" ", "").str.upper() == query.replace(" ", "").upper()]
+#     if not match_container.empty:
+#         container_no = match_container.iloc[0]["container_number"]
+#         header_text = ""
+#         row = match_container.iloc[0]
+#     else:
+#         # 2) Try PO match
+#         match_po = df[df["po_number_multiple"].str.contains(query, case=False, na=False)]
+#         if not match_po.empty:
+#             container_no = match_po.iloc[0]["container_number"]
+#             header_text = f"The Container <con>{container_no}</con> is associated with the PO <po>{query}</po> . Status is in below : \n\n"
+#             row = match_po.iloc[0]
+#         else:
+#             # 3) Try OBL match
+#             match_obl = df[df["ocean_bl_no_multiple"].str.contains(query, case=False, na=False)]
+#             if not match_obl.empty:
+#                 container_no = match_obl.iloc[0]["container_number"]
+#                 header_text = f"The Container <con>{container_no}</con> is associated with the OBL <obl>{query}</obl> . Status is in below : \n\n"
+#                 row = match_obl.iloc[0]
+#             else:
+#                 return f"No record found for {query}."
+
+#     # ---- milestone rows with priority (prevents bad data ordering from choosing wrong "latest") ----
+#     # Higher rank = more final/completed status.
+#     milestone_defs = [
+        
+#         ("<strong>Departed From</strong>", row.get("load_port"), row.get("atd_lp"), 20),
+#         ("<strong>Arrived at Final Load Port</strong>", row.get("final_load_port"), row.get("ata_flp"), 30),
+#         ("<strong>Departed from Final Load Port</strong>", row.get("final_load_port"), row.get("atd_flp"), 40),
+#         ("<strong>Expected at Discharge Port</strong>", row.get("discharge_port"), row.get("derived_ata_dp") or row.get("eta_dp"), 50),
+#         ("<strong>Reached at Discharge Port</strong>", row.get("discharge_port"), row.get("ata_dp"), 60),
+#         ("<strong>Reached at Last CY</strong>", row.get("last_cy_location"), row.get("equipment_arrived_at_last_cy"), 70),
+#         ("<strong>Out Gate at Last CY</strong>", row.get("out_gate_at_last_cy_lcn"), row.get("out_gate_at_last_cy"), 80),
+#         ("<strong>Delivered at</strong>", row.get("delivery_date_to_consignee_lcn"), row.get("delivery_date_to_consignee"), 90),
+#         ("<strong>Empty Container Returned to</strong>", row.get("empty_container_return_lcn"), row.get("empty_container_return_date"), 100),
+#     ]
+
+#     milestone_rows = []
+#     for event, location, raw_date, rank in milestone_defs:
+#         dt = pd.to_datetime(raw_date, errors="coerce")
+#         if pd.isna(dt):
+#             continue
+#         milestone_rows.append(
+#             {
+#                 "event": event,
+#                 "location": None if pd.isna(location) else location,
+#                 "date": dt.strftime("%Y-%m-%d"),
+#                 "_dt": dt,
+#                 "_rank": rank,
+#             }
+#         )
+
+#     if not milestone_rows:
+#         return f"No milestones found for container {container_no}."
+
+#     milestones_df = pd.DataFrame(milestone_rows)
+
+#     # Sort chronologically for display
+#     # milestones_df = milestones_df.sort_values("_dt", ascending=True)
+
+#     # Pick "latest status" by (rank first, then date)
+#     last_row = max(milestone_rows, key=lambda x: (x["_rank"], x["_dt"]))
+#     latest_text = f"The Container <con>{container_no}</con> {last_row['event']} {last_row['location']} on {last_row['date']}"
+
+#     # Convert milestone dataframe to string (no internal helper cols)
+#     milestone_text = milestones_df[["event", "location", "date"]].to_string(index=False, header=False)
+
+#     result = (
+#         f"{header_text}"
+#         f"{latest_text}\n\n"
+#         f" <MILESTONE> {milestone_text}."
+#     )
+#     return result
 
 def safe_date(v):
     """
@@ -8904,19 +9038,31 @@ TOOLS = [
     Tool(
         name="Get Container Milestones",
         func=get_container_milestones,
-        return_direct=True,  # <<< IMPORTANT: bypass LLM output parser; tool output becomes final answer
+        return_direct=True,
         description=(
-            "PRIMARY TOOL FOR ALL CONTAINER STATUS AND MILESTONE QUERIES. "
+            "PRIMARY TOOL FOR ALL CONTAINER AND PO STATUS/MILESTONE QUERIES.\n"
+            "\n"
             "Use this tool FIRST for ANY query asking about:\n"
-            "- Container status (e.g., 'what is status of ABCD1234567')\n"
-            "- Container milestones (e.g., 'show milestones for container X')\n"
-            "- Container tracking (e.g., 'track container Y')\n"
-            "- Container location (e.g., 'where is container Z')\n"
-            "- Container journey/events (e.g., 'event history for container')\n"
-            "- When/where queries (e.g., 'when did container arrive', 'where is my container')\n"
+            "- Container status: 'what is status of container ABCD1234567'\n"
+            "- PO status: 'what is status of PO 5300009636', 'status of the PO 5300009636'\n"
+            "- Container milestones: 'show milestones for container X'\n"
+            "- PO milestones: 'show milestones for PO Y', 'track PO 5300009636'\n"
+            "- Container tracking: 'track container Y'\n"
+            "- Container location: 'where is container Z'\n"
+            "- PO location: 'where is PO 5300009636'\n"
+            "- Container journey: 'event history for container'\n"
+            "- PO journey: 'journey for PO X'\n"
+            "\n"
+            "CRITICAL PO HANDLING:\n"
+            "- Input can be: 'PO 5300009636', '5300009636', 'PO5300009636', 'po 5300009636'\n"
+            "- Tool will find container(s) for the PO and return their milestones\n"
+            "- Searches po_number_multiple column (comma-separated values)\n"
+            "- Returns: 'The Container XXXX is associated with the PO YYYY. Status is...'\n"
+            "\n"
             "Keywords: status, milestone, track, tracking, where, location, journey, event, history, progress\n"
-            "This tool provides complete timeline of container movement with all milestone dates.\n"
-            "DO NOT use 'Check Arrival Status' if query asks for status/milestones."
+            "\n"
+            "DO NOT use 'Get Containers or PO or OBL By Supplier' for status queries.\n"
+            "DO NOT use 'Check Arrival Status' for milestone queries.\n"
         )
     ),
 
@@ -9379,6 +9525,7 @@ TOOLS = [
     ),
 
 ]
+
 
 
 
