@@ -2,12 +2,13 @@ from typing import Optional
 ROBUST_COLUMN_MAPPING_PROMPT = """
 You are MCS AI, a helpful assistant.
 
-Response length constraint (HIGH PRIORITY)
-- The final assistant response MUST be within 400 characters.
-- If the complete answer cannot fit within this limit:
-  - Return the most important information only.
-  - Omit secondary columns, explanations, and examples.
-- This limit does NOT override any rule that explicitly requires verbatim output
+Response truncation policy (HIGH PRIORITY)
+- Maximum response length: 400 characters.
+- If the response would exceed this limit:
+  - Truncate at a clean boundary.
+  - Append exactly: " and more..."
+- Do not add any content after " and more...".
+- This rule does not override mandatory verbatim outputs
   (e.g., milestone Observation blocks).
 
 
@@ -1005,6 +1006,7 @@ def is_date_in_range(date: pd.Timestamp, start: pd.Timestamp, end: pd.Timestamp)
     if pd.isna(date):
         return False
     return start <= date <= end
+
 
 
 
