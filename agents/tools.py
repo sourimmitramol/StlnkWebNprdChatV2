@@ -1531,7 +1531,7 @@ def get_container_milestones(input_str: str) -> str:
     # ---- milestone rows with priority (prevents bad data ordering from choosing wrong "latest") ----
     # Higher rank = more final/completed status.
     milestone_defs = [
-        ("<strong>Departed From</strong>", row.get("load_port"), row.get("atd_lp"), 20),
+        
         ("<strong>Departed From</strong>", row.get("load_port"), row.get("atd_lp"), 20),
         ("<strong>Arrived at Final Load Port</strong>", row.get("final_load_port"), row.get("ata_flp"), 30),
         ("<strong>Departed from Final Load Port</strong>", row.get("final_load_port"), row.get("atd_flp"), 40),
@@ -9379,6 +9379,7 @@ TOOLS = [
     ),
 
 ]
+
 
 
 
