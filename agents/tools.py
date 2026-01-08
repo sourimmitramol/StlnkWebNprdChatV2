@@ -1531,15 +1531,16 @@ def get_container_milestones(input_str: str) -> str:
     # ---- milestone rows with priority (prevents bad data ordering from choosing wrong "latest") ----
     # Higher rank = more final/completed status.
     milestone_defs = [
-        ("<strong>Empty Container Returned to</strong>", row.get("empty_container_return_lcn"), row.get("empty_container_return_date"), 100),
-        ("<strong>Delivered at</strong>", row.get("delivery_location_to_consignee"), row.get("delivery_date_to_consignee"), 90),
-        ("<strong>Out Gate at Last CY</strong>", row.get("out_gate_at_last_cy_lcn"), row.get("out_gate_at_last_cy"), 80),
-        ("<strong>Reached at Last CY</strong>", row.get("last_cy_location"), row.get("equipment_arrived_at_last_cy"), 70),
-        ("<strong>Reached at Discharge Port</strong>", row.get("discharge_port"), row.get("ata_dp"), 60),
-        ("<strong>Expected at Discharge Port</strong>", row.get("discharge_port"), row.get("derived_ata_dp") or row.get("eta_dp"), 50),
-        ("<strong>Departed from Final Load Port</strong>", row.get("final_load_port"), row.get("atd_flp"), 40),
-        ("<strong>Arrived at Final Load Port</strong>", row.get("final_load_port"), row.get("ata_flp"), 30),
         ("<strong>Departed From</strong>", row.get("load_port"), row.get("atd_lp"), 20),
+        ("<strong>Departed From</strong>", row.get("load_port"), row.get("atd_lp"), 20),
+        ("<strong>Arrived at Final Load Port</strong>", row.get("final_load_port"), row.get("ata_flp"), 30),
+        ("<strong>Departed from Final Load Port</strong>", row.get("final_load_port"), row.get("atd_flp"), 40),
+        ("<strong>Expected at Discharge Port</strong>", row.get("discharge_port"), row.get("derived_ata_dp") or row.get("eta_dp"), 50),
+        ("<strong>Reached at Discharge Port</strong>", row.get("discharge_port"), row.get("ata_dp"), 60),
+        ("<strong>Reached at Last CY</strong>", row.get("last_cy_location"), row.get("equipment_arrived_at_last_cy"), 70),
+        ("<strong>Out Gate at Last CY</strong>", row.get("out_gate_at_last_cy_lcn"), row.get("out_gate_at_last_cy"), 80),
+        ("<strong>Delivered at</strong>", row.get("delivery_date_to_consignee_lcn"), row.get("delivery_date_to_consignee"), 90),
+        ("<strong>Empty Container Returned to</strong>", row.get("empty_container_return_lcn"), row.get("empty_container_return_date"), 100),
     ]
 
     milestone_rows = []
@@ -1563,7 +1564,7 @@ def get_container_milestones(input_str: str) -> str:
     milestones_df = pd.DataFrame(milestone_rows)
 
     # Sort chronologically for display
-    milestones_df = milestones_df.sort_values("_dt", ascending=True)
+    # milestones_df = milestones_df.sort_values("_dt", ascending=True)
 
     # Pick "latest status" by (rank first, then date)
     last_row = max(milestone_rows, key=lambda x: (x["_rank"], x["_dt"]))
@@ -1578,7 +1579,6 @@ def get_container_milestones(input_str: str) -> str:
         f" <MILESTONE> {milestone_text}."
     )
     return result
-
 
 def safe_date(v):
     """
@@ -9379,6 +9379,7 @@ TOOLS = [
     ),
 
 ]
+
 
 
 
