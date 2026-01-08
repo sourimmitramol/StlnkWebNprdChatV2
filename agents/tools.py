@@ -8622,7 +8622,9 @@ def get_bulk_container_transit_analysis(query: str) -> str:
 # ------------------------------------------------------------------
 # TOOLS list – must be at module level, not inside any function!
 # ------------------------------------------------------------------
-Tool(
+TOOLS = [
+
+    Tool(
         name="Get Container Milestones",
         func=get_container_milestones,
         return_direct=True,  # <<< IMPORTANT: bypass LLM output parser; tool output becomes final answer
@@ -9073,6 +9075,7 @@ Tool(
     ),
 
 ]
+
 
 
 
