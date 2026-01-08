@@ -7587,6 +7587,8 @@ def get_eta_for_booking(question: str = None, consignee_code: str = None, **kwar
 # ...existing code...
 
 
+
+
 def get_booking_details(question: str = None, consignee_code: str = None, **kwargs):
     """
     Booking-related lookup tool:
@@ -7604,6 +7606,11 @@ def get_booking_details(question: str = None, consignee_code: str = None, **kwar
     q = (question or kwargs.get("query") or kwargs.get("input") or "").strip()
     if not q:
         return "Please provide a booking/PO/container/BL query."
+
+    try:
+        logger.info(f"[get_booking_details] Received query: {q!r}")
+    except:
+        pass
 
     q_lower = q.lower()
     q_upper = q.upper()
@@ -7624,8 +7631,15 @@ def get_booking_details(question: str = None, consignee_code: str = None, **kwar
 
     po_no = extract_po_number(q_extract)
     if not po_no:
+        # Try explicit "PO" prefix
         m_po = re.search(r"\bPO\s*#?\s*(\d{5,})\b", q_upper)
         po_no = m_po.group(1) if m_po else None
+    if not po_no:
+        # **CRITICAL FIX**: If query has "booking number of <digits>", treat as PO
+        if re.search(r"\bbooking\s+number\s+of\b", q_lower):
+            m_numeric = re.search(r"\b(\d{7,})\b", q_upper)
+            if m_numeric:
+                po_no = m_numeric.group(1)
 
     try:
         obl_no = extract_ocean_bl_number(q_extract)
@@ -7658,6 +7672,11 @@ def get_booking_details(question: str = None, consignee_code: str = None, **kwar
     # Guard: if BL extractor grabbed a container-like token, prefer container semantics
     if obl_no and re.fullmatch(r"[A-Z]{4}\d{7}", str(obl_no).upper().strip()):
         obl_no = None
+
+    try:
+        logger.info(f"[get_booking_details] Extracted identifiers: container={container_no}, po={po_no}, obl={obl_no}, booking={booking_no}")
+    except:
+        pass
 
     # Intent flags
     wants_booking_number = bool(re.search(r"\bbooking\s+number\b", q_lower)) and not booking_no
@@ -7775,7 +7794,21 @@ def get_booking_details(question: str = None, consignee_code: str = None, **kwar
             if matches.empty:
                 matches = df[df["container_number"].astype(str).str.contains(container_no, case=False, na=False)].copy()
             if matches.empty:
-                return f"No data found for container {container_no}."
+                # **FALLBACK**: Maybe it's actually a PO misidentified as container
+                if re.match(r"^\d{7,}$", container_no):
+                    po_col = "po_number_multiple" if "po_number_multiple" in df.columns else "po_number"
+                    if po_col in df.columns:
+                        po_norm = _normalize_po_token(container_no)
+                        mask = df[po_col].apply(lambda cell: _po_in_cell(cell, po_norm))
+                        matches = df[mask].copy()
+                        if not matches.empty:
+                            pass  # Found as PO, continue
+                        else:
+                            return f"No booking found for container or PO {container_no}."
+                    else:
+                        return f"No data found for container {container_no}."
+                else:
+                    return f"No data found for container {container_no}."
 
         elif po_no:
             po_col = "po_number_multiple" if "po_number_multiple" in df.columns else ("po_number" if "po_number" in df.columns else None)
@@ -7798,9 +7831,9 @@ def get_booking_details(question: str = None, consignee_code: str = None, **kwar
                 return f"No data found for OBL/BL {obl_no}."
 
         else:
-            # Fallback: if user wrote "booking number of 5300008696" (no PO prefix)
+            # **ENHANCED FALLBACK**: if user wrote "booking number of 5300008696" (no PO prefix)
             # treat as PO-like numeric token if present and not a container/booking token
-            m_num = re.search(r"\b(\d{5,})\b", q_upper)
+            m_num = re.search(r"\b(\d{7,})\b", q_upper)  # POs are typically 7+ digits
             if m_num:
                 po_guess = m_num.group(1)
                 po_col = "po_number_multiple" if "po_number_multiple" in df.columns else ("po_number" if "po_number" in df.columns else None)
@@ -7809,7 +7842,10 @@ def get_booking_details(question: str = None, consignee_code: str = None, **kwar
                     mask = df[po_col].apply(lambda cell: _po_in_cell(cell, po_norm))
                     matches = df[mask].copy()
                     if matches.empty:
-                        return f"No data found for PO {po_guess}."
+                        # **SECONDARY FALLBACK**: Try simple contains match
+                        matches = df[df[po_col].astype(str).str.upper().str.contains(po_guess, na=False)].copy()
+                    if matches.empty:
+                        return f"No booking found for PO {po_guess}. Please verify the PO number."
                 else:
                     return "PO column not found in the dataset."
             else:
@@ -7829,6 +7865,7 @@ def get_booking_details(question: str = None, consignee_code: str = None, **kwar
         return out.where(pd.notnull(out), None).to_dict(orient="records")
 
     return "Please ask a booking-related question (booking number of PO/container/BL, ETA of booking, or PO/container/BL of booking)."
+
 
 
 
@@ -9461,28 +9498,45 @@ TOOLS = [
         name="Get Booking Details",
         func=get_booking_details,
         description=(
-            "PRIMARY TOOL for BOOKING-related mapping queries (booking ⇄ PO ⇄ container ⇄ ocean BL/OBL) and booking ETA routing.\n"
+            "PRIMARY TOOL for BOOKING NUMBER lookups (booking ⇄ PO ⇄ container ⇄ ocean BL/OBL).\n"
             "\n"
-            "Use this tool when the user asks ANY of the following:\n"
-            "- 'what is the booking number of PO 5300008696' or 'booking number of 5300008696'\n"
-            "- 'what is the booking number of container MSBU4522691' or 'booking number of MSBU4522691'\n"
-            "- 'what is the booking number of BL/OBL <BL>' or 'booking number of <BL>'\n"
-            "- 'PO of booking TH2017962' / 'container of booking TH2017962' / 'BL of booking TH2017962'\n"
-            "- 'ETA of booking GT3000512' (this tool delegates to 'Get ETA For Booking')\n"
+            "USE THIS TOOL when user asks about BOOKING NUMBERS:\n"
+            "CORRECT usage examples:\n"
+            "- 'what is the booking number of PO 5300008696' → Input: '5300008696'\n"
+            "- 'booking number of 5300008696' → Input: '5300008696'\n"
+            "- 'booking number for PO 5300008696' → Input: '5300008696'\n"
+            "- 'what is the booking number of container MSBU4522691' → Input: 'MSBU4522691'\n"
+            "- 'booking number of MSBU4522691' → Input: 'MSBU4522691'\n"
+            "- 'booking number of BL MOLWMNL2400017' → Input: 'MOLWMNL2400017'\n"
+            "- 'PO of booking VN2084805' → Input: 'VN2084805'\n"
+            "- 'container of booking TH2017962' → Input: 'TH2017962'\n"
+            "- 'BL of booking GT3000512' → Input: 'GT3000512'\n"
             "\n"
-            "IMPORTANT: This tool ALSO supports BARE IDENTIFIERS as input (agent retries may pass only the code).\n"
-            "Examples of valid direct inputs that MUST be handled by this tool:\n"
-            "- 'PO5300008696' or '5300008696' (treat as PO → booking number)\n"
-            "- 'MSBU4522691' (treat as container → booking number)\n"
-            "- 'MLWCN0001523' (treat as ocean BL/OBL → booking number)\n"
+            "PO NUMBER HANDLING (CRITICAL):\n"
+            "- PO numbers are typically 7-10 digits (e.g., 5300008696, 5300009636)\n"
+            "- Input can be: 'PO 5300008696', '5300008696', 'PO5300008696', 'po 5300008696'\n"
+            "- Tool searches po_number_multiple column (comma-separated values)\n"
+            "- Returns booking_number_multiple + container + discharge_port + consignee\n"
             "\n"
-            "Data columns:\n"
-            "- booking_number_multiple (comma-separated)\n"
-            "- po_number_multiple / po_number\n"
-            "- container_number\n"
-            "- ocean_bl_no_multiple\n"
+            " CONTAINER HANDLING:\n"
+            "- Container format: 4 letters + 7 digits (e.g., MSBU4522691, MRKU0496086)\n"
+            "- Returns booking_number_multiple for that container\n"
             "\n"
-            "DO NOT use Keyword Lookup / Container Milestones for booking-number mapping questions.\n"
+            " BARE IDENTIFIER SUPPORT:\n"
+            "Agent retries may pass only the code without context words.\n"
+            "This tool MUST handle:\n"
+            "- '5300008696' (7+ digits) → Treat as PO number → return booking\n"
+            "- 'MSBU4522691' (4 letters + 7 digits) → Treat as container → return booking\n"
+            "- 'MOLWMNL2400017' (ocean BL pattern) → Treat as BL → return booking\n"
+            "- 'VN2084805' (booking pattern) → Return PO/container/BL mapping\n"
+            "\n"
+            " DO NOT USE for:\n"
+            "- Status queries (use 'Get Container Milestones')\n"
+            "- Milestone queries (use 'Get Container Milestones')\n"
+            "- ETA of PO (use 'Get ETA For PO')\n"
+            "- Transit analysis (use transit tools)\n"
+            "\n"
+            " ETA delegation: 'ETA of booking X' → delegates to 'Get ETA For Booking'\n"
         )
     ),
 	Tool(
@@ -9525,6 +9579,7 @@ TOOLS = [
     ),
 
 ]
+
 
 
 
