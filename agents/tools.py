@@ -1505,27 +1505,21 @@ def get_container_milestones(input_str: str) -> str:
     container_no = None
     header_text = ""
 
-    # -----------------------------
-    # 1️⃣ Try direct container match
-    # -----------------------------
+    # 1) Try direct container match
     match_container = df[df["container_number"].str.replace(" ", "").str.upper() == query.replace(" ", "").upper()]
     if not match_container.empty:
         container_no = match_container.iloc[0]["container_number"]
-        header_text = ""  # direct container query, no header
+        header_text = ""
         row = match_container.iloc[0]
     else:
-        # -----------------------------
-        # 2️⃣ Try PO match
-        # -----------------------------
+        # 2) Try PO match
         match_po = df[df["po_number_multiple"].str.contains(query, case=False, na=False)]
         if not match_po.empty:
             container_no = match_po.iloc[0]["container_number"]
             header_text = f"The Container <con>{container_no}</con> is associated with the PO <po>{query}</po> . Status is in below : \n\n"
             row = match_po.iloc[0]
         else:
-            # -----------------------------
-            # 3️⃣ Try OBL match
-            # -----------------------------
+            # 3) Try OBL match
             match_obl = df[df["ocean_bl_no_multiple"].str.contains(query, case=False, na=False)]
             if not match_obl.empty:
                 container_no = match_obl.iloc[0]["container_number"]
@@ -1534,42 +1528,55 @@ def get_container_milestones(input_str: str) -> str:
             else:
                 return f"No record found for {query}."
 
-
-    milestones = [
-        ("<strong>Departed From</strong>", row.get("load_port"), safe_date(row.get("atd_lp"))),
-        ("<strong>Arrived at Final Load Port</strong>", row.get("final_load_port"), safe_date(row.get("ata_flp"))),
-        ("<strong>Departed from Final Load Port</strong>", row.get("final_load_port"), safe_date(row.get("atd_flp"))),
-        ("<strong>Expected at Discharge Port</strong>", row.get("discharge_port"), safe_date(row.get("derived_ata_dp") or row.get("eta_dp"))),
-        ("<strong>Reached at Discharge Port</strong>", row.get("discharge_port"), safe_date(row.get("ata_dp"))),
-        ("<strong>Reached at Last CY</strong>", row.get("last_cy_location"), safe_date(row.get("equipment_arrived_at_last_cy"))),
-        ("<strong>Out Gate at Last CY</strong>", row.get("out_gate_at_last_cy_lcn"), safe_date(row.get("out_gate_at_last_cy"))),
-        ("<strong>Delivered at</strong>", row.get("delivery_location_to_consignee"), safe_date(row.get("delivery_date_to_consignee"))),
-        ("<strong>Empty Container Returned to</strong>", row.get("empty_container_return_lcn"), safe_date(row.get("empty_container_return_date"))),
+    # ---- milestone rows with priority (prevents bad data ordering from choosing wrong "latest") ----
+    # Higher rank = more final/completed status.
+    milestone_defs = [
+        ("<strong>Empty Container Returned to</strong>", row.get("empty_container_return_lcn"), row.get("empty_container_return_date"), 100),
+        ("<strong>Delivered at</strong>", row.get("delivery_location_to_consignee"), row.get("delivery_date_to_consignee"), 90),
+        ("<strong>Out Gate at Last CY</strong>", row.get("out_gate_at_last_cy_lcn"), row.get("out_gate_at_last_cy"), 80),
+        ("<strong>Reached at Last CY</strong>", row.get("last_cy_location"), row.get("equipment_arrived_at_last_cy"), 70),
+        ("<strong>Reached at Discharge Port</strong>", row.get("discharge_port"), row.get("ata_dp"), 60),
+        ("<strong>Expected at Discharge Port</strong>", row.get("discharge_port"), row.get("derived_ata_dp") or row.get("eta_dp"), 50),
+        ("<strong>Departed from Final Load Port</strong>", row.get("final_load_port"), row.get("atd_flp"), 40),
+        ("<strong>Arrived at Final Load Port</strong>", row.get("final_load_port"), row.get("ata_flp"), 30),
+        ("<strong>Departed From</strong>", row.get("load_port"), row.get("atd_lp"), 20),
     ]
 
-    milestones_df = pd.DataFrame(milestones, columns=["event", "location", "date"])
-    milestones_df = milestones_df.dropna(subset=["date"])
+    milestone_rows = []
+    for event, location, raw_date, rank in milestone_defs:
+        dt = pd.to_datetime(raw_date, errors="coerce")
+        if pd.isna(dt):
+            continue
+        milestone_rows.append(
+            {
+                "event": event,
+                "location": None if pd.isna(location) else location,
+                "date": dt.strftime("%Y-%m-%d"),
+                "_dt": dt,
+                "_rank": rank,
+            }
+        )
 
-    if milestones_df.empty:
+    if not milestone_rows:
         return f"No milestones found for container {container_no}."
 
-    # Sort chronologically
-    milestones_df = milestones_df.sort_values("date")
+    milestones_df = pd.DataFrame(milestone_rows)
 
-    # Get the latest milestone
-    last = milestones_df.iloc[-1]
-    latest_text = f"The Container <con>{container_no}</con> {last['event']} {last['location']} on {last['date']}"
+    # Sort chronologically for display
+    milestones_df = milestones_df.sort_values("_dt", ascending=True)
 
-    # Convert milestone dataframe to string
-    milestone_text = milestones_df.to_string(index=False, header=False)
+    # Pick "latest status" by (rank first, then date)
+    last_row = max(milestone_rows, key=lambda x: (x["_rank"], x["_dt"]))
+    latest_text = f"The Container <con>{container_no}</con> {last_row['event']} {last_row['location']} on {last_row['date']}"
 
-    # Final formatted output
+    # Convert milestone dataframe to string (no internal helper cols)
+    milestone_text = milestones_df[["event", "location", "date"]].to_string(index=False, header=False)
+
     result = (
         f"{header_text}"
         f"{latest_text}\n\n"
         f" <MILESTONE> {milestone_text}."
     )
-
     return result
 
 
@@ -8893,9 +8900,11 @@ def get_bulk_container_transit_analysis(query: str) -> str:
 # TOOLS list – must be at module level, not inside any function!
 # ------------------------------------------------------------------
 TOOLS = [
+
     Tool(
         name="Get Container Milestones",
         func=get_container_milestones,
+        return_direct=True,  # <<< IMPORTANT: bypass LLM output parser; tool output becomes final answer
         description=(
             "PRIMARY TOOL FOR ALL CONTAINER STATUS AND MILESTONE QUERIES. "
             "Use this tool FIRST for ANY query asking about:\n"
@@ -9370,6 +9379,7 @@ TOOLS = [
     ),
 
 ]
+
 
 
 
