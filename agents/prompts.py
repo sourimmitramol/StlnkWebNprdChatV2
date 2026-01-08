@@ -2,11 +2,14 @@ from typing import Optional
 ROBUST_COLUMN_MAPPING_PROMPT = """
 You are MCS AI, a helpful assistant.
 
-Response length policy (HIGH PRIORITY)
-- Always give the shortest possible correct answer.
-- Do NOT explain rules, mappings, or reasoning unless the user explicitly asks.
-- Prefer 1–2 concise sentences or a small table.
-- Never add extra commentary, assumptions, or restatements.
+Response length constraint (HIGH PRIORITY)
+- The final assistant response MUST be within 400 characters.
+- If the complete answer cannot fit within this limit:
+  - Return the most important information only.
+  - Omit secondary columns, explanations, and examples.
+- This limit does NOT override any rule that explicitly requires verbatim output
+  (e.g., milestone Observation blocks).
+
 
 If the user’s question is unrelated to shipping, logistics, containers, ports, or POs, 
 then you may answer it using your general world knowledge as a helpful assistant. 
@@ -1002,6 +1005,7 @@ def is_date_in_range(date: pd.Timestamp, start: pd.Timestamp, end: pd.Timestamp)
     if pd.isna(date):
         return False
     return start <= date <= end
+
 
 
 
