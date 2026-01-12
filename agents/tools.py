@@ -1479,15 +1479,14 @@ def get_current_location(query: str) -> str:
 # ------------------------------------------------------------------
 # 1️⃣ Container Milestones
 # ------------------------------------------------------------------
+
 def get_container_milestones(input_str: str) -> str:
     """
     Retrieve all milestone events for a given container, PO, or OBL number.
     Search order:
       1. container_number
-      2. po_number_multiple
+      2. po_number_multiple (ENHANCED)
       3. ocean_bl_no_multiple
-    Output:
-      Returns a descriptive text block exactly in your desired format.
     """
     import pandas as pd
 
@@ -1512,12 +1511,50 @@ def get_container_milestones(input_str: str) -> str:
         header_text = ""
         row = match_container.iloc[0]
     else:
-        # 2) Try PO match
-        match_po = df[df["po_number_multiple"].str.contains(query, case=False, na=False)]
-        if not match_po.empty:
-            container_no = match_po.iloc[0]["container_number"]
-            header_text = f"The Container <con>{container_no}</con> is associated with the PO <po>{query}</po> . Status is in below : \n\n"
-            row = match_po.iloc[0]
+        # 2) **ENHANCED PO MATCH** - Extract and normalize PO number
+        po_no = extract_po_number(query)
+        
+        # Additional fallback for pure numeric PO (e.g., "5300009636")
+        if not po_no:
+            # Try to extract pure numeric sequence
+            m = re.search(r'\b(\d{6,})\b', query)
+            if m:
+                po_no = m.group(1)
+        
+        if po_no:
+            try:
+                logger.info(f"[get_container_milestones] Searching for PO: {po_no}")
+            except:
+                pass
+            
+            # **CRITICAL FIX**: Use robust PO matching with normalization
+            po_norm = _normalize_po_token(po_no)
+            
+            # Check if po_number_multiple column exists
+            if "po_number_multiple" in df.columns:
+                # Use the robust _po_in_cell matcher
+                match_po = df[df["po_number_multiple"].apply(lambda cell: _po_in_cell(cell, po_norm))]
+                
+                try:
+                    logger.info(f"[get_container_milestones] PO match results: {len(match_po)} rows found")
+                except:
+                    pass
+                
+                if not match_po.empty:
+                    container_no = match_po.iloc[0]["container_number"]
+                    header_text = f"The Container <con>{container_no}</con> is associated with the PO <po>{po_no}</po> . Status is in below : \n\n"
+                    row = match_po.iloc[0]
+                else:
+                    # **FALLBACK**: Try simple contains match (less strict)
+                    match_po_fallback = df[df["po_number_multiple"].str.upper().str.contains(po_no.upper(), na=False)]
+                    if not match_po_fallback.empty:
+                        container_no = match_po_fallback.iloc[0]["container_number"]
+                        header_text = f"The Container <con>{container_no}</con> is associated with the PO <po>{po_no}</po> . Status is in below : \n\n"
+                        row = match_po_fallback.iloc[0]
+                    else:
+                        return f"No record found for PO {po_no}."
+            else:
+                return "PO column (po_number_multiple) not found in dataset."
         else:
             # 3) Try OBL match
             match_obl = df[df["ocean_bl_no_multiple"].str.contains(query, case=False, na=False)]
@@ -1528,18 +1565,17 @@ def get_container_milestones(input_str: str) -> str:
             else:
                 return f"No record found for {query}."
 
-    # ---- milestone rows with priority (prevents bad data ordering from choosing wrong "latest") ----
-    # Higher rank = more final/completed status.
+    # ---- milestone rows with priority (prevents bad data ordering) ----
     milestone_defs = [
-        ("<strong>Empty Container Returned to</strong>", row.get("empty_container_return_lcn"), row.get("empty_container_return_date"), 100),
-        ("<strong>Delivered at</strong>", row.get("delivery_location_to_consignee"), row.get("delivery_date_to_consignee"), 90),
-        ("<strong>Out Gate at Last CY</strong>", row.get("out_gate_at_last_cy_lcn"), row.get("out_gate_at_last_cy"), 80),
-        ("<strong>Reached at Last CY</strong>", row.get("last_cy_location"), row.get("equipment_arrived_at_last_cy"), 70),
-        ("<strong>Reached at Discharge Port</strong>", row.get("discharge_port"), row.get("ata_dp"), 60),
-        ("<strong>Expected at Discharge Port</strong>", row.get("discharge_port"), row.get("derived_ata_dp") or row.get("eta_dp"), 50),
-        ("<strong>Departed from Final Load Port</strong>", row.get("final_load_port"), row.get("atd_flp"), 40),
-        ("<strong>Arrived at Final Load Port</strong>", row.get("final_load_port"), row.get("ata_flp"), 30),
         ("<strong>Departed From</strong>", row.get("load_port"), row.get("atd_lp"), 20),
+        ("<strong>Arrived at Final Load Port</strong>", row.get("final_load_port"), row.get("ata_flp"), 30),
+        ("<strong>Departed from Final Load Port</strong>", row.get("final_load_port"), row.get("atd_flp"), 40),
+        ("<strong>Expected at Discharge Port</strong>", row.get("discharge_port"), row.get("derived_ata_dp") or row.get("eta_dp"), 50),
+        ("<strong>Reached at Discharge Port</strong>", row.get("discharge_port"), row.get("ata_dp"), 60),
+        ("<strong>Reached at Last CY</strong>", row.get("last_cy_location"), row.get("equipment_arrived_at_last_cy"), 70),
+        ("<strong>Out Gate at Last CY</strong>", row.get("out_gate_at_last_cy_lcn"), row.get("out_gate_at_last_cy"), 80),
+        ("<strong>Delivered at</strong>", row.get("delivery_date_to_consignee_lcn"), row.get("delivery_date_to_consignee"), 90),
+        ("<strong>Empty Container Returned to</strong>", row.get("empty_container_return_lcn"), row.get("empty_container_return_date"), 100),
     ]
 
     milestone_rows = []
@@ -1562,9 +1598,6 @@ def get_container_milestones(input_str: str) -> str:
 
     milestones_df = pd.DataFrame(milestone_rows)
 
-    # Sort chronologically for display
-    milestones_df = milestones_df.sort_values("_dt", ascending=True)
-
     # Pick "latest status" by (rank first, then date)
     last_row = max(milestone_rows, key=lambda x: (x["_rank"], x["_dt"]))
     latest_text = f"The Container <con>{container_no}</con> {last_row['event']} {last_row['location']} on {last_row['date']}"
@@ -1578,6 +1611,108 @@ def get_container_milestones(input_str: str) -> str:
         f" <MILESTONE> {milestone_text}."
     )
     return result
+# ...existing code...
+
+# def get_container_milestones(input_str: str) -> str:
+#     """
+#     Retrieve all milestone events for a given container, PO, or OBL number.
+#     Search order:
+#       1. container_number
+#       2. po_number_multiple
+#       3. ocean_bl_no_multiple
+#     Output:
+#       Returns a descriptive text block exactly in your desired format.
+#     """
+#     import pandas as pd
+
+#     query = str(input_str).strip()
+#     if not query:
+#         return "Please provide a container number, PO number, or OBL number."
+
+#     df = _df().copy()
+
+#     # Normalize required columns
+#     for col in ["container_number", "po_number_multiple", "ocean_bl_no_multiple"]:
+#         if col in df.columns:
+#             df[col] = df[col].astype(str).fillna("").str.strip()
+
+#     container_no = None
+#     header_text = ""
+
+#     # 1) Try direct container match
+#     match_container = df[df["container_number"].str.replace(" ", "").str.upper() == query.replace(" ", "").upper()]
+#     if not match_container.empty:
+#         container_no = match_container.iloc[0]["container_number"]
+#         header_text = ""
+#         row = match_container.iloc[0]
+#     else:
+#         # 2) Try PO match
+#         match_po = df[df["po_number_multiple"].str.contains(query, case=False, na=False)]
+#         if not match_po.empty:
+#             container_no = match_po.iloc[0]["container_number"]
+#             header_text = f"The Container <con>{container_no}</con> is associated with the PO <po>{query}</po> . Status is in below : \n\n"
+#             row = match_po.iloc[0]
+#         else:
+#             # 3) Try OBL match
+#             match_obl = df[df["ocean_bl_no_multiple"].str.contains(query, case=False, na=False)]
+#             if not match_obl.empty:
+#                 container_no = match_obl.iloc[0]["container_number"]
+#                 header_text = f"The Container <con>{container_no}</con> is associated with the OBL <obl>{query}</obl> . Status is in below : \n\n"
+#                 row = match_obl.iloc[0]
+#             else:
+#                 return f"No record found for {query}."
+
+#     # ---- milestone rows with priority (prevents bad data ordering from choosing wrong "latest") ----
+#     # Higher rank = more final/completed status.
+#     milestone_defs = [
+        
+#         ("<strong>Departed From</strong>", row.get("load_port"), row.get("atd_lp"), 20),
+#         ("<strong>Arrived at Final Load Port</strong>", row.get("final_load_port"), row.get("ata_flp"), 30),
+#         ("<strong>Departed from Final Load Port</strong>", row.get("final_load_port"), row.get("atd_flp"), 40),
+#         ("<strong>Expected at Discharge Port</strong>", row.get("discharge_port"), row.get("derived_ata_dp") or row.get("eta_dp"), 50),
+#         ("<strong>Reached at Discharge Port</strong>", row.get("discharge_port"), row.get("ata_dp"), 60),
+#         ("<strong>Reached at Last CY</strong>", row.get("last_cy_location"), row.get("equipment_arrived_at_last_cy"), 70),
+#         ("<strong>Out Gate at Last CY</strong>", row.get("out_gate_at_last_cy_lcn"), row.get("out_gate_at_last_cy"), 80),
+#         ("<strong>Delivered at</strong>", row.get("delivery_date_to_consignee_lcn"), row.get("delivery_date_to_consignee"), 90),
+#         ("<strong>Empty Container Returned to</strong>", row.get("empty_container_return_lcn"), row.get("empty_container_return_date"), 100),
+#     ]
+
+#     milestone_rows = []
+#     for event, location, raw_date, rank in milestone_defs:
+#         dt = pd.to_datetime(raw_date, errors="coerce")
+#         if pd.isna(dt):
+#             continue
+#         milestone_rows.append(
+#             {
+#                 "event": event,
+#                 "location": None if pd.isna(location) else location,
+#                 "date": dt.strftime("%Y-%m-%d"),
+#                 "_dt": dt,
+#                 "_rank": rank,
+#             }
+#         )
+
+#     if not milestone_rows:
+#         return f"No milestones found for container {container_no}."
+
+#     milestones_df = pd.DataFrame(milestone_rows)
+
+#     # Sort chronologically for display
+#     # milestones_df = milestones_df.sort_values("_dt", ascending=True)
+
+#     # Pick "latest status" by (rank first, then date)
+#     last_row = max(milestone_rows, key=lambda x: (x["_rank"], x["_dt"]))
+#     latest_text = f"The Container <con>{container_no}</con> {last_row['event']} {last_row['location']} on {last_row['date']}"
+
+#     # Convert milestone dataframe to string (no internal helper cols)
+#     milestone_text = milestones_df[["event", "location", "date"]].to_string(index=False, header=False)
+
+#     result = (
+#         f"{header_text}"
+#         f"{latest_text}\n\n"
+#         f" <MILESTONE> {milestone_text}."
+#     )
+#     return result
 
 def safe_date(v):
     """
@@ -1828,7 +1963,6 @@ def ensure_datetime(df: pd.DataFrame, columns: list) -> pd.DataFrame:
     return df
 
 # ...existing code...
-
 
 
 def get_delayed_containers(question: str = None, consignee_code: str = None, **kwargs) -> str:
@@ -2092,7 +2226,6 @@ def get_delayed_containers(question: str = None, consignee_code: str = None, **k
             out[dcol] = out[dcol].dt.strftime("%Y-%m-%d")
 
     return out.where(pd.notnull(out), None).to_dict(orient="records")
-
 
 
 # ...existing code...
@@ -4872,8 +5005,7 @@ def get_containers_departing_from_load_port(query: str) -> str:
             output_cols.append(bl_col)
 
     # Add additional context columns
-    additional_cols = ['discharge_port', 'eta_dp', 'revised_eta', 'consignee_code_multiple', 'final_carrier_name', 'hot_container_flag']
-    
+    additional_cols = ['discharge_port', 'eta_dp', 'revised_eta', 'consignee_code_multiple', 'final_carrier_name']   
     # Add transport_mode if it was used in filtering
     if modes and 'transport_mode' in results.columns:
         additional_cols.append('transport_mode')
@@ -4900,7 +5032,282 @@ def get_containers_departing_from_load_port(query: str) -> str:
 
     return out.where(pd.notnull(out), None).to_dict(orient='records')
 
+# ...existing code...
 
+def get_containers_still_at_load_port(question: str = None, consignee_code: str = None, **kwargs):
+    """
+    List containers that are STILL at a given load/origin port and have NOT yet departed.
+
+    Core business logic:
+      - atd_lp is NULL  => not departed from load port yet
+      - load_port matches the user-provided location (name or code)
+
+    Supports (query-driven) filters:
+      - consignee_code (parameter) in addition to thread-local consignee filtering via _df()
+      - hot containers: if query mentions hot/priority/urgent/rush/expedited
+      - transport_mode: "by sea/air/road/rail/courier/sea-air"
+      - optional ETD window ONLY if query explicitly mentions ETD/scheduled + a time phrase
+        (e.g., "still at Shanghai with ETD next 7 days")
+
+    Returns:
+      - list[dict] of up to 200 rows (or a single count dict for "how many" queries)
+    """
+    import re
+    import pandas as pd
+    from difflib import get_close_matches
+
+    query = (question or kwargs.get("query") or kwargs.get("input") or "").strip()
+    if not query:
+        return "Please provide a query like: 'Which containers are still at CHATTOGRAM and not yet departed?'"
+
+    q_lower = query.lower()
+    q_up = query.upper()
+
+    # 1) Load data (already thread-local consignee scoped by _df())
+    df = _df()
+    if df is None or getattr(df, "empty", True):
+        return "No data available for your authorized consignees."
+
+    # 2) Optional explicit consignee_code narrowing (in addition to thread-local)
+    if consignee_code and "consignee_code_multiple" in df.columns:
+        codes = [c.strip().upper() for c in str(consignee_code).split(",") if c.strip()]
+        code_set = set(codes) | {c.lstrip("0") for c in codes}
+
+        def row_has_code(cell) -> bool:
+            if pd.isna(cell):
+                return False
+            s = str(cell).upper()
+            return any(c in s for c in code_set)
+
+        df = df[df["consignee_code_multiple"].apply(row_has_code)].copy()
+        if df.empty:
+            return f"No containers found for consignee code(s) {', '.join(codes)}."
+
+    # 3) Validate required columns
+    if "load_port" not in df.columns:
+        return "Load port column (load_port) not found in the dataset."
+    if "atd_lp" not in df.columns:
+        return "ATD load port column (atd_lp) not found in the dataset."
+
+    # 4) Parse dates we may format/use
+    date_cols = ["atd_lp"]
+    if "etd_lp" in df.columns:
+        date_cols.append("etd_lp")
+    df = ensure_datetime(df, date_cols)
+
+    # 5) Base filter: NOT YET DEPARTED from load port
+    still_mask = df["atd_lp"].isna()
+    df = df[still_mask].copy()
+    if df.empty:
+        return "No containers are currently pending departure (atd_lp is null) for your authorized consignees."
+
+    # 6) Extract load port location (code or name) from query
+    def normalize_port_name(port_str: str) -> str:
+        if pd.isna(port_str):
+            return ""
+        s = str(port_str).upper()
+        s = re.sub(r"\s*\([^)]*\)\s*", "", s)  # remove "(CNSHA)" part
+        s = s.replace(",", " ")
+        s = re.sub(r"\s+", " ", s).strip()
+        return s
+
+    def extract_port_code(port_str: str) -> str | None:
+        if pd.isna(port_str):
+            return None
+        m = re.search(r"\(([A-Z0-9\-]{3,6})\)", str(port_str).upper())
+        return m.group(1) if m else None
+
+    # Create normalized helpers for matching
+    df["_port_name_norm"] = df["load_port"].apply(normalize_port_name)
+    df["_port_code"] = df["load_port"].apply(extract_port_code)
+
+    # (A) Explicit code like "(BDCGP)"
+    port_code = None
+    m_code = re.search(r"\(([A-Z0-9\-]{3,6})\)", q_up)
+    if m_code:
+        port_code = m_code.group(1).strip().upper()
+
+    # (B) Bare code token like "BDCGP" (only accept if it exists in dataset codes)
+    if not port_code:
+        cand_codes = set(re.findall(r"\b[A-Z0-9\-]{3,6}\b", q_up))
+        known_codes = set(df["_port_code"].dropna().astype(str).str.upper().unique().tolist())
+        for c in sorted(cand_codes, key=len, reverse=True):
+            if c in known_codes:
+                port_code = c
+                break
+
+    # (C) Name phrase after "at/in/from/origin/load port"
+    port_name = None
+    if not port_code:
+        patterns = [
+            r"\b(?:still\s+at|at|in)\s+(?:load\s+port\s+|origin\s+port\s+|origin\s+)?([A-Za-z0-9\s\.\-\,\(\)]+?)(?=\s+\b(?:and|but|not|yet|depart|departed|leave|left|sail|sailed|ship|shipped|etd|today|tomorrow|yesterday|next|last|this|within|in)\b|[?.!,]|$)",
+            r"\b(?:not\s+(?:yet\s+)?)?(?:departed|left|sailed)\s+from\s+([A-Za-z0-9\s\.\-\,\(\)]+?)(?=\s+\b(?:and|but|today|tomorrow|yesterday|next|last|this|within|in)\b|[?.!,]|$)",
+            r"\bload\s+port\s+([A-Za-z0-9\s\.\-\,\(\)]+?)(?=\s+\b(?:and|but|today|tomorrow|yesterday|next|last|this|within|in)\b|[?.!,]|$)",
+            r"\borigin\s+([A-Za-z0-9\s\.\-\,\(\)]+?)(?=\s+\b(?:and|but|today|tomorrow|yesterday|next|last|this|within|in)\b|[?.!,]|$)",
+        ]
+        for pat in patterns:
+            m = re.search(pat, query, re.IGNORECASE)
+            if m:
+                port_name = m.group(1).strip()
+                break
+
+        if port_name:
+            # Remove common trailing time words if captured
+            port_name = re.sub(
+                r"\b(?:today|tomorrow|yesterday|next|last|this|week|month|days?)\b.*$",
+                "",
+                port_name,
+                flags=re.IGNORECASE,
+            ).strip()
+
+    if not port_code and not port_name:
+        df.drop(columns=["_port_name_norm", "_port_code"], inplace=True, errors="ignore")
+        return "Please specify a load port/location (e.g., 'at CHATTOGRAM' or '(BDCGP)')."
+
+    # 7) Apply port filter (code > exact name > word-based > fuzzy)
+    port_mask = pd.Series(False, index=df.index)
+
+    if port_code:
+        code_mask = df["_port_code"].fillna("").str.upper() == port_code
+        port_mask |= code_mask
+        try:
+            logger.info(f"[get_containers_still_at_load_port] Code match '{port_code}': {int(code_mask.sum())} rows")
+        except Exception:
+            pass
+
+    if not port_mask.any() and port_name:
+        user_norm = normalize_port_name(port_name)
+        exact = df["_port_name_norm"] == user_norm
+        port_mask |= exact
+        try:
+            logger.info(f"[get_containers_still_at_load_port] Exact name match '{user_norm}': {int(exact.sum())} rows")
+        except Exception:
+            pass
+
+        if not port_mask.any():
+            words = [w for w in user_norm.split() if len(w) >= 3]
+            if words:
+                wmask = pd.Series(True, index=df.index)
+                for w in words:
+                    wmask &= df["_port_name_norm"].str.contains(rf"\b{re.escape(w)}\b", na=False, regex=True)
+                port_mask |= wmask
+                try:
+                    logger.info(f"[get_containers_still_at_load_port] Word-based match {words}: {int(wmask.sum())} rows")
+                except Exception:
+                    pass
+            else:
+                sub = df["_port_name_norm"].str.contains(re.escape(user_norm), na=False)
+                port_mask |= sub
+
+        if not port_mask.any():
+            # Fuzzy fallback over normalized unique names
+            candidates = df["_port_name_norm"].dropna().astype(str).unique().tolist()
+            best = get_close_matches(normalize_port_name(port_name), candidates, n=1, cutoff=0.85)
+            if best:
+                fuzzy = df["_port_name_norm"] == best[0]
+                port_mask |= fuzzy
+                try:
+                    logger.info(f"[get_containers_still_at_load_port] Fuzzy match '{best[0]}': {int(fuzzy.sum())} rows")
+                except Exception:
+                    pass
+
+    df = df[port_mask].copy()
+    df.drop(columns=["_port_name_norm", "_port_code"], inplace=True, errors="ignore")
+
+    if df.empty:
+        where = port_code or port_name
+        return f"No containers found still at load port '{where}' (atd_lp is null) for your authorized consignees."
+
+    # 8) Optional transport mode filter (query-driven)
+    try:
+        modes = extract_transport_modes(query)
+    except Exception:
+        modes = set()
+
+    if modes and "transport_mode" in df.columns:
+        mode_mask = df["transport_mode"].astype(str).str.lower().apply(lambda s: any(m in s for m in modes))
+        df = df[mode_mask].copy()
+        if df.empty:
+            where = port_code or port_name
+            return f"No containers found still at '{where}' by transport mode {', '.join(sorted(modes))}."
+
+    # 9) Optional hot filter (query-driven)
+    is_hot_query = bool(re.search(r"\b(hot|priority|urgent|rush|expedited)\b", q_lower))
+    hot_col = None
+    if is_hot_query:
+        hot_flag_cols = [c for c in df.columns if "hot_container_flag" in c.lower()] or \
+                        [c for c in df.columns if c.lower() in ("hot_container", "hot_flag")]
+        if hot_flag_cols:
+            hot_col = hot_flag_cols[0]
+
+            def _is_hot(v) -> bool:
+                if pd.isna(v):
+                    return False
+                return str(v).strip().upper() in {"Y", "YES", "TRUE", "1", "HOT"}
+
+            df = df[df[hot_col].apply(_is_hot)].copy()
+            if df.empty:
+                where = port_code or port_name
+                return f"No hot containers found still at '{where}' (atd_lp is null)."
+
+    # 10) Optional ETD window ONLY when query explicitly asks ETD/scheduled + time phrase
+    wants_etd_window = ("etd" in q_lower) or ("scheduled" in q_lower) or ("schedule" in q_lower)
+    mentions_time = bool(re.search(r"\b(today|tomorrow|yesterday|next|last|this|within|in)\b", q_lower))
+    if wants_etd_window and mentions_time and "etd_lp" in df.columns:
+        try:
+            start_date, end_date, period_desc = parse_time_period(query)
+            etd_norm = df["etd_lp"].dt.normalize()
+            df = df[df["etd_lp"].notna() & (etd_norm >= start_date) & (etd_norm <= end_date)].copy()
+            if df.empty:
+                where = port_code or port_name
+                return f"No not-yet-departed containers found at '{where}' with ETD in {period_desc}."
+        except Exception:
+            pass
+
+    # 11) Output shaping
+    output_cols = [
+        "container_number",
+        "load_port",
+        "etd_lp",
+        "atd_lp",
+        "discharge_port",
+        "po_number_multiple",
+        "final_carrier_name",
+        "transport_mode",
+        "consignee_code_multiple",
+    ]
+    if hot_col and hot_col in df.columns:
+        output_cols.append(hot_col)
+
+    output_cols = [c for c in output_cols if c in df.columns]
+    out = df[output_cols].drop_duplicates().copy()
+
+    # Sort by ETD if present (otherwise by container)
+    if "etd_lp" in out.columns:
+        out = safe_sort_dataframe(out, "etd_lp", ascending=True)
+    else:
+        out = safe_sort_dataframe(out, "container_number", ascending=True)
+
+    # Format dates
+    for dcol in ["etd_lp", "atd_lp"]:
+        if dcol in out.columns and pd.api.types.is_datetime64_any_dtype(out[dcol]):
+            out[dcol] = out[dcol].dt.strftime("%Y-%m-%d")
+
+    # 12) Count intent support
+    is_count_query = bool(re.search(r"\b(how\s+many|count|number\s+of|total)\b", q_lower))
+    if is_count_query:
+        where = port_code or port_name
+        sample = out["container_number"].dropna().astype(str).unique().tolist()[:50] if "container_number" in out.columns else []
+        return [{
+            "count": int(len(out)),
+            "load_port": where,
+            "logic": "atd_lp is null",
+            "sample_containers": sample,
+        }]
+
+    return out.head(200).where(pd.notnull(out), None).to_dict(orient="records")
+
+# ...existing code...
 
 
 def get_containers_departed_from_load_port(query: str) -> str:
@@ -7179,6 +7586,9 @@ def get_eta_for_booking(question: str = None, consignee_code: str = None, **kwar
 
 # ...existing code...
 
+
+
+
 def get_booking_details(question: str = None, consignee_code: str = None, **kwargs):
     """
     Booking-related lookup tool:
@@ -7196,6 +7606,11 @@ def get_booking_details(question: str = None, consignee_code: str = None, **kwar
     q = (question or kwargs.get("query") or kwargs.get("input") or "").strip()
     if not q:
         return "Please provide a booking/PO/container/BL query."
+
+    try:
+        logger.info(f"[get_booking_details] Received query: {q!r}")
+    except:
+        pass
 
     q_lower = q.lower()
     q_upper = q.upper()
@@ -7216,8 +7631,15 @@ def get_booking_details(question: str = None, consignee_code: str = None, **kwar
 
     po_no = extract_po_number(q_extract)
     if not po_no:
+        # Try explicit "PO" prefix
         m_po = re.search(r"\bPO\s*#?\s*(\d{5,})\b", q_upper)
         po_no = m_po.group(1) if m_po else None
+    if not po_no:
+        # **CRITICAL FIX**: If query has "booking number of <digits>", treat as PO
+        if re.search(r"\bbooking\s+number\s+of\b", q_lower):
+            m_numeric = re.search(r"\b(\d{7,})\b", q_upper)
+            if m_numeric:
+                po_no = m_numeric.group(1)
 
     try:
         obl_no = extract_ocean_bl_number(q_extract)
@@ -7250,6 +7672,11 @@ def get_booking_details(question: str = None, consignee_code: str = None, **kwar
     # Guard: if BL extractor grabbed a container-like token, prefer container semantics
     if obl_no and re.fullmatch(r"[A-Z]{4}\d{7}", str(obl_no).upper().strip()):
         obl_no = None
+
+    try:
+        logger.info(f"[get_booking_details] Extracted identifiers: container={container_no}, po={po_no}, obl={obl_no}, booking={booking_no}")
+    except:
+        pass
 
     # Intent flags
     wants_booking_number = bool(re.search(r"\bbooking\s+number\b", q_lower)) and not booking_no
@@ -7367,7 +7794,21 @@ def get_booking_details(question: str = None, consignee_code: str = None, **kwar
             if matches.empty:
                 matches = df[df["container_number"].astype(str).str.contains(container_no, case=False, na=False)].copy()
             if matches.empty:
-                return f"No data found for container {container_no}."
+                # **FALLBACK**: Maybe it's actually a PO misidentified as container
+                if re.match(r"^\d{7,}$", container_no):
+                    po_col = "po_number_multiple" if "po_number_multiple" in df.columns else "po_number"
+                    if po_col in df.columns:
+                        po_norm = _normalize_po_token(container_no)
+                        mask = df[po_col].apply(lambda cell: _po_in_cell(cell, po_norm))
+                        matches = df[mask].copy()
+                        if not matches.empty:
+                            pass  # Found as PO, continue
+                        else:
+                            return f"No booking found for container or PO {container_no}."
+                    else:
+                        return f"No data found for container {container_no}."
+                else:
+                    return f"No data found for container {container_no}."
 
         elif po_no:
             po_col = "po_number_multiple" if "po_number_multiple" in df.columns else ("po_number" if "po_number" in df.columns else None)
@@ -7390,9 +7831,9 @@ def get_booking_details(question: str = None, consignee_code: str = None, **kwar
                 return f"No data found for OBL/BL {obl_no}."
 
         else:
-            # Fallback: if user wrote "booking number of 5300008696" (no PO prefix)
+            # **ENHANCED FALLBACK**: if user wrote "booking number of 5300008696" (no PO prefix)
             # treat as PO-like numeric token if present and not a container/booking token
-            m_num = re.search(r"\b(\d{5,})\b", q_upper)
+            m_num = re.search(r"\b(\d{7,})\b", q_upper)  # POs are typically 7+ digits
             if m_num:
                 po_guess = m_num.group(1)
                 po_col = "po_number_multiple" if "po_number_multiple" in df.columns else ("po_number" if "po_number" in df.columns else None)
@@ -7401,7 +7842,10 @@ def get_booking_details(question: str = None, consignee_code: str = None, **kwar
                     mask = df[po_col].apply(lambda cell: _po_in_cell(cell, po_norm))
                     matches = df[mask].copy()
                     if matches.empty:
-                        return f"No data found for PO {po_guess}."
+                        # **SECONDARY FALLBACK**: Try simple contains match
+                        matches = df[df[po_col].astype(str).str.upper().str.contains(po_guess, na=False)].copy()
+                    if matches.empty:
+                        return f"No booking found for PO {po_guess}. Please verify the PO number."
                 else:
                     return "PO column not found in the dataset."
             else:
@@ -7421,6 +7865,10 @@ def get_booking_details(question: str = None, consignee_code: str = None, **kwar
         return out.where(pd.notnull(out), None).to_dict(orient="records")
 
     return "Please ask a booking-related question (booking number of PO/container/BL, ETA of booking, or PO/container/BL of booking)."
+
+
+
+
 
 ################### fd related query strated from here #########################
 def get_containers_by_final_destination(query: str) -> str:
@@ -8627,19 +9075,31 @@ TOOLS = [
     Tool(
         name="Get Container Milestones",
         func=get_container_milestones,
-        return_direct=True,  # <<< IMPORTANT: bypass LLM output parser; tool output becomes final answer
+        return_direct=True,
         description=(
-            "PRIMARY TOOL FOR ALL CONTAINER STATUS AND MILESTONE QUERIES. "
+            "PRIMARY TOOL FOR ALL CONTAINER AND PO STATUS/MILESTONE QUERIES.\n"
+            "\n"
             "Use this tool FIRST for ANY query asking about:\n"
-            "- Container status (e.g., 'what is status of ABCD1234567')\n"
-            "- Container milestones (e.g., 'show milestones for container X')\n"
-            "- Container tracking (e.g., 'track container Y')\n"
-            "- Container location (e.g., 'where is container Z')\n"
-            "- Container journey/events (e.g., 'event history for container')\n"
-            "- When/where queries (e.g., 'when did container arrive', 'where is my container')\n"
+            "- Container status: 'what is status of container ABCD1234567'\n"
+            "- PO status: 'what is status of PO 5300009636', 'status of the PO 5300009636'\n"
+            "- Container milestones: 'show milestones for container X'\n"
+            "- PO milestones: 'show milestones for PO Y', 'track PO 5300009636'\n"
+            "- Container tracking: 'track container Y'\n"
+            "- Container location: 'where is container Z'\n"
+            "- PO location: 'where is PO 5300009636'\n"
+            "- Container journey: 'event history for container'\n"
+            "- PO journey: 'journey for PO X'\n"
+            "\n"
+            "CRITICAL PO HANDLING:\n"
+            "- Input can be: 'PO 5300009636', '5300009636', 'PO5300009636', 'po 5300009636'\n"
+            "- Tool will find container(s) for the PO and return their milestones\n"
+            "- Searches po_number_multiple column (comma-separated values)\n"
+            "- Returns: 'The Container XXXX is associated with the PO YYYY. Status is...'\n"
+            "\n"
             "Keywords: status, milestone, track, tracking, where, location, journey, event, history, progress\n"
-            "This tool provides complete timeline of container movement with all milestone dates.\n"
-            "DO NOT use 'Check Arrival Status' if query asks for status/milestones."
+            "\n"
+            "DO NOT use 'Get Containers or PO or OBL By Supplier' for status queries.\n"
+            "DO NOT use 'Check Arrival Status' for milestone queries.\n"
         )
     ),
 
@@ -9038,29 +9498,73 @@ TOOLS = [
         name="Get Booking Details",
         func=get_booking_details,
         description=(
-            "PRIMARY TOOL for BOOKING-related mapping queries (booking ⇄ PO ⇄ container ⇄ ocean BL/OBL) and booking ETA routing.\n"
+            "PRIMARY TOOL for BOOKING NUMBER lookups (booking ⇄ PO ⇄ container ⇄ ocean BL/OBL).\n"
             "\n"
-            "Use this tool when the user asks ANY of the following:\n"
-            "- 'what is the booking number of PO 5300008696' or 'booking number of 5300008696'\n"
-            "- 'what is the booking number of container MSBU4522691' or 'booking number of MSBU4522691'\n"
-            "- 'what is the booking number of BL/OBL <BL>' or 'booking number of <BL>'\n"
-            "- 'PO of booking TH2017962' / 'container of booking TH2017962' / 'BL of booking TH2017962'\n"
-            "- 'ETA of booking GT3000512' (this tool delegates to 'Get ETA For Booking')\n"
+            "USE THIS TOOL when user asks about BOOKING NUMBERS:\n"
+            "CORRECT usage examples:\n"
+            "- 'what is the booking number of PO 5300008696' → Input: '5300008696'\n"
+            "- 'booking number of 5300008696' → Input: '5300008696'\n"
+            "- 'booking number for PO 5300008696' → Input: '5300008696'\n"
+            "- 'what is the booking number of container MSBU4522691' → Input: 'MSBU4522691'\n"
+            "- 'booking number of MSBU4522691' → Input: 'MSBU4522691'\n"
+            "- 'booking number of BL MOLWMNL2400017' → Input: 'MOLWMNL2400017'\n"
+            "- 'PO of booking VN2084805' → Input: 'VN2084805'\n"
+            "- 'container of booking TH2017962' → Input: 'TH2017962'\n"
+            "- 'BL of booking GT3000512' → Input: 'GT3000512'\n"
             "\n"
-            "IMPORTANT: This tool ALSO supports BARE IDENTIFIERS as input (agent retries may pass only the code).\n"
-            "Examples of valid direct inputs that MUST be handled by this tool:\n"
-            "- 'PO5300008696' or '5300008696' (treat as PO → booking number)\n"
-            "- 'MSBU4522691' (treat as container → booking number)\n"
-            "- 'MLWCN0001523' (treat as ocean BL/OBL → booking number)\n"
+            "PO NUMBER HANDLING (CRITICAL):\n"
+            "- PO numbers are typically 7-10 digits (e.g., 5300008696, 5300009636)\n"
+            "- Input can be: 'PO 5300008696', '5300008696', 'PO5300008696', 'po 5300008696'\n"
+            "- Tool searches po_number_multiple column (comma-separated values)\n"
+            "- Returns booking_number_multiple + container + discharge_port + consignee\n"
             "\n"
-            "Data columns:\n"
-            "- booking_number_multiple (comma-separated)\n"
-            "- po_number_multiple / po_number\n"
-            "- container_number\n"
-            "- ocean_bl_no_multiple\n"
+            " CONTAINER HANDLING:\n"
+            "- Container format: 4 letters + 7 digits (e.g., MSBU4522691, MRKU0496086)\n"
+            "- Returns booking_number_multiple for that container\n"
             "\n"
-            "DO NOT use Keyword Lookup / Container Milestones for booking-number mapping questions.\n"
+            " BARE IDENTIFIER SUPPORT:\n"
+            "Agent retries may pass only the code without context words.\n"
+            "This tool MUST handle:\n"
+            "- '5300008696' (7+ digits) → Treat as PO number → return booking\n"
+            "- 'MSBU4522691' (4 letters + 7 digits) → Treat as container → return booking\n"
+            "- 'MOLWMNL2400017' (ocean BL pattern) → Treat as BL → return booking\n"
+            "- 'VN2084805' (booking pattern) → Return PO/container/BL mapping\n"
+            "\n"
+            " DO NOT USE for:\n"
+            "- Status queries (use 'Get Container Milestones')\n"
+            "- Milestone queries (use 'Get Container Milestones')\n"
+            "- ETA of PO (use 'Get ETA For PO')\n"
+            "- Transit analysis (use transit tools)\n"
+            "\n"
+            " ETA delegation: 'ETA of booking X' → delegates to 'Get ETA For Booking'\n"
         )
+    ),
+	Tool(
+        name="Get Containers Still At Load Port (Not Yet Departed)",
+        func=get_containers_still_at_load_port,
+        description=(
+            "PRIMARY TOOL for queries asking which containers/shipments are STILL AT an origin/load port and have NOT departed yet.\n"
+            "\n"
+            "Use this tool when user asks variants like:\n"
+            "- 'Which containers are still at CHATTOGRAM and not yet departed?'\n"
+            "- 'containers not departed from Chattogram'\n"
+            "- 'shipments stuck at origin Chattogram'\n"
+            "- 'containers awaiting departure at BDCGP'\n"
+            "- 'how many containers are at SHANGHAI and haven't left?'\n"
+            "\n"
+            "Core logic (must follow):\n"
+            "- atd_lp is NULL => not departed\n"
+            "- Filter by load_port matching the user location (port name like 'CHATTOGRAM' OR code like '(BDCGP)' or 'BDCGP')\n"
+            "\n"
+            "Supported optional filters (only if user asks):\n"
+            "- Hot containers: if query includes hot/priority/urgent/rush/expedited (uses hot_container_flag column)\n"
+            "- Transport mode: sea/air/road/rail/courier/sea-air\n"
+            "- Consignee scope: honors thread-local consignee authorization via _df(); can also accept consignee_code parameter.\n"
+            "\n"
+            "Important:\n"
+            "- DO NOT use 'Get Containers Departing From Load Port' (that tool is ETD-window/upcoming departures).\n"
+            "- This tool is for 'still at X', 'not yet departed', 'awaiting departure', 'not left' semantics.\n"
+        ),
     ),
     Tool(
     name="Get Bulk Container Transit Analysis",
@@ -9075,6 +9579,11 @@ TOOLS = [
     ),
 
 ]
+
+
+
+
+
 
 
 
