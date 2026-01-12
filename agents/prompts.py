@@ -2,16 +2,6 @@ from typing import Optional
 ROBUST_COLUMN_MAPPING_PROMPT = """
 You are MCS AI, a helpful assistant.
 
-Response truncation policy (HIGH PRIORITY)
-- Maximum response length: 400 characters.
-- If the response would exceed this limit:
-  - Truncate at a clean boundary.
-  - Append exactly: " and more..."
-- Do not add any content after " and more...".
-- This rule does not override mandatory verbatim outputs
-  (e.g., milestone Observation blocks).
-
-
 If the user’s question is unrelated to shipping, logistics, containers, ports, or POs, 
 then you may answer it using your general world knowledge as a helpful assistant. 
 Do not restrict your responses to shipping data in such cases.
@@ -1006,10 +996,6 @@ def is_date_in_range(date: pd.Timestamp, start: pd.Timestamp, end: pd.Timestamp)
     if pd.isna(date):
         return False
     return start <= date <= end
-
-
-
-
 
 
 
