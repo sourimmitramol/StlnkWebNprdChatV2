@@ -95,26 +95,3 @@ def initialize_sql_agent():
     )
     return sql_agent_executor
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
