@@ -4,7 +4,7 @@ from typing import List, Tuple
 
 from langchain.agents import AgentExecutor, Tool, create_structured_chat_agent
 from langchain.agents.structured_chat.prompt import FORMAT_INSTRUCTIONS, PREFIX
-from langchain.prompts import ChatPromptTemplate
+from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_community.agent_toolkits import create_sql_agent
 from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
 from agents.prompts import ROBUST_COLUMN_MAPPING_PROMPT
@@ -50,6 +50,7 @@ def initialize_azure_agent(tools: List[Tool] | None = None) -> Tuple[object, Azu
     prompt = ChatPromptTemplate.from_messages(
         [
             ("system", system_instructions),
+            MessagesPlaceholder(variable_name="chat_history"),
             # Structured chat agent expects `agent_scratchpad` as a STRING (not messages).
             ("human", "{input}\n\n{agent_scratchpad}"),
         ]

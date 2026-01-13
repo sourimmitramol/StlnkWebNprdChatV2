@@ -4,7 +4,9 @@ import re
 import ast
 from fastapi import FastAPI, HTTPException, Query, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
-from typing import Optional, List
+from typing import Optional, List, Dict
+from langchain_community.chat_message_histories import ChatMessageHistory
+from langchain_core.messages import HumanMessage, AIMessage
 
 from utils.container import extract_po_number
 
@@ -37,6 +39,9 @@ from agents.tools import (
 from agents.router import route_query
 
 logger = logging.getLogger("shipping_chatbot")
+
+# In-memory store for session-based chat history
+SESSION_HISTORY: Dict[str, ChatMessageHistory] = {}
 
 app = FastAPI(
     title="Shipping Chatbot API",
@@ -178,9 +183,29 @@ def ask(body: QueryWithConsigneeBody):
         threading.current_thread().consignee_code = consignee_code
 
         try:
-            result = AGENT.invoke({"input": consignee_context})
-        except TypeError:
-            result = AGENT.invoke({"input": consignee_context})
+            # Handle session memory
+            session_id = body.session_id
+            chat_history = []
+            if session_id:
+                if session_id not in SESSION_HISTORY:
+                    SESSION_HISTORY[session_id] = ChatMessageHistory()
+                # Get the last 10 messages to keep context manageable
+                chat_history = SESSION_HISTORY[session_id].messages[-10:]
+
+            # Pass both input and chat_history to the agent
+            result = AGENT.invoke({
+                "input": consignee_context,
+                "chat_history": chat_history
+            })
+            
+            # Update history if session_id is provided
+            if session_id:
+                SESSION_HISTORY[session_id].add_user_message(consignee_context)
+                SESSION_HISTORY[session_id].add_ai_message(result.get("output", ""))
+                
+        except TypeError as e:
+            logger.error(f"Invocation error: {e}")
+            result = AGENT.invoke({"input": consignee_context, "chat_history": []})
 
         # Clear the context after use
         if hasattr(threading.current_thread(), 'consignee_code'):

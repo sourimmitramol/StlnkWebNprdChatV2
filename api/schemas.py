@@ -1,5 +1,6 @@
 # api/schemas.py
 from pydantic import BaseModel, Field
+from typing import Optional, List
 
 
 class AskRequest(BaseModel):
@@ -9,3 +10,4 @@ class AskRequest(BaseModel):
 class QueryWithConsigneeBody(BaseModel):
     question: str
     consignee_code: str
+    session_id: Optional[str] = None
