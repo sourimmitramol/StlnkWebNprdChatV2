@@ -192,20 +192,21 @@ def ask(body: QueryWithConsigneeBody):
                 # Get the last 10 messages to keep context manageable
                 chat_history = SESSION_HISTORY[session_id].messages[-10:]
 
-            # Pass both input and chat_history to the agent
+            # Pass input, chat_history and consignee context to the agent
             result = AGENT.invoke({
-                "input": consignee_context,
-                "chat_history": chat_history
+                "input": q,
+                "chat_history": chat_history,
+                "consignee_code": ", ".join(consignee_code)
             })
             
             # Update history if session_id is provided
             if session_id:
-                SESSION_HISTORY[session_id].add_user_message(consignee_context)
+                SESSION_HISTORY[session_id].add_user_message(q)
                 SESSION_HISTORY[session_id].add_ai_message(result.get("output", ""))
                 
         except TypeError as e:
             logger.error(f"Invocation error: {e}")
-            result = AGENT.invoke({"input": consignee_context, "chat_history": []})
+            result = AGENT.invoke({"input": q, "chat_history": [], "consignee_code": ", ".join(consignee_code)})
 
         # Clear the context after use
         if hasattr(threading.current_thread(), 'consignee_code'):
@@ -213,6 +214,17 @@ def ask(body: QueryWithConsigneeBody):
 
         if isinstance(result, str):
             result = {"output": result, "intermediate_steps": []}
+
+        # --- Enhanced Step Logging ---
+        steps = result.get("intermediate_steps", [])
+        if steps:
+            for i, step in enumerate(steps):
+                if isinstance(step, tuple) and len(step) == 2:
+                    action, _ = step
+                    tool = getattr(action, "tool", None) or getattr(action, "tool_name", "Unknown")
+                    tool_input = getattr(action, "tool_input", "None")
+                    logger.info(f"AGENT_STEP: {i+1} | Tool Used: {tool} | Tool Input: {tool_input}")
+        # -----------------------------
 
         output = (result.get("output") or "").strip()
         print(result.get("intermediate_steps"))

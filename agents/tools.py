@@ -81,6 +81,15 @@ def _df() -> pd.DataFrame:
     return df
 
 
+def get_today_date(query: str = None) -> str:
+    """
+    Returns the current date. Use this tool whenever you need to know 'today', 
+    'current date', or need to calculate relative dates like 'yesterday' or 'tomorrow'.
+    """
+    now = datetime.now()
+    return f"Today is {now.strftime('%A, %B %d, %Y')}. (ISO: {now.strftime('%Y-%m-%d')})"
+
+
 def handle_non_shipping_queries(query: str) -> str:
     """
     Handle greetings, thanks, small talk, and general non-shipping queries.
@@ -3310,21 +3319,12 @@ def lookup_keyword(query: str) -> str:
 # 7️⃣ PandasAI data analysis
 def analyze_data_with_pandas(query: str) -> str:
     """
-    Analyze shipping data using pandas based on a natural language query.
-    Input: Ask any statistical or calculation question about the data.
-    Output: Analysis result or summary.
+    Analyze shipping data using dynamic code generation and pandas.
+    Input: Ask any statistical, calculation, or trend question about the data.
+    Output: Analytical summary or answer.
     """
-    df = _df()
-    # Example: simple keyword-based logic
-    if "average delay" in query.lower():
-        if "delay_days" not in df.columns:
-            df["delay_days"] = (pd.to_datetime(df["ata_dp"], errors="coerce") - pd.to_datetime(df["eta_dp"], errors="coerce")).dt.days
-        avg_delay = df["delay_days"].mean()
-        return f"Average delay is {avg_delay:.2f} days."
-    elif "total containers" in query.lower():
-        return f"Total containers: {len(df)}"
-    else:
-        return "Sorry, I can only answer questions about average delay or total containers right now."
+    from agents.analytics_engine import unified_shipment_analyst
+    return unified_shipment_analyst(query)
 
 
 # 8️⃣ Field information (generic) – the biggest function in the original script
@@ -8793,6 +8793,11 @@ def get_bulk_container_transit_analysis(query: str) -> str:
 
 # TOOLS list – must be at module level, not inside any function!
 TOOLS = [
+    Tool(
+        name="Get Today Date",
+        func=get_today_date,
+        description="Returns the current date. Use this tool whenever you need to know today's date for relative time calculations (yesterday, last week, etc.)."
+    ),
 
     Tool(
         name="Get Container Milestones",
@@ -8925,7 +8930,12 @@ TOOLS = [
     Tool(
         name="Analyze Data with Pandas",
         func=analyze_data_with_pandas,
-        description="Analyze shipping data using pandas based on a natural language query."
+        description=(
+            "THE ULTIMATE ANALYTICS TOOL. Use this for ANY question regarding counts, averages, "
+            "trends, comparisons, or complex filtering. Examples: 'average transit time per carrier', "
+            "'how many containers to USLGB in Oct', 'which origin has most delays', 'percentage of hot containers'. "
+            "It uses a dynamic code engine to answer almost any data-driven question."
+        )
     ),
     Tool(
         name="Get Field Info",

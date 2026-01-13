@@ -27,6 +27,16 @@ def initialize_azure_agent(tools: List[Tool] | None = None) -> Tuple[object, Azu
     if tools is None:
         tools = TOOLS
 
+    # --- HARD RESTRICTION TO CORE TOOLS ---
+    core_tool_names = [
+        "Get Today Date",
+        "Get Container Milestones",
+        "Analyze Data with Pandas",
+        "Handle Non-shipping queries"
+    ]
+    tools = [t for t in tools if t.name in core_tool_names]
+    # --------------------------------------
+
     llm = AzureChatOpenAI(
         azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
         api_key=settings.AZURE_OPENAI_API_KEY,
@@ -38,11 +48,18 @@ def initialize_azure_agent(tools: List[Tool] | None = None) -> Tuple[object, Azu
     # Required variables for create_structured_chat_agent: tools, tool_names, input, agent_scratchpad
     system_instructions = (
         f"{ROBUST_COLUMN_MAPPING_PROMPT}\n\n"
+        "CORE TOOL PREFERENCE RULES:\n"
+        "1. For Status, Tracking, Tracking History, or Milestones of a SPECIFIC Container/PO/BL -> ALWAYS use 'Get Container Milestones'.\n"
+        "2. For ALL OTHER data queries (counts, averages, delays, trends, distributions, port stats, carrier performance) -> PRIORITY GOTO: 'Analyze Data with Pandas'.\n"
+        "3. Use 'Get Today Date' immediately if the query involves relative dates (yesterday, today, next week) before picking other tools.\n\n"
+        "CRITICAL: You MUST respond in the structured JSON format specified below. Even your 'Final Answer' MUST be a JSON blob with action='Final Answer' and your response in 'action_input'.\n\n"
+        "CONSIGNEE AUTHORIZATION CONTEXT:\n"
+        "- The 'Authorized Consignee(s)' listed below are for permission context.\n"
+        "- NEVER use these codes AS shipment identifiers (PO/Container/BL).\n\n"
         "CRITICAL DATE HANDLING RULES:\n"
         "- When the user mentions a month without a year (e.g., 'October', 'Oct', 'December'), ALWAYS assume the year is 2025\n"
         "- NEVER assume 2026 or any future year unless explicitly stated by the user\n"
-        "- For all date-related queries (delays, arrivals, shipments), default to year 2025\n"
-        "- Examples: 'Oct' = 'October 2025', 'delayed in December' = 'delayed in December 2025'\n\n"
+        "- For all date-related queries, default to year 2025\n"
         f"{PREFIX}\n\n"
         "{tools}\n\n"
         f"{FORMAT_INSTRUCTIONS}"
@@ -51,8 +68,7 @@ def initialize_azure_agent(tools: List[Tool] | None = None) -> Tuple[object, Azu
         [
             ("system", system_instructions),
             MessagesPlaceholder(variable_name="chat_history"),
-            # Structured chat agent expects `agent_scratchpad` as a STRING (not messages).
-            ("human", "{input}\n\n{agent_scratchpad}"),
+            ("human", "AUTHORIZED CONSIGNNE CODES: {consignee_code}\n\nUSER QUESTION: {input}\n\n{agent_scratchpad}"),
         ]
     )
 
