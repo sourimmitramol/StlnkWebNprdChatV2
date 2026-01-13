@@ -2764,14 +2764,28 @@ def get_hot_containers(question: str = None, consignee_code: str = None, **kwarg
 
     carrier_or_vessel = _extract_carrier_or_vessel(query)
     if carrier_or_vessel:
-        carrier_cols = [c for c in ["final_carrier_name", "final_vessel_name"] if c in hot_df.columns]
+        carrier_cols = [c for c in ["final_carrier_name"] if c in hot_df.columns]
         if carrier_cols:
             carrier_mask = pd.Series(False, index=hot_df.index)
+            
+            # **CRITICAL FIX**: Case-insensitive substring matching for carrier names
+            carrier_upper = carrier_or_vessel.upper()
             for c in carrier_cols:
-                carrier_mask |= hot_df[c].astype(str).str.contains(carrier_or_vessel, case=False, na=False)
+                # Match if carrier name CONTAINS the search term (case-insensitive)
+                carrier_mask |= hot_df[c].astype(str).str.upper().str.contains(
+                    re.escape(carrier_upper), 
+                    na=False, 
+                    regex=True
+                )
+            
             hot_df = hot_df[carrier_mask].copy()
             if hot_df.empty:
                 return f"No hot containers found for carrier/vessel '{carrier_or_vessel}' for your authorized consignees."
+            
+            try:
+                logger.info(f"[get_hot_containers] After carrier filter ('{carrier_or_vessel}'): {len(hot_df)} rows")
+            except Exception:
+                pass
 
     # -----------------------
     # Optional time filter (minimal + query-driven)
@@ -9579,6 +9593,7 @@ TOOLS = [
     ),
 
 ]
+
 
 
 
