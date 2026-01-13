@@ -74,18 +74,18 @@ def health():
 # ----------------------------------------------------------------------
 # Helper function to validate consignee access
 # ----------------------------------------------------------------------
-def filter_by_consignee(df, consignee_codes: List[str]):
+def filter_by_consignee(df, consignee_code: List[str]):
     """Filter DataFrame to only include rows where consignee_code_multiple contains any of the provided codes"""
-    pattern = r"|".join([rf"\b{re.escape(code)}\b" for code in consignee_codes])
+    pattern = r"|".join([rf"\b{re.escape(code)}\b" for code in consignee_code])
     mask = df['consignee_code_multiple'].astype(str).apply(
         lambda x: bool(re.search(pattern, x))
     )
     return df[mask]
 
 
-def check_container_authorization(df, container_numbers: List[str], consignee_codes: List[str]):
+def check_container_authorization(df, container_numbers: List[str], consignee_code: List[str]):
     """Check if the container belongs to one of the authorized consignees"""
-    authorized_df = filter_by_consignee(df, consignee_codes)
+    authorized_df = filter_by_consignee(df, consignee_code)
     container_mask = authorized_df['container_number'].isin(container_numbers)
     return authorized_df[container_mask], not authorized_df[container_mask].empty
 
@@ -96,13 +96,13 @@ def check_container_authorization(df, container_numbers: List[str], consignee_co
 def ask(body: QueryWithConsigneeBody):
     q = body.question.strip()
     #consignee_codes = [c.strip() for c in body.consignee_code.split(",") if c.strip()]
-    consignee_codes = list(dict.fromkeys(c.strip() for c in body.consignee_code.split(",") if c.strip()))
-    #print(consignee_codes)
-    logger.info(f"User_Query: {q}, c_codes: {consignee_codes}")
+    consignee_code = list(dict.fromkeys(c.strip() for c in body.consignee_code.split(",") if c.strip()))
+    #print(consignee_code)
+    logger.info(f"User_Query: {q}, consignee_code: {consignee_code}")
     if not q:
         raise HTTPException(status_code=400, detail="Empty question")
     
-    if not consignee_codes:
+    if not consignee_code:
         raise HTTPException(status_code=400, detail="Consignee code is required")
 
     # Get the DataFrame from blob storage
@@ -110,7 +110,7 @@ def ask(body: QueryWithConsigneeBody):
     df = get_shipment_df().copy()
     
     # Filter by consignee codes
-    authorized_df = filter_by_consignee(df, consignee_codes)
+    authorized_df = filter_by_consignee(df, consignee_code)
     
     if authorized_df.empty:
         return {"response": "No data found.", "table": [], "mode": "agent"}
@@ -125,7 +125,7 @@ def ask(body: QueryWithConsigneeBody):
         requested_containers = [c.strip() for c in re.split(r'\s*,\s*', container_str)]
         
         # Check if these containers belong to the authorized consignees
-        _, is_authorized = check_container_authorization(df, requested_containers, consignee_codes)
+        _, is_authorized = check_container_authorization(df, requested_containers, consignee_code)
         if not is_authorized:
             return {"response": "No data found.", "table": [], "mode": "agent"}
     
@@ -170,12 +170,12 @@ def ask(body: QueryWithConsigneeBody):
 
     try:
         # Pass consignee context to the agent including authorization info
-        consignee_context = f"user {','.join(consignee_codes)}: {q}"
+        consignee_context = f"user {','.join(consignee_code)}: {q}"
         #consignee_context = f"user: {q}"
 
         # Set consignee codes in a global context that tools can access
         import threading
-        threading.current_thread().consignee_codes = consignee_codes
+        threading.current_thread().consignee_code = consignee_code
 
         try:
             result = AGENT.invoke({"input": consignee_context})
@@ -183,8 +183,8 @@ def ask(body: QueryWithConsigneeBody):
             result = AGENT.invoke({"input": consignee_context})
 
         # Clear the context after use
-        if hasattr(threading.current_thread(), 'consignee_codes'):
-            delattr(threading.current_thread(), 'consignee_codes')
+        if hasattr(threading.current_thread(), 'consignee_code'):
+            delattr(threading.current_thread(), 'consignee_code')
 
         if isinstance(result, str):
             result = {"output": result, "intermediate_steps": []}
@@ -204,7 +204,7 @@ def ask(body: QueryWithConsigneeBody):
 
         # ---- NEW: Fallback when agent stops due to iteration/time limit ----
         if re.search(r"Agent stopped due to iteration limit or time limit\.", output, re.IGNORECASE):
-            fallback = route_query(q, consignee_codes)  # Pass consignee codes
+            fallback = route_query(q, consignee_code)  # Pass consignee codes
             
             # Handle list/dict returns from transit analysis functions
             if isinstance(fallback, list) and len(fallback) > 0 and isinstance(fallback[0], dict):
@@ -342,7 +342,7 @@ def ask(body: QueryWithConsigneeBody):
         
         # Try router fallback before failing
         try:
-            fallback = route_query(q, consignee_codes)  # Pass consignee codes
+            fallback = route_query(q, consignee_code)  # Pass consignee codes
             
             # Handle list/dict returns from transit analysis functions
             if isinstance(fallback, list) and len(fallback) > 0 and isinstance(fallback[0], dict):

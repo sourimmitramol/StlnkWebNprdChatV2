@@ -1,17 +1,1 @@
 2026-01-12 10:27:33,123 - shipping_chatbot - INFO - AzureChatOpenAI ready
-2026-01-12 10:27:33,123 - shipping_chatbot - INFO - Agent created with 51 tools
-2026-01-12 10:27:33,127 - shipping_chatbot - INFO - Agent ready for HTTP requests
-2026-01-12 10:28:39,927 - shipping_chatbot - INFO - User_Query: let me know the status about ELCU2103087, c_codes: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
-2026-01-12 10:28:39,930 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
-2026-01-12 10:30:38,035 - shipping_chatbot - INFO - Fetched 20280 rows
-2026-01-12 10:30:38,052 - shipping_chatbot - INFO - Starting preprocessing on 20280 rows
-2026-01-12 10:30:38,515 - shipping_chatbot - INFO - Removed 0 duplicate rows
-2026-01-12 10:30:41,824 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
-2026-01-12 10:30:43,074 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
-2026-01-12 10:30:45,587 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
-2026-01-12 10:30:45,596 - shipping_chatbot - INFO - Added `actual_transit_days` column
-2026-01-12 10:30:45,602 - shipping_chatbot - INFO - Added `estimated_transit_days` column
-2026-01-12 10:30:45,774 - shipping_chatbot - INFO - Pre-processing finished - 20280 rows remain
-2026-01-12 10:56:11,924 - shipping_chatbot - INFO - User_Query: hello!, c_codes: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
-2026-01-12 10:56:27,118 - shipping_chatbot - INFO - Router: Set consignee codes ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392'] for query: hello!
-2026-01-12 10:56:27,331 - shipping_chatbot - INFO - Consignee filtering validated: 7829 rows for codes ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']

@@ -46,22 +46,22 @@ from agents.tools import (
     _df,  # Import the DataFrame function to test filtering
 )
 
-def validate_consignee_filtering(consignee_codes: list) -> bool:
+def validate_consignee_filtering(consignee_code: list) -> bool:
     """Validate that consignee filtering is working properly"""
     try:
         # Get filtered DataFrame
         df_filtered = _df()
         
         if df_filtered.empty:
-            logger.warning(f"No data found after consignee filtering for codes: {consignee_codes}")
+            logger.warning(f"No data found after consignee filtering for codes: {consignee_code}")
             return False
         
         # Check if consignee codes are present in the filtered data
         if 'consignee_code_multiple' in df_filtered.columns:
-            # Extract numeric codes from consignee_codes
+            # Extract numeric codes from consignee_code
             import re
             numeric_codes = []
-            for code in consignee_codes:
+            for code in consignee_code:
                 # Extract numeric part (e.g., "0045831" from "EDDIE BAUER LLC(0045831)")
                 match = re.search(r'\((\d+)\)', code)
                 if match:
@@ -90,17 +90,17 @@ def validate_consignee_filtering(consignee_codes: list) -> bool:
         logger.error(f"Error validating consignee filtering: {e}", exc_info=True)
         return False
 
-def route_query(query: str, consignee_codes: list = None) -> str:
+def route_query(query: str, consignee_code: list = None) -> str:
     """Route query with consignee authorization support"""
     try:
         # Set thread-local consignee codes for tools
-        if consignee_codes:
-            threading.current_thread().consignee_codes = consignee_codes
-            logger.info(f"Router: Set consignee codes {consignee_codes} for query: {query}")
+        if consignee_code:
+            threading.current_thread().consignee_code = consignee_code
+            logger.info(f"Router: Set consignee codes {consignee_code} for query: {query}")
             
             # ========== VALIDATE CONSIGNEE FILTERING ==========
-            if not validate_consignee_filtering(consignee_codes):
-                return f"No data available for your authorized consignee codes: {consignee_codes}"
+            if not validate_consignee_filtering(consignee_code):
+                return f"No data available for your authorized consignee codes: {consignee_code}"
         
         q = query.lower()
         
@@ -259,8 +259,8 @@ def route_query(query: str, consignee_codes: list = None) -> str:
         return f"Error processing your query: {str(e)}"
     finally:
         # ========== ALWAYS CLEAN UP CONSIGNEE CONTEXT ==========
-        if consignee_codes and hasattr(threading.current_thread(), 'consignee_codes'):
-            delattr(threading.current_thread(), 'consignee_codes')
+        if consignee_code and hasattr(threading.current_thread(), 'consignee_code'):
+            delattr(threading.current_thread(), 'consignee_code')
             logger.debug("Cleaned up consignee codes from thread context")
 
 

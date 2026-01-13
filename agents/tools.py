@@ -52,13 +52,13 @@ def _df() -> pd.DataFrame:
     df = get_shipment_df()
 
     # Check if consignee codes are set in thread-local storage
-    if hasattr(threading.current_thread(), 'consignee_codes'):
-        consignee_codes = threading.current_thread().consignee_codes
+    if hasattr(threading.current_thread(), 'consignee_code'):
+        consignee_code = threading.current_thread().consignee_code
 
-        if consignee_codes and 'consignee_code_multiple' in df.columns:
+        if consignee_code and 'consignee_code_multiple' in df.columns:
             # Extract numeric codes from consignee codes
             numeric_codes = []
-            for code in consignee_codes:
+            for code in consignee_code:
                 # Extract numeric part (e.g., "0045831" from "EDDIE BAUER LLC(0045831)")
                 match = re.search(r'\((\d+)\)', code)
                 if match:
@@ -139,17 +139,17 @@ def handle_non_shipping_queries(query: str) -> str:
     return "That doesn’t look like a shipping-related question, but I’m MCS AI and I’m here to help! 😊 What would you like to know?"
 
 
-def _get_current_consignee_codes():
+def _get_current_consignee_code():
     """Get current consignee codes from thread-local storage"""
-    return getattr(threading.current_thread(), 'consignee_codes', None)
+    return getattr(threading.current_thread(), 'consignee_code', None)
 
-def _df_filtered_by_consignee(consignee_codes=None):
+def _df_filtered_by_consignee(consignee_code=None):
     """Get DataFrame filtered by consignee codes if provided"""
     df = get_shipment_df()
-    if consignee_codes:
+    if consignee_code:
         # Extract just the numeric part from consignee codes
         numeric_codes = []
-        for code in consignee_codes:
+        for code in consignee_code:
             # Extract numeric part (e.g., "0045831" from "EDDIE BAUER LLC(0045831)")
             match = re.search(r'\((\d+)\)', code)
             if match:
