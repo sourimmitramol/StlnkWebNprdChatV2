@@ -9405,7 +9405,7 @@ TOOLS = [
         "- FEEDER VESSEL = FIRST VESSEL (first_vessel_name, first_vessel_code, first_voyage_code)\n"
         "\n"
         "BOOKING NUMBER SUPPORT (CRITICAL):\n"
-        "- Input can be: 'EG2002468', 'GT3000512', 'VN2084805', 'CN9140225', etc.\n"
+        "- Input can be: 'KH2031789', 'EG2002468', 'GT3000512', 'VN2084805', 'CN9140225', etc.\n"
         "- Booking numbers are 6-20 alphanumeric characters (not container format: AAAA#######)\n"
         "- Searches booking_number_multiple column (comma-separated values)\n"
         "- Returns vessel info for ALL containers in that booking\n"
@@ -9415,6 +9415,7 @@ TOOLS = [
         "- Returns vessel info for that specific container\n"
         "\n"
         "Examples of queries this tool handles:\n"
+        "- 'First and Mother vessel details of KH2031789' → Booking number lookup\n"
         "- 'First and Mother vessel details of EG2002468' → Booking number lookup\n"
         "- 'What is the mother vessel for booking GT3000512' → Booking number lookup\n"
         "- 'Show vessel details for container MSBU4522691' → Container lookup\n"
@@ -9437,7 +9438,7 @@ TOOLS = [
         "DO NOT use 'Get Container Milestones' for vessel queries.\n"
         "DO NOT use 'Get Booking Details' for vessel information.\n"
         )
-    ),
+   ),
     Tool(
         name="Get Upcoming POs",
         func=get_upcoming_pos,
@@ -9802,6 +9803,7 @@ TOOLS = [
     ),
 
 ]
+
 
 
 
