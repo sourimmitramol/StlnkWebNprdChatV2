@@ -3617,39 +3617,200 @@ def get_field_info(query: str) -> str:
 # ------------------------------------------------------------------
 def get_vessel_info(input_str: str) -> str:
     """
-    Get vessel details for a specific container.
-    Input: Provide a valid container number (partial or full).
-    Output: Vessel codes and names for the container.
-    If not found, prompts for a valid container number.
+    Get vessel details for a specific container or booking number.
+    Input: Provide a valid container number (partial or full) or booking number.
+    Output: Vessel codes and names for the container/booking with related information.
+    If not found, prompts for a valid identifier.
+    here mother vessel is final_vessel_name and feeder vessel is first_vessel_name.
     """
+    import pandas as pd
+    
+    input_str = (input_str or "").strip()
+    if not input_str:
+        return "Please specify a valid container number or booking number."
+
+    try:
+        logger.info(f"[get_vessel_info] Processing input: {input_str}")
+    except:
+        pass
+
+    df = _df()  # Respects consignee filtering
+    
+    if df.empty:
+        return "No data available for your authorized consignees."
+
+    # ========== 1) TRY BOOKING NUMBER FIRST ==========
+    booking_no = None
+    
+    # **CRITICAL FIX**: Improved booking number detection
+    # Pattern 1: If input is NOT a container format (AAAA#######), treat as potential booking
+    input_upper = input_str.upper().strip()
+    
+    # Container format check: exactly 4 letters + 7 digits
+    is_container_format = bool(re.fullmatch(r'[A-Z]{4}\d{7}', input_upper))
+    
+    if not is_container_format:
+        # Check length: booking numbers are typically 6-20 characters
+        if 6 <= len(input_upper) <= 20:
+            # Contains at least 2 letters and some digits (booking pattern)
+            if re.search(r'[A-Z]', input_upper) and re.search(r'\d', input_upper):
+                booking_no = input_upper
+                try:
+                    logger.info(f"[get_vessel_info] Detected as potential booking number: {booking_no}")
+                except:
+                    pass
+
+    if booking_no and "booking_number_multiple" in df.columns:
+        try:
+            logger.info(f"[get_vessel_info] Attempting booking number match: {booking_no}")
+        except:
+            pass
+        
+        # **CRITICAL FIX**: Use robust booking matching with normalization
+        booking_norm = _normalize_booking_token(booking_no)
+        
+        try:
+            logger.info(f"[get_vessel_info] Normalized booking: '{booking_no}' -> '{booking_norm}'")
+        except:
+            pass
+        
+        # Use the helper function for comma-separated matching
+        mask = df["booking_number_multiple"].apply(lambda cell: _booking_in_cell(cell, booking_norm))
+        rows = df[mask].copy()
+        
+        try:
+            logger.info(f"[get_vessel_info] Booking search results: {len(rows)} rows found")
+            if len(rows) > 0:
+                sample_bookings = rows["booking_number_multiple"].head(3).tolist()
+                logger.info(f"[get_vessel_info] Sample matching bookings: {sample_bookings}")
+        except:
+            pass
+        
+        if not rows.empty:
+            try:
+                logger.info(f"[get_vessel_info] Found {len(rows)} record(s) for booking {booking_no}")
+            except:
+                pass
+            
+            # Parse dates for sorting (get most recent record)
+            date_cols = [c for c in ["etd_lp", "eta_dp", "revised_eta"] if c in rows.columns]
+            if date_cols:
+                rows = ensure_datetime(rows, date_cols)
+                rows["_sort_date"] = rows[date_cols].max(axis=1)
+                rows = rows.sort_values("_sort_date", ascending=False)
+            
+            # Prepare output columns
+            output_cols = [
+                "booking_number_multiple",
+                "container_number",
+                "po_number_multiple",
+                "first_vessel_code",
+                "first_vessel_name",
+                "first_voyage_code",
+                "final_vessel_code",
+                "final_vessel_name",
+                "final_voyage_code",
+                "load_port",
+                "discharge_port",
+                "etd_lp",
+                "eta_dp",
+                "revised_eta",
+                "final_carrier_name",
+                "consignee_code_multiple"
+            ]
+            
+            # Filter to available columns
+            output_cols = [c for c in output_cols if c in rows.columns]
+            result_df = rows[output_cols].head(50).copy()
+            
+            # Format date columns
+            for dcol in ["etd_lp", "eta_dp", "revised_eta"]:
+                if dcol in result_df.columns and pd.api.types.is_datetime64_any_dtype(result_df[dcol]):
+                    result_df[dcol] = result_df[dcol].dt.strftime("%Y-%m-%d")
+            
+            try:
+                logger.info(f"[get_vessel_info] Returning {len(result_df)} vessel record(s) for booking {booking_no}")
+            except:
+                pass
+            
+            return result_df.where(pd.notnull(result_df), None).to_dict(orient='records')
+
+    # ========== 2) TRY CONTAINER NUMBER ==========
     container_no = extract_container_number(input_str)
+    
     if not container_no:
-        return "Please specify a valid container number."
+        # Fallback: try to extract 4 letters + 7 digits pattern
+        m_cont = re.search(r'\b([A-Z]{4}\d{7})\b', input_str.upper())
+        container_no = m_cont.group(1) if m_cont else None
 
-    df = _df()
-    df["container_number"] = df["container_number"].astype(str)
+    if container_no:
+        try:
+            logger.info(f"[get_vessel_info] Attempting container number match: {container_no}")
+        except:
+            pass
+        
+        if "container_number" not in df.columns:
+            return f"Container column not found for container {container_no}."
 
-    # exact match → then contains → then prefix
-    clean = clean_container_number(container_no)
-    rows = df[df["container_number"].str.replace(" ", "").str.upper() == clean]
+        # Exact match after normalizing
+        clean = clean_container_number(container_no)
+        rows = df[df["container_number"].astype(str).str.replace(" ", "").str.upper() == clean]
 
-    if rows.empty:
-        rows = df[df["container_number"].str.contains(container_no, case=False, na=False)]
+        # Fallback to contains match
+        if rows.empty:
+            rows = df[df["container_number"].str.contains(container_no, case=False, na=False)]
 
-    if rows.empty:
-        return f"No data found for container {container_no}."
+        if rows.empty:
+            return f"No data found for container {container_no}."
+        
+        try:
+            logger.info(f"[get_vessel_info] Found {len(rows)} record(s) for container {container_no}")
+        except:
+            pass
 
-    row = rows.iloc[0]
-    parts = []
-    for col in ["first_vessel_code", "first_vessel_name",
-                "final_vessel_code", "final_vessel_name"]:
-        if col in row and pd.notnull(row[col]) and str(row[col]).strip():
-            parts.append(f"{col.replace('_', ' ').title()}: {row[col]}")
+        # Get the first/most relevant record
+        row = rows.iloc[0]
+        
+        # Prepare output columns
+        output_cols = [
+            "container_number",
+            "booking_number_multiple",
+            "po_number_multiple",
+            "first_vessel_code",
+            "first_vessel_name",
+            "first_voyage_code",
+            "final_vessel_code",
+            "final_vessel_name",
+            "final_voyage_code",
+            "load_port",
+            "discharge_port",
+            "etd_lp",
+            "eta_dp",
+            "revised_eta",
+            "final_carrier_name",
+            "consignee_code_multiple"
+        ]
+        
+        # Build result dictionary from available columns
+        result = {}
+        for col in output_cols:
+            if col in row.index:
+                val = row[col]
+                # Format dates
+                if col in ["etd_lp", "eta_dp", "revised_eta"] and pd.notna(val):
+                    if hasattr(val, 'strftime'):
+                        val = val.strftime("%Y-%m-%d")
+                result[col] = val if pd.notna(val) else None
+        
+        try:
+            logger.info(f"[get_vessel_info] Returning vessel info for container {container_no}")
+        except:
+            pass
+        
+        return [result]
 
-    if not parts:
-        return f"No vessel information stored for container {container_no}."
-
-    return f"Vessel information for container {container_no}:\n" + "\n".join(parts)
+    # ========== 3) NO VALID IDENTIFIER FOUND ==========
+    return f"Please specify a valid container number or booking number. Input received: {input_str}"
 
 
 # ------------------------------------------------------------------
@@ -9225,9 +9386,57 @@ TOOLS = [
         description="Retrieve detailed information for a container or summarize a specific field."
     ),
     Tool(
-        name="Get Vessel Info",
-        func=get_vessel_info,
-        description="Get vessel details for a specific container."
+    name="Get Vessel Info",
+    func=get_vessel_info,
+    description=(
+        "PRIMARY TOOL for ALL VESSEL-RELATED QUERIES (mother vessel, feeder vessel, first vessel, final vessel).\n"
+        "\n"
+        "Use this tool for ANY query asking about:\n"
+        "- Vessel details: 'show vessel details for container/booking X'\n"
+        "- Mother vessel: 'what is mother vessel for container/booking Y', 'mother vessel of EG2002468'\n"
+        "- Feeder vessel: 'what is feeder vessel for container/booking Z', 'first vessel details'\n"
+        "- First and mother vessel: 'first and mother vessel details of EG2002468'\n"
+        "- Final vessel: 'final vessel name for container/booking X'\n"
+        "- Vessel codes: 'show vessel codes for booking Y'\n"
+        "- Voyage information: 'voyage code for container Z'\n"
+        "\n"
+        "CRITICAL TERMINOLOGY:\n"
+        "- MOTHER VESSEL = FINAL VESSEL (final_vessel_name, final_vessel_code, final_voyage_code)\n"
+        "- FEEDER VESSEL = FIRST VESSEL (first_vessel_name, first_vessel_code, first_voyage_code)\n"
+        "\n"
+        "BOOKING NUMBER SUPPORT (CRITICAL):\n"
+        "- Input can be: 'EG2002468', 'GT3000512', 'VN2084805', 'CN9140225', etc.\n"
+        "- Booking numbers are 6-20 alphanumeric characters (not container format: AAAA#######)\n"
+        "- Searches booking_number_multiple column (comma-separated values)\n"
+        "- Returns vessel info for ALL containers in that booking\n"
+        "\n"
+        "CONTAINER NUMBER SUPPORT:\n"
+        "- Container format: 4 letters + 7 digits (e.g., MSBU4522691, MRKU0496086)\n"
+        "- Returns vessel info for that specific container\n"
+        "\n"
+        "Examples of queries this tool handles:\n"
+        "- 'First and Mother vessel details of EG2002468' → Booking number lookup\n"
+        "- 'What is the mother vessel for booking GT3000512' → Booking number lookup\n"
+        "- 'Show vessel details for container MSBU4522691' → Container lookup\n"
+        "- 'Mother vessel of VN2084805' → Booking number lookup\n"
+        "- 'First vessel name for EG2002468' → Booking number lookup\n"
+        "- 'Vessel codes for container MRKU0496086' → Container lookup\n"
+        "\n"
+        "Returns:\n"
+        "- booking_number_multiple (if booking query)\n"
+        "- container_number\n"
+        "- po_number_multiple\n"
+        "- first_vessel_code, first_vessel_name, first_voyage_code (FEEDER vessel)\n"
+        "- final_vessel_code, final_vessel_name, final_voyage_code (MOTHER vessel)\n"
+        "- load_port, discharge_port\n"
+        "- etd_lp, eta_dp, revised_eta\n"
+        "- final_carrier_name, consignee_code_multiple\n"
+        "\n"
+        "Output format: JSON list[dict] with all vessel and shipment details\n"
+        "\n"
+        "DO NOT use 'Get Container Milestones' for vessel queries.\n"
+        "DO NOT use 'Get Booking Details' for vessel information.\n"
+        )
     ),
     Tool(
         name="Get Upcoming POs",
@@ -9593,6 +9802,7 @@ TOOLS = [
     ),
 
 ]
+
 
 
 
