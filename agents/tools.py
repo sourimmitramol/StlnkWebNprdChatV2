@@ -7927,13 +7927,12 @@ def get_booking_details(question: str = None, consignee_code: str = None, **kwar
             return f"No data found for booking {booking_no}."
 
         out_cols = [
-            "booking_number_multiple",
             "container_number",
             "po_number_multiple",
             "po_number",
             "ocean_bl_no_multiple",
+            "booking_number_multiple",
             "discharge_port",
-            "consignee_code_multiple",
         ]
         # include ETA/arrival context if present
         for c in ["revised_eta", "eta_dp", "ata_dp", "derived_ata_dp"]:
@@ -8027,11 +8026,11 @@ def get_booking_details(question: str = None, consignee_code: str = None, **kwar
                 return "Please specify a PO number, container number, or ocean BL/OBL to look up the booking number."
 
         out_cols = [
-            "booking_number_multiple",
             "container_number",
             "po_number_multiple",
             "po_number",
             "ocean_bl_no_multiple",
+            "booking_number_multiple",
             "discharge_port",
             "consignee_code_multiple",
         ]
@@ -8040,6 +8039,9 @@ def get_booking_details(question: str = None, consignee_code: str = None, **kwar
         return out.where(pd.notnull(out), None).to_dict(orient="records")
 
     return "Please ask a booking-related question (booking number of PO/container/BL, ETA of booking, or PO/container/BL of booking)."
+
+
+
 
 
 
@@ -9803,6 +9805,7 @@ TOOLS = [
     ),
 
 ]
+
 
 
 
