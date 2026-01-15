@@ -88,8 +88,11 @@ def route_query(
         # Set thread-local consignee codes for tools
         if consignee_code:
             threading.current_thread().consignee_code = consignee_code
+            threading.current_thread().chat_history = (
+                chat_history  # Store history for tools
+            )
             logger.info(
-                f"Router: Set consignee codes {consignee_code} for query: {query}"
+                f"Router: Set context (codes: {consignee_code}, has_history: {bool(chat_history)}) for query: {query}"
             )
 
             # ========== VALIDATE CONSIGNEE FILTERING ==========
@@ -372,4 +375,6 @@ def route_query(
         # ========== ALWAYS CLEAN UP CONSIGNEE CONTEXT ==========
         if consignee_code and hasattr(threading.current_thread(), "consignee_code"):
             delattr(threading.current_thread(), "consignee_code")
-            logger.debug("Cleaned up consignee codes from thread context")
+        if hasattr(threading.current_thread(), "chat_history"):
+            delattr(threading.current_thread(), "chat_history")
+        logger.debug("Cleaned up thread context")

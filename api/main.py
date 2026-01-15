@@ -1,4 +1,5 @@
 # api/main.py
+# python -m uvicorn api.main:app --reload
 import ast
 import logging
 import re
@@ -188,6 +189,7 @@ def ask(body: QueryWithConsigneeBody):
         import threading
 
         threading.current_thread().consignee_code = consignee_code
+        threading.current_thread().chat_history = chat_history
 
         try:
             # Handle session memory
@@ -226,6 +228,8 @@ def ask(body: QueryWithConsigneeBody):
         # Clear the context after use
         if hasattr(threading.current_thread(), "consignee_code"):
             delattr(threading.current_thread(), "consignee_code")
+        if hasattr(threading.current_thread(), "chat_history"):
+            delattr(threading.current_thread(), "chat_history")
 
         if isinstance(result, str):
             result = {"output": result, "intermediate_steps": []}
