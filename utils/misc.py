@@ -1,7 +1,8 @@
 # utils/misc.py
 import re
-import pandas as pd
 from typing import Iterable
+
+import pandas as pd
 
 
 def to_datetime(series: pd.Series) -> pd.Series:
@@ -11,4 +12,4 @@ def to_datetime(series: pd.Series) -> pd.Series:
 
 def clean_container_number(num: str) -> str:
     """Strip everything that isn’t alphanumeric and upper‑case."""
-    return re.sub(r'[^A-Z0-9]', '', num.upper())
+    return re.sub(r"[^A-Z0-9]", "", num.upper())

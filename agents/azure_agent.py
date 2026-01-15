@@ -7,16 +7,19 @@ from langchain.agents.structured_chat.prompt import FORMAT_INSTRUCTIONS, PREFIX
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_community.agent_toolkits import create_sql_agent
 from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
+
 from agents.prompts import ROBUST_COLUMN_MAPPING_PROMPT
 from agents.tools import get_blob_sql_engine
-
 from config import settings
+
 from .tools import TOOLS
 
 logger = logging.getLogger("shipping_chatbot")
 
 
-def initialize_azure_agent(tools: List[Tool] | None = None) -> Tuple[object, AzureChatOpenAI]:
+def initialize_azure_agent(
+    tools: List[Tool] | None = None,
+) -> Tuple[object, AzureChatOpenAI]:
     """Build the chat agent with Azure OpenAI.
 
     Notes:
@@ -32,7 +35,7 @@ def initialize_azure_agent(tools: List[Tool] | None = None) -> Tuple[object, Azu
         "Get Today Date",
         "Get Container Milestones",
         "Analyze Data with Pandas",
-        "Handle Non-shipping queries"
+        "Handle Non-shipping queries",
     ]
     tools = [t for t in tools if t.name in core_tool_names]
     # --------------------------------------
@@ -42,7 +45,7 @@ def initialize_azure_agent(tools: List[Tool] | None = None) -> Tuple[object, Azu
         api_key=settings.AZURE_OPENAI_API_KEY,
         api_version=settings.AZURE_OPENAI_API_VERSION,
         azure_deployment=settings.AZURE_OPENAI_DEPLOYMENT,
-        temperature=0.03  # Adjust temperature for creativity (0.0 = deterministic, 1.0 = creative)
+        temperature=0.03,  # Adjust temperature for creativity (0.0 = deterministic, 1.0 = creative)
     )
     # Build a structured-chat agent prompt (offline, no LangChain Hub dependency)
     # Required variables for create_structured_chat_agent: tools, tool_names, input, agent_scratchpad
@@ -51,7 +54,9 @@ def initialize_azure_agent(tools: List[Tool] | None = None) -> Tuple[object, Azu
         "CORE TOOL PREFERENCE RULES:\n"
         "1. For Status, Tracking, Tracking History, or Milestones of a SPECIFIC Container/PO/BL -> ALWAYS use 'Get Container Milestones'.\n"
         "2. For ALL OTHER data queries (counts, averages, delays, trends, distributions, port stats, carrier performance) -> PRIORITY GOTO: 'Analyze Data with Pandas'.\n"
-        "3. Use 'Get Today Date' immediately if the query involves relative dates (yesterday, today, next week) before picking other tools.\n\n"
+        "3. For greetings, small talk, or company info (MCS mission, vision, CEO, locations, values) -> ALWAYS use 'Handle Non-shipping queries'.\n"
+        "4. If Analyze Data with Pandas returns 'no data' but the query involves company information keywords, FAILOVER to 'Handle Non-shipping queries'.\n"
+        "5. Use 'Get Today Date' immediately if the query involves relative dates (yesterday, today, next week) before picking other tools.\n\n"
         "CRITICAL: You MUST respond in the structured JSON format specified below. Even your 'Final Answer' MUST be a JSON blob with action='Final Answer' and your response in 'action_input'.\n\n"
         "CONSIGNEE AUTHORIZATION CONTEXT:\n"
         "- The 'Authorized Consignee(s)' listed below are for permission context.\n"
@@ -68,11 +73,16 @@ def initialize_azure_agent(tools: List[Tool] | None = None) -> Tuple[object, Azu
         [
             ("system", system_instructions),
             MessagesPlaceholder(variable_name="chat_history"),
-            ("human", "AUTHORIZED CONSIGNNE CODES: {consignee_code}\n\nUSER QUESTION: {input}\n\n{agent_scratchpad}"),
+            (
+                "human",
+                "AUTHORIZED CONSIGNNE CODES: {consignee_code}\n\nUSER QUESTION: {input}\n\n{agent_scratchpad}",
+            ),
         ]
     )
 
-    runnable_agent = create_structured_chat_agent(llm=llm, tools=tools or TOOLS, prompt=prompt)
+    runnable_agent = create_structured_chat_agent(
+        llm=llm, tools=tools or TOOLS, prompt=prompt
+    )
     agent = AgentExecutor(
         agent=runnable_agent,
         tools=tools or TOOLS,
@@ -110,11 +120,6 @@ def initialize_sql_agent():
     engine = get_blob_sql_engine()
     # Create the SQL agent executor
     sql_agent_executor = create_sql_agent(
-        llm,
-        db=engine,
-        agent_type="openai-tools",
-        verbose=True
+        llm, db=engine, agent_type="openai-tools", verbose=True
     )
     return sql_agent_executor
-
-

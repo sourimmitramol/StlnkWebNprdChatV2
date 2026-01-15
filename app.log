@@ -146,3 +146,182 @@
 2026-01-13 17:21:37,377 - shipping_chatbot - INFO - [get_containers_PO_OBL_by_supplier] Extracted: container=None, po=0000866, obl=None
 2026-01-13 17:21:37,392 - shipping_chatbot - INFO - [get_containers_PO_OBL_by_supplier] PO lookup: po_norm=0000866, found 0 rows
 2026-01-13 17:21:38,400 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Get Containers or PO or OBL By Supplier | Tool Input: consignee_code: 0000866, 0005179
+2026-01-15 09:16:20,571 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-15 09:16:20,571 - shipping_chatbot - INFO - Agent created with 4 tools
+2026-01-15 09:16:20,571 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-15 09:17:00,423 - shipping_chatbot - INFO - User_Query: who is the supplier for FBIU0348756, consignee_code: ['0000866']
+2026-01-15 09:17:00,424 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-15 09:17:16,544 - shipping_chatbot - INFO - Fetched 19284 rows
+2026-01-15 09:17:16,559 - shipping_chatbot - INFO - Starting preprocessing on 19284 rows
+2026-01-15 09:17:16,857 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-15 09:17:19,254 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-15 09:17:20,001 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-15 09:17:20,952 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-15 09:17:20,952 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-15 09:17:20,959 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-15 09:17:20,999 - shipping_chatbot - INFO - Pre-processing finished - 19284 rows remain
+2026-01-15 09:17:23,349 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Get Container Milestones | Tool Input: container FBIU0348756
+2026-01-15 09:17:57,140 - shipping_chatbot - INFO - User_Query: who is the supplier for FBIU0348756, consignee_code: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-15 09:17:59,515 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Get Container Milestones | Tool Input: FBIU0348756
+2026-01-15 09:19:32,701 - shipping_chatbot - INFO - User_Query: what is the container for 5303013468, consignee_code: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-15 09:19:35,107 - shipping_chatbot - INFO - [get_container_milestones] Searching for PO: 5303013468
+2026-01-15 09:19:35,151 - shipping_chatbot - INFO - [get_container_milestones] PO match results: 1 rows found
+2026-01-15 09:19:35,157 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Get Container Milestones | Tool Input: PO 5303013468
+2026-01-15 12:49:49,039 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-15 12:49:49,039 - shipping_chatbot - INFO - Agent created with 4 tools
+2026-01-15 12:49:49,039 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-15 13:06:58,903 - shipping_chatbot - INFO - User_Query: What is the ceo message, consignee_code: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
+2026-01-15 13:06:58,908 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-15 13:07:18,099 - shipping_chatbot - INFO - Fetched 19284 rows
+2026-01-15 13:07:18,102 - shipping_chatbot - INFO - Starting preprocessing on 19284 rows
+2026-01-15 13:07:18,205 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-15 13:07:18,815 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-15 13:07:18,979 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-15 13:07:19,554 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-15 13:07:19,554 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-15 13:07:19,559 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-15 13:07:19,589 - shipping_chatbot - INFO - Pre-processing finished - 19284 rows remain
+2026-01-15 13:07:26,455 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Handle Non-shipping queries | Tool Input: The CEO message typically refers to a communication from the Chief Executive Officer of a company, often addressing employees, customers, or stakeholders about the company's vision, achievements, goals, or important updates. If you are looking for a specific CEO message, please provide more context or specify the company or organization.
+2026-01-15 13:07:26,455 - shipping_chatbot - INFO - AGENT_STEP: 2 | Tool Used: Handle Non-shipping queries | Tool Input: The CEO message usually refers to a statement or communication from the Chief Executive Officer of a company. If you are asking about a specific CEO message, please provide the name of the company or more context so I can assist you better.
+2026-01-15 13:08:04,276 - shipping_chatbot - INFO - User_Query: What is the ceo message of america, consignee_code: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
+2026-01-15 13:08:12,024 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Handle Non-shipping queries | Tool Input: The CEO message of America is not a specific or standard term. If you mean a message from the CEO of a particular American company or organization, please specify the company name. Alternatively, if you are referring to a general statement or speech by a CEO in America, please provide more details.
+2026-01-15 13:08:41,100 - shipping_chatbot - INFO - User_Query: What mcs generally do, consignee_code: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
+2026-01-15 13:08:46,013 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Handle Non-shipping queries | Tool Input: MCS (MOL Chemical Shipping) generally provides specialized shipping and logistics services, focusing on the transportation of chemical products and other specialized cargo. They offer container shipping, logistics solutions, supply chain management, and related services to ensure safe, efficient, and reliable delivery of goods globally.
+2026-01-15 13:09:20,133 - shipping_chatbot - INFO - User_Query: can you list his services offered, consignee_code: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
+2026-01-15 13:09:24,340 - shipping_chatbot - ERROR - Agent failed: unexpected character after line continuation character (analytics_engine.py, line 88)
+Traceback (most recent call last):
+  File "C:\Users\CHOWDHURYRaju\Desktop\roshan\StlnkWebNprdChatV2\api\main.py", line 196, in ask
+    result = AGENT.invoke({
+             ^^^^^^^^^^^^^^
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\chains\base.py", line 166, in invoke
+    raise e
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\chains\base.py", line 156, in invoke
+    self._call(inputs, run_manager=run_manager)
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\agents\agent.py", line 1433, in _call
+    next_step_output = self._take_next_step(
+                       ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\agents\agent.py", line 1139, in _take_next_step
+    [
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\agents\agent.py", line 1139, in <listcomp>
+    [
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\agents\agent.py", line 1224, in _iter_next_step
+    yield self._perform_agent_action(
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\agents\agent.py", line 1246, in _perform_agent_action
+    observation = tool.run(
+                  ^^^^^^^^^
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain_core\tools.py", line 452, in run
+    raise e
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain_core\tools.py", line 409, in run
+    context.run(
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain_core\tools.py", line 633, in _run
+    else self.func(*args, **kwargs)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\CHOWDHURYRaju\Desktop\roshan\StlnkWebNprdChatV2\agents\tools.py", line 3244, in analyze_data_with_pandas
+    from agents.analytics_engine import unified_shipment_analyst
+  File "C:\Users\CHOWDHURYRaju\Desktop\roshan\StlnkWebNprdChatV2\agents\analytics_engine.py", line 88
+    \"\"\"
+     ^
+SyntaxError: unexpected character after line continuation character
+2026-01-15 13:09:24,490 - shipping_chatbot - INFO - Router: Set consignee codes ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392'] for query: can you list his services offered
+2026-01-15 13:09:24,564 - shipping_chatbot - INFO - Consignee filtering validated: 7513 rows for codes ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
+2026-01-15 13:09:51,633 - shipping_chatbot - INFO - User_Query: what are the services offerred by mcs, consignee_code: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
+2026-01-15 13:09:56,613 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Handle Non-shipping queries | Tool Input: MCS (MOL Chemical Shipping) offers a range of services primarily focused on specialized shipping and logistics. Their services typically include container shipping, chemical logistics, supply chain management, cargo handling, and transportation solutions tailored for chemical and other specialized cargo. They ensure safe, efficient, and reliable delivery of goods globally, often providing value-added services such as tracking, customs clearance support, and tailored logistics solutions to meet customer needs.
+2026-01-15 13:10:44,483 - shipping_chatbot - INFO - User_Query: do they have any offices in egypt, consignee_code: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
+2026-01-15 13:10:50,926 - shipping_chatbot - ERROR - Agent failed: unexpected character after line continuation character (analytics_engine.py, line 88)
+Traceback (most recent call last):
+  File "C:\Users\CHOWDHURYRaju\Desktop\roshan\StlnkWebNprdChatV2\api\main.py", line 196, in ask
+    result = AGENT.invoke({
+             ^^^^^^^^^^^^^^
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\chains\base.py", line 166, in invoke
+    raise e
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\chains\base.py", line 156, in invoke
+    self._call(inputs, run_manager=run_manager)
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\agents\agent.py", line 1433, in _call
+    next_step_output = self._take_next_step(
+                       ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\agents\agent.py", line 1139, in _take_next_step
+    [
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\agents\agent.py", line 1139, in <listcomp>
+    [
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\agents\agent.py", line 1224, in _iter_next_step
+    yield self._perform_agent_action(
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\agents\agent.py", line 1246, in _perform_agent_action
+    observation = tool.run(
+                  ^^^^^^^^^
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain_core\tools.py", line 452, in run
+    raise e
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain_core\tools.py", line 409, in run
+    context.run(
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain_core\tools.py", line 633, in _run
+    else self.func(*args, **kwargs)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\CHOWDHURYRaju\Desktop\roshan\StlnkWebNprdChatV2\agents\tools.py", line 3244, in analyze_data_with_pandas
+    from agents.analytics_engine import unified_shipment_analyst
+  File "C:\Users\CHOWDHURYRaju\Desktop\roshan\StlnkWebNprdChatV2\agents\analytics_engine.py", line 88
+    \"\"\"
+     ^
+SyntaxError: unexpected character after line continuation character
+2026-01-15 13:10:50,928 - shipping_chatbot - INFO - Router: Set consignee codes ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392'] for query: do they have any offices in egypt
+2026-01-15 13:10:51,036 - shipping_chatbot - INFO - Consignee filtering validated: 7513 rows for codes ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
+2026-01-15 13:11:45,051 - shipping_chatbot - INFO - User_Query: do mcs have any offices in romania, consignee_code: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
+2026-01-15 13:11:47,739 - shipping_chatbot - ERROR - Agent failed: unexpected character after line continuation character (analytics_engine.py, line 88)
+Traceback (most recent call last):
+  File "C:\Users\CHOWDHURYRaju\Desktop\roshan\StlnkWebNprdChatV2\api\main.py", line 196, in ask
+    result = AGENT.invoke({
+             ^^^^^^^^^^^^^^
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\chains\base.py", line 166, in invoke
+    raise e
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\chains\base.py", line 156, in invoke
+    self._call(inputs, run_manager=run_manager)
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\agents\agent.py", line 1433, in _call
+    next_step_output = self._take_next_step(
+                       ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\agents\agent.py", line 1139, in _take_next_step
+    [
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\agents\agent.py", line 1139, in <listcomp>
+    [
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\agents\agent.py", line 1224, in _iter_next_step
+    yield self._perform_agent_action(
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\agents\agent.py", line 1246, in _perform_agent_action
+    observation = tool.run(
+                  ^^^^^^^^^
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain_core\tools.py", line 452, in run
+    raise e
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain_core\tools.py", line 409, in run
+    context.run(
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain_core\tools.py", line 633, in _run
+    else self.func(*args, **kwargs)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\CHOWDHURYRaju\Desktop\roshan\StlnkWebNprdChatV2\agents\tools.py", line 3244, in analyze_data_with_pandas
+    from agents.analytics_engine import unified_shipment_analyst
+  File "C:\Users\CHOWDHURYRaju\Desktop\roshan\StlnkWebNprdChatV2\agents\analytics_engine.py", line 88
+    \"\"\"
+     ^
+SyntaxError: unexpected character after line continuation character
+2026-01-15 13:11:47,740 - shipping_chatbot - INFO - Router: Set consignee codes ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392'] for query: do mcs have any offices in romania
+2026-01-15 13:11:47,796 - shipping_chatbot - INFO - Consignee filtering validated: 7513 rows for codes ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
+2026-01-15 13:13:58,692 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-15 13:13:58,692 - shipping_chatbot - INFO - Agent created with 4 tools
+2026-01-15 13:13:58,692 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-15 13:14:04,043 - shipping_chatbot - INFO - User_Query: do mcs have any offices in romania, consignee_code: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
+2026-01-15 13:14:04,047 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-15 13:14:26,239 - shipping_chatbot - INFO - Fetched 19284 rows
+2026-01-15 13:14:26,239 - shipping_chatbot - INFO - Starting preprocessing on 19284 rows
+2026-01-15 13:14:26,334 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-15 13:14:26,987 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-15 13:14:27,182 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-15 13:14:27,789 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-15 13:14:27,789 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-15 13:14:27,789 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-15 13:14:27,818 - shipping_chatbot - INFO - Pre-processing finished - 19284 rows remain
+2026-01-15 13:14:31,716 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Handle Non-shipping queries | Tool Input: MCS is a global logistics and shipping company with offices in many countries. However, there is no publicly available information confirming that MCS has an office specifically in Romania. For the most accurate and up-to-date information, it is recommended to contact MCS directly or visit their official website.
+2026-01-15 13:15:38,256 - shipping_chatbot - INFO - User_Query: what are the services offered by mcs, consignee_code: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
+2026-01-15 13:15:42,621 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Handle Non-shipping queries | Tool Input: MCS (Marine Container Services) typically offers a range of logistics and shipping services including container shipping, freight forwarding, supply chain management, customs clearance, warehousing, and distribution. For detailed and specific services, please refer to MCS's official website or contact their customer service directly.
+2026-01-15 13:16:22,985 - shipping_chatbot - INFO - User_Query: what is mcs mission, vision and values, consignee_code: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
+2026-01-15 13:16:27,494 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Handle Non-shipping queries | Tool Input: MCS's mission, vision, and values are not part of the shipping dataset. Generally, companies like MCS focus on providing reliable, efficient, and customer-centric logistics and shipping solutions. For the exact mission, vision, and values of MCS, please refer to their official website or corporate publications.
+2026-01-15 13:18:12,103 - shipping_chatbot - INFO - User_Query: what is mcs mission, consignee_code: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
+2026-01-15 13:18:18,263 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Handle Non-shipping queries | Tool Input: MCS's mission statement is not available in the shipping dataset. For accurate information about MCS's mission, please refer to MCS's official website or contact their corporate communications.
+2026-01-15 13:18:18,263 - shipping_chatbot - INFO - AGENT_STEP: 2 | Tool Used: Handle Non-shipping queries | Tool Input: MCS's mission statement is not available in the shipping dataset. For accurate information about MCS's mission, please refer to MCS's official website or contact their corporate communications.

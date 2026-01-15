@@ -7,6 +7,7 @@ from azure.storage.blob import BlobServiceClient
 from langchain_openai import AzureChatOpenAI
 
 from config import settings
+
 from .preprocess import preprocess_data
 
 logger = logging.getLogger("shipping_chatbot")
@@ -14,7 +15,9 @@ logger = logging.getLogger("shipping_chatbot")
 
 def _client() -> BlobServiceClient:
     """Helper to build the BlobServiceClient from Settings."""
-    return BlobServiceClient.from_connection_string(settings.AZURE_STORAGE_CONNECTION_STRING)
+    return BlobServiceClient.from_connection_string(
+        settings.AZURE_STORAGE_CONNECTION_STRING
+    )
 
 
 def download_shipment_csv() -> pd.DataFrame:
