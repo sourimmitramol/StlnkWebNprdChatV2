@@ -4546,10 +4546,11 @@ def get_containers_departing_from_load_port(query: str) -> str:
     is_booking_query = bool(re.search(r"\bbookings?\b", query_lower))
 
     # ========== 1) EXTRACT IDENTIFIERS (Container/PO/OBL) ==========
-    # Remove consignee code mentions before extraction to avoid false positives
+    # **CRITICAL FIX**: Remove consignee code mentions (including comma-separated lists) before extraction
     query_for_extraction = query
+    # Pattern to match: "for consignee codes 0000866,0001363,..." or "consignee code 0000866" etc.
     query_for_extraction = re.sub(
-        r"\b(?:for\s+)?(?:consignee|user)(?:\s*[_\-]?\s*code)?\s*[:=]?\s*\d{5,10}\b",
+        r"\b(?:for\s+)?(?:consignee|user)(?:\s+codes?)?(?:\s*[_\-]?\s*code[s]?)?\s*[:=]?\s*[\d,\s]+",
         "",
         query_for_extraction,
         flags=re.IGNORECASE,
@@ -5059,7 +5060,6 @@ def get_containers_departing_from_load_port(query: str) -> str:
         pass
 
     return out.where(pd.notnull(out), None).to_dict(orient="records")
-
 
 
 # ...existing code...
@@ -9577,33 +9577,39 @@ TOOLS = [
     name="Get Containers Departing From Load Port", 
     func=get_containers_departing_from_load_port,
     description=(
-        "PRIMARY TOOL FOR ALL FUTURE/UPCOMING DEPARTURE QUERIES FROM LOAD PORTS.\n"
+        "PRIMARY TOOL FOR ALL FUTURE/UPCOMING DEPARTURE QUERIES FROM LOAD PORTS (INCLUDING HOT CONTAINERS).\n"
         "Use this tool for ANY query asking about containers/shipments/POs scheduled to depart or leave from origin/load ports.\n"
         "\n"
-        "CRITICAL: Use this tool when query contains:\n"
-        "- Future departure keywords: 'will depart', 'departing', 'scheduled to leave', 'going to leave', 'leaving', 'sailing'\n"
-        "- Upcoming time references: 'next X days', 'tomorrow', 'this week', 'next week', 'upcoming', 'in next', 'within'\n"
-        "- Load port references: 'from load port', 'from origin', 'from PORTNAME', 'load port PORTNAME', 'leaving PORTNAME'\n"
+        "**CRITICAL**: This tool handles HOT/PRIORITY/URGENT container DEPARTURES.\n"
+        "If query mentions 'hot' + 'depart/leave/sail/from', use THIS tool, NOT 'Get Hot Containers'.\n"
+        "\n"
+        "Departure keywords (MUST use this tool):\n"
+        "- 'will depart', 'departing', 'departs', 'scheduled to leave', 'going to leave', 'leaving', 'sailing'\n"
+        "- 'from load port', 'from origin', 'from SHANGHAI', 'from QINGDAO', 'leave from', 'sail from'\n"
+        "- Combined with time: 'next X days', 'tomorrow', 'this week', 'next week', 'upcoming', 'in next', 'within'\n"
         "\n"
         "Examples of queries this tool handles:\n"
         "'Which containers will depart from load port QINGDAO in next 5 days?'\n"
         "'Show upcoming departures from SHANGHAI this week'\n"
+        "'Hot containers departing from SHANGHAI in next 10 days' ← HOT + DEPART\n"
+        "'List priority shipments leaving from QINGDAO next week' ← HOT + LEAVE\n"
+        "'Urgent containers scheduled to depart from NINGBO' ← HOT + DEPART\n"
         "'Containers scheduled to leave NINGBO tomorrow'\n"
         "'Which shipments are departing from BUSAN in next 7 days?'\n"
         "'POs leaving from load port HONG KONG next week'\n"
         "'What will sail from XIAMEN in next 3 days?'\n"
         "'Upcoming ETD from YANTIAN'\n"
-        "'Containers going to depart from origin port QINGDAO'\n"
         "\n"
         "Technical Details:\n"
         "- Uses etd_lp (Estimated Time of Departure from Load Port)\n"
         "- Automatically excludes already departed containers (atd_lp is not null)\n"
         "- Filters by load_port column with fuzzy port name/code matching\n"
+        "- Supports hot_container_flag filtering when 'hot/priority/urgent' mentioned\n"
         "- Supports time windows: 'next X days', 'tomorrow', 'this/next week', date ranges\n"
         "- Returns: container_number, load_port, etd_lp, discharge_port, PO, carrier, consignee\n"
         "\n"
         "DO NOT use 'Get Containers Departed From Load Port' for future departures.\n"
-        "DO NOT use 'Get Containers By ETD Window' unless query specifically asks about ETD dates without port context.\n")
+        "DO NOT use 'Get Hot Containers' for departure queries.\n")
     
    ),
 	Tool(
@@ -9814,36 +9820,32 @@ TOOLS = [
     name="Get Hot Containers",
     func=get_hot_containers,
     description=(
-        "PRIMARY TOOL FOR ALL HOT/PRIORITY CONTAINER QUERIES.\n"
+        "PRIMARY TOOL FOR HOT/PRIORITY CONTAINER ARRIVAL & STATUS QUERIES (NOT DEPARTURES).\n"
         "\n"
-        "Use this tool for ANY query that mentions 'hot', 'priority', 'urgent', 'rush', or 'expedited' containers.\n"
+        "**CRITICAL SCOPE**: This tool is for ARRIVAL/STATUS queries ONLY.\n"
+        "DO NOT use for departure queries - use 'Get Containers Departing From Load Port' instead.\n"
         "\n"
-        "CRITICAL: This tool handles BOTH:\n"
-        "1. Generic hot container queries: 'Show my hot containers', 'List all priority shipments'\n"
-        "2. Hot containers WITH filters:\n"
-        "   - Delay filters: 'hot containers delayed by more than 3 days', 'priority shipments late by 5 days'\n"
-        "   - Port filters: 'hot containers at Rotterdam', 'urgent shipments arriving at NLRTM'\n"
-        "   - Transport mode: 'hot containers by sea', 'priority shipments by air'\n"
-        "   - Arrival status: 'hot containers that have arrived', 'priority shipments already reached'\n"
+        "Use this tool when query mentions 'hot' + ARRIVAL/STATUS context:\n"
+        "- Generic: 'Show my hot containers', 'List all priority shipments'\n"
+        "- Arrivals: 'hot containers arriving at Rotterdam', 'urgent shipments at USNYC'\n"
+        "- Status: 'hot containers that have arrived', 'priority shipments already reached'\n"
+        "- Delays: 'hot containers delayed by 3 days', 'priority shipments late'\n"
         "\n"
-        "Examples of queries this tool handles:\n"
-        "- 'Show me all hot containers'\n"
-        "- 'List priority shipments'\n"
-        "- 'Hot containers delayed by more than 3 days'\n"
-        "- 'Which hot containers are late by 5 days?'\n"
-        "- 'Urgent shipments at USNYC'\n"
-        "- 'Priority containers by sea'\n"
-        "- 'Hot containers that have arrived'\n"
+        "DO NOT USE for departure queries like:\n"
+        "- 'hot containers departing from Shanghai' → Use 'Get Containers Departing From Load Port'\n"
+        "- 'hot containers leaving QINGDAO' → Use 'Get Containers Departing From Load Port'\n"
+        "- 'priority shipments scheduled to depart' → Use 'Get Containers Departing From Load Port'\n"
         "\n"
-        "DO NOT use 'Get Delayed Containers' if query mentions 'hot' or 'priority'.\n"
-        "DO NOT use 'Get Hot Upcoming Arrivals' unless query explicitly asks about upcoming/arriving/next X days.\n"
+        "Keywords that indicate DEPARTURES (use other tool):\n"
+        "- depart, departing, leave, leaving, sail, sailing, scheduled to depart, will depart\n"
+        "- 'from load port', 'from origin', 'from Shanghai/QINGDAO/etc.'\n"
         "\n"
-        "This tool automatically:\n"
+        "This tool handles:\n"
         "- Filters to ONLY hot_container_flag = TRUE\n"
-        "- Applies delay calculations when delay keywords present\n"
-        "- Filters by port when location mentioned\n"
-        "- Filters by transport mode when sea/air/road mentioned\n"
-        "- Returns all relevant hot containers without date restrictions (unless delay filter applied)"
+        "- Delay calculations for late arrivals\n"
+        "- Port filtering for discharge/arrival ports\n"
+        "- Transport mode filtering\n"
+        "- Arrival status (arrived vs in-transit)\n"
     )
 ),
     Tool(
@@ -10123,5 +10125,7 @@ TOOLS = [
     ),
 
 ]
+
+
 
 
