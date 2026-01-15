@@ -3732,6 +3732,7 @@ def get_upcoming_pos(query: str, consignee_code: str = None) -> str:
         - PO matching is prefix-insensitive (PO123, 123, PO-123 all match).
         - If query explicitly asks about a PO (e.g., "is 5302816722 arriving...") 
           function returns a short yes/no string + details.
+        - **CRITICAL**: Location filtering uses ONLY discharge_port column (NOT final_destination)
     """
     query = (query or "").strip()
     query_upper = query.upper()
@@ -3875,55 +3876,103 @@ def get_upcoming_pos(query: str, consignee_code: str = None) -> str:
             logger.debug(f"Error in consignee name detection: {e}")
  
     # ----------------------
-    # 3) Detect port/location tokens in query
+    # **CRITICAL FIX**: 3) Detect port/location tokens in query - CHECK DISCHARGE_PORT ONLY
     # ----------------------
-    port_cols = [
-        c for c in ['discharge_port', 'vehicle_arrival_lcn', 'final_destination'] 
-        if c in candidate_df.columns
-    ]
-    
-    if port_cols:
+    if 'discharge_port' not in candidate_df.columns:
+        try:
+            logger.warning("[get_upcoming_pos] discharge_port column not found in dataset")
+        except:
+            pass
+    else:
         location_mask = pd.Series(False, index=candidate_df.index, dtype=bool)
         location_found = False
         location_name = None
         
-        # Pattern 1: Port codes in parentheses like (USLAX)
-        paren_match = re.search(r'\(([A-Z0-9]{3,6})\)', query_upper)
+        # Helper function to normalize port names (remove codes in parentheses)
+        def normalize_port_name(port_str):
+            if pd.isna(port_str):
+                return ""
+            s = str(port_str).upper()
+            # Remove content in parentheses (port codes)
+            s = re.sub(r'\([^)]*\)', '', s)
+            # Normalize whitespace
+            s = re.sub(r'\s+', ' ', s).strip()
+            return s
+        
+        # Pattern 1: Port codes in parentheses like (USBNA) or (USLAX)
+        paren_match = re.search(r'\(([A-Z0-9]{3,6})\)', query.upper())
         if paren_match:
             tok = paren_match.group(1)
-            for col in port_cols:
-                location_mask |= candidate_df[col].astype(str).str.upper().str.contains(
-                    rf'\({re.escape(tok)}\)', 
-                    na=False
-                )
+            location_mask = candidate_df['discharge_port'].astype(str).str.upper().str.contains(
+                rf'\({re.escape(tok)}\)', 
+                na=False
+            )
+            
             if location_mask.any():
                 location_found = True
                 location_name = tok
+                try:
+                    logger.info(f"[get_upcoming_pos] Found port code in parentheses: {tok}")
+                except:
+                    pass
         
-        # Pattern 2: City names with prepositions
+        # **CRITICAL ADDITION**: Pattern 2: Bare port codes like "USBNA", "USLAX" (WITHOUT parentheses)
+        if not location_found:
+            # Look for 5-6 character uppercase port codes (e.g., USBNA, USLAX, HKHKG)
+            bare_code_match = re.search(r'\b([A-Z]{2}[A-Z0-9]{3,4})\b', query.upper())
+            if bare_code_match:
+                tok = bare_code_match.group(1)
+                # Match this code within the discharge_port field (inside parentheses)
+                location_mask = candidate_df['discharge_port'].astype(str).str.upper().str.contains(
+                    rf'\({re.escape(tok)}\)', 
+                    na=False
+                )
+                
+                if location_mask.any():
+                    location_found = True
+                    location_name = tok
+                    try:
+                        logger.info(f"[get_upcoming_pos] Found BARE port code: {tok} (matched in discharge_port)")
+                    except:
+                        pass
+        
+        # Pattern 3: City names (e.g., NASHVILLE, LOS ANGELES)
         if not location_found:
             city_patterns = [
-                r'\b(?:AT|IN|TO)\s+([A-Z][A-Za-z\s\.\-]{3,}?)(?:\s+IN\s+|\s+NEXT\s+|,|\s*$)',
-                r'\b(LOS\s+ANGELES|LONG\s+BEACH|SINGAPORE|ROTTERDAM|HONG\s+KONG)\b'
+                # "POs arriving AT NASHVILLE" - strict word boundary with prepositions
+                r'\b(?:AT|IN|TO)\s+([A-Z][A-Za-z\s\.\-]{2,}?)(?=\s+(?:FOR|IN\s+NEXT|WITHIN|THIS|NEXT|$))',
+                # Known major cities/ports
+                r'\b(NASHVILLE|LOS\s+ANGELES|LONG\s+BEACH|SINGAPORE|ROTTERDAM|HONG\s+KONG|SHANGHAI|BUSAN|SAVANNAH|OAKLAND|MIAMI|HOUSTON|CHICAGO|NEW\s+YORK)\b'
             ]
             
             for pattern in city_patterns:
                 city_match = re.search(pattern, query, re.IGNORECASE)
                 if city_match:
                     city = city_match.group(1).strip().upper()
-                    # Clean up the matched city name
+                    
+                    # Clean up the matched city name by removing trailing timeframe words
                     city = re.sub(r'\s+(IN\s+)?NEXT.*$', '', city, flags=re.IGNORECASE).strip()
+                    city = re.sub(r'\s+(IN\s+)?THE\s+LAST.*$', '', city, flags=re.IGNORECASE).strip()
+                    city = re.sub(r'\s+LAST\s+.*$', '', city, flags=re.IGNORECASE).strip()
                     
                     if city and len(city) > 2:
-                        location_name = city
-                        for col in port_cols:
-                            location_mask |= candidate_df[col].astype(str).str.upper().str.contains(
-                                re.escape(city), 
-                                na=False
-                            )
+                        location_name = city.upper()
                         
-                        if location_mask.any():
+                        # **CRITICAL**: Normalize and match ONLY in discharge_port column
+                        city_norm = normalize_port_name(city)
+                        
+                        # Match against discharge_port column ONLY
+                        city_mask = candidate_df['discharge_port'].apply(
+                            lambda s: city_norm in normalize_port_name(s) if pd.notna(s) else False
+                        )
+                        
+                        if city_mask.any():
+                            location_mask = city_mask
                             location_found = True
+                            try:
+                                logger.info(f"[get_upcoming_pos] Found city: {city} in discharge_port column ONLY")
+                            except:
+                                pass
                             break
         
         # Apply location filter if found
@@ -3931,186 +3980,40 @@ def get_upcoming_pos(query: str, consignee_code: str = None) -> str:
             candidate_df = candidate_df[location_mask].copy()
             if candidate_df.empty:
                 return (
-                    f"No upcoming POs arriving at {location_name} "
-                    f"in the {period_desc}."
+                    f"No upcoming POs arriving at discharge port {location_name} "
+                    f"between {start_date.strftime('%Y-%m-%d')} and {end_date.strftime('%Y-%m-%d')}."
                 )
- 
-    # ----------------------
-    # **CRITICAL FIX**: 4) PO-specific queries - ONLY extract POs from query text, 
-    # NOT from consignee_code
-    # ----------------------
-    
-    # Build a set of known consignee codes to exclude from PO matching
-    known_consignee_codes = set()
-    if consignee_code:
-        known_consignee_codes.update([
-            c.strip().upper() 
-            for c in str(consignee_code).split(',') 
-            if c.strip()
-        ])
-    
-    if 'consignee_code_multiple' in candidate_df.columns:
-        try:
-            for raw in candidate_df['consignee_code_multiple'].dropna().astype(str).tolist():
-                for part in re.split(r',\s*', raw):
-                    m = re.search(r'\(([A-Z0-9\- ]+)\)\s*$', part.strip().upper())
-                    if m:
-                        code = m.group(1).strip().upper()
-                        known_consignee_codes.add(code)
-                        known_consignee_codes.add(code.lstrip('0'))
-        except Exception as e:
-            logger.debug(f"Error extracting consignee codes: {e}")
-    
-    try:
-        logger.info(
-            f"[get_upcoming_pos] Known consignee codes to exclude from PO matching: "
-            f"{known_consignee_codes}"
-        )
-    except Exception:
-        pass
-    
-    # Extract PO tokens ONLY from query text, excluding consignee codes
-    po_tokens = []
-    
-    # Pattern 1: Explicit "PO" prefix (e.g., "PO5302816722", "PO-6300134648")
-    explicit_pos = re.findall(r'\bPO[-]?(\d{5,})\b', query_upper)
-    po_tokens.extend(explicit_pos)
-    
-    # Pattern 2: Numeric tokens (only if query explicitly mentions "PO" or "purchase order")
-    if re.search(r'\b(PO|PURCHASE\s+ORDER)\b', query_upper):
-        # Only extract numeric tokens if query context suggests POs
-        numeric_tokens = re.findall(r'\b(\d{5,})\b', query_upper)
-        
-        # Filter out known consignee codes
-        for token in numeric_tokens:
-            if (token not in known_consignee_codes and 
-                token.lstrip('0') not in known_consignee_codes):
-                po_tokens.append(token)
-    
-    try:
-        logger.info(f"[get_upcoming_pos] Extracted PO tokens from query: {po_tokens}")
-    except Exception:
-        pass
- 
-    # ----------------------
-    # Handle PO-specific queries
-    # ----------------------
-    if po_tokens:
-        # Normalize PO tokens (remove leading zeros)
-        po_norms = {
-            pn.lstrip('0') 
-            for pn in [re.sub(r'[^0-9]', '', p) for p in po_tokens] 
-            if pn
-        }
-        
-        try:
-            logger.info(f"[get_upcoming_pos] Normalized PO tokens: {po_norms}")
-        except Exception:
-            pass
-        
-        if 'po_number_multiple' in candidate_df.columns:
-            def row_norms(cell):
-                """Extract normalized PO numbers from a cell."""
-                if pd.isna(cell):
-                    return set()
-                parts = [
-                    p.strip() 
-                    for p in re.split(r',\s*', str(cell)) 
-                    if p.strip()
-                ]
-                return {normalize_po_text(p) for p in parts if p}
             
-            # Find matching rows
-            matches = []
-            for idx, row in candidate_df.iterrows():
-                norms = row_norms(row.get('po_number_multiple'))
-                if norms & po_norms:  # Set intersection
-                    matches.append(row)
-            
-            if matches:
-                # Check if query is a yes/no question about a specific PO
-                is_yes_no_query = (
-                    re.search(r'^\s*IS\b', query_upper) or 
-                    (re.search(r'\bARRIVING\b', query_upper) and '?' in query)
-                )
-                
-                if is_yes_no_query:
-                    # Return concise yes/no answer
-                    first = matches[0]
-                    etd_field = next(
-                        (c for c in date_priority if c in candidate_df.columns), 
-                        None
-                    )
-                    etd_val = first.get(etd_field) if etd_field else None
-                    display_etd = (
-                        pd.to_datetime(etd_val).strftime('%Y-%m-%d') 
-                        if pd.notna(etd_val) 
-                        else None
-                    )
-                    po_display = first.get('po_number_multiple', None)
-                    port_display = first.get('discharge_port', None)
-                    
-                    return (
-                        f"Yes — PO {po_tokens[0]} is scheduled "
-                        f"(ETA: {display_etd}) to {port_display}. "
-                        f"Row PO(s): {po_display}"
-                    )
-                else:
-                    # Return detailed records
-                    matches_df = pd.DataFrame(matches)
-                    out_cols = (
-                        ['po_number_multiple'] + 
-                        date_priority + 
-                        ["container_number", 'discharge_port', 'final_destination', 
-                         'consignee_code_multiple']
-                    )
-                    out_cols = [c for c in out_cols if c in matches_df.columns]
-                    
-                    # Format dates
-                    for d in date_priority:
-                        if (d in matches_df.columns and 
-                            pd.api.types.is_datetime64_any_dtype(matches_df[d])):
-                            matches_df[d] = matches_df[d].dt.strftime('%Y-%m-%d')
-                    
-                    return matches_df[out_cols].drop_duplicates().to_dict(orient='records')
-            else:
-                # No matches found for the specific PO
-                return (
-                    f"No — PO {po_tokens[0]} is not scheduled to ship to the "
-                    f"requested location/consignee in the {period_desc}."
-                )
-    
-    # ----------------------
-    # If NO PO tokens found in query, return all upcoming POs for the consignee
-    # ----------------------
-    try:
-        logger.info("[get_upcoming_pos] No PO tokens found in query, returning all upcoming POs")
-    except Exception:
-        pass
+            try:
+                logger.info(f"[get_upcoming_pos] After discharge_port filter ({location_name}): {len(candidate_df)} rows")
+                # Log sample discharge ports to verify
+                sample_ports = candidate_df['discharge_port'].head(5).tolist()
+                logger.info(f"[get_upcoming_pos] Sample discharge ports after filter: {sample_ports}")
+            except:
+                pass
  
-    # Final output - return all upcoming POs
+    # ----------------------
+    # 4) Build output
+    # ----------------------
     po_col = (
         "po_number_multiple" if "po_number_multiple" in candidate_df.columns 
         else ("po_number" if "po_number" in candidate_df.columns else None)
     )
     
-    out_cols = []
-    if po_col:
-        out_cols.append(po_col)
+    if not po_col:
+        return "PO column not found in the dataset."
+    
+    out_cols = [po_col]
     
     # Add date columns
     out_cols += [c for c in date_priority if c in candidate_df.columns]
     
-    # Add additional columns
-    out_cols += [
-        c for c in [
-            'container_number', 
-            'discharge_port', 
-            'final_destination', 
-            'consignee_code_multiple'
-        ] 
-        if c in candidate_df.columns
-    ]
+    # **CRITICAL**: Only include discharge_port in output (NOT final_destination)
+    additional_cols = ['container_number', 'discharge_port', 'consignee_code_multiple']
+    
+    for c in additional_cols:
+        if c in candidate_df.columns and c not in out_cols:
+            out_cols.append(c)
  
     # Remove duplicates while preserving order
     out_cols = list(dict.fromkeys(out_cols))
@@ -4130,8 +4033,12 @@ def get_upcoming_pos(query: str, consignee_code: str = None) -> str:
             pd.api.types.is_datetime64_any_dtype(result_df[d])):
             result_df[d] = result_df[d].dt.strftime('%Y-%m-%d')
  
+    try:
+        logger.info(f"[get_upcoming_pos] Returning {len(result_df)} PO records")
+    except:
+        pass
+ 
     return result_df.where(pd.notnull(result_df), None).to_dict(orient='records')
-
 
 # ------------------------------------------------------------------
 # 11️⃣ Delayed PO's (complex ETA / milestone logic)
@@ -10216,4 +10123,5 @@ TOOLS = [
     ),
 
 ]
+
 
