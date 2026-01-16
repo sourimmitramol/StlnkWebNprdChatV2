@@ -26,7 +26,7 @@ from agents.tools import (_df, analyze_data_with_pandas,
                           sql_query_tool, vector_search_tool)
 from utils.container import extract_po_number
 
-from .schemas import AskRequest, QueryWithConsigneeBody
+from .schemas import QueryWithConsigneeBody  # , AskRequest
 
 logger = logging.getLogger("shipping_chatbot")
 
@@ -181,9 +181,14 @@ def ask(body: QueryWithConsigneeBody):
     # ---------------------------------------------------------------
 
     try:
-        # Pass consignee context to the agent including authorization info
-        consignee_context = f"user {','.join(consignee_code)}: {q}"
-        # consignee_context = f"user: {q}"
+        # Handle session memory
+        session_id = body.session_id
+        chat_history = []
+        if session_id:
+            if session_id not in SESSION_HISTORY:
+                SESSION_HISTORY[session_id] = ChatMessageHistory()
+            # Get the last 10 messages to keep context manageable
+            chat_history = SESSION_HISTORY[session_id].messages[-10:]
 
         # Set consignee codes in a global context that tools can access
         import threading
@@ -192,15 +197,6 @@ def ask(body: QueryWithConsigneeBody):
         threading.current_thread().chat_history = chat_history
 
         try:
-            # Handle session memory
-            session_id = body.session_id
-            chat_history = []
-            if session_id:
-                if session_id not in SESSION_HISTORY:
-                    SESSION_HISTORY[session_id] = ChatMessageHistory()
-                # Get the last 10 messages to keep context manageable
-                chat_history = SESSION_HISTORY[session_id].messages[-10:]
-
             # Pass input, chat_history and consignee context to the agent
             result = AGENT.invoke(
                 {
@@ -220,7 +216,7 @@ def ask(body: QueryWithConsigneeBody):
             result = AGENT.invoke(
                 {
                     "input": q,
-                    "chat_history": [],
+                    "chat_history": chat_history,
                     "consignee_code": ", ".join(consignee_code),
                 }
             )
@@ -443,7 +439,9 @@ def ask(body: QueryWithConsigneeBody):
 
         # Try router fallback before failing
         try:
-            fallback = route_query(q, consignee_code)  # Pass consignee codes
+            fallback = route_query(
+                q, consignee_code, chat_history
+            )  # Pass consignee codes and history
 
             # Handle list/dict returns from transit analysis functions
             if (

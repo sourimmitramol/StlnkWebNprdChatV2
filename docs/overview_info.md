@@ -405,6 +405,9 @@ Cherry-pick from a menu of value-added services to bolster your supply chain ope
 - Palletization
 - QA / QC checking
 
+**MOL Official Website**
+**web address** https://www.molconsolidation.com/
+
 **MOL Official Social Media**
 **YouTube** https://www.youtube.com/channel/UC3fh2UYMTb8E_zrKEgfDRcw
 **Facebook** https://www.facebook.com/Mitsui-OSK-Lines-114143676889103
