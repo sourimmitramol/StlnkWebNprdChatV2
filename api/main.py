@@ -1,4 +1,3 @@
-# api/main.py
 import logging
 import re
 import ast
@@ -83,63 +82,11 @@ def filter_by_consignee(df, consignee_codes: List[str]):
     return df[mask]
 
 
-def sanitize_response(response_text: str) -> str:
-    """
-    Remove consignee code references from response text to avoid exposing internal codes to users.
-    
-    Removes patterns like:
-    - "for user 0000866"
-    - "for consignee 0000866"
-    - "for consignee code 0000866"
-    - "user 0000866,0001363"
-    - "for user code 0000866"
-    
-    Args:
-        response_text: The response text to sanitize
-        
-    Returns:
-        Sanitized response text without consignee code references
-    """
-    if not response_text or not isinstance(response_text, str):
-        return response_text
-    
-    # Pattern 1: Remove "for user XXXXX" or "for consignee XXXXX" (single or comma-separated codes)
-    response_text = re.sub(
-        r'\s+for\s+(?:user|consignee)(?:\s+code[s]?)?\s+[\d,\s]+',
-        '',
-        response_text,
-        flags=re.IGNORECASE
-    )
-    
-    # Pattern 2: Remove "user XXXXX:" at the beginning (e.g., "user 0000866: What are...")
-    response_text = re.sub(
-        r'^\s*(?:user|consignee)(?:\s+code[s]?)?\s+[\d,\s]+\s*:\s*',
-        '',
-        response_text,
-        flags=re.IGNORECASE
-    )
-    
-    # Pattern 3: Remove standalone "for user/consignee code(s) XXXXX"
-    response_text = re.sub(
-        r'\s+for\s+(?:the\s+)?(?:user|consignee)(?:\s+code[s]?)?\s+[\d,\s]+',
-        '',
-        response_text,
-        flags=re.IGNORECASE
-    )
-    
-    # Pattern 4: Clean up any double spaces or trailing/leading whitespace
-    response_text = re.sub(r'\s+', ' ', response_text).strip()
-    
-    return response_text
-
-
 def check_container_authorization(df, container_numbers: List[str], consignee_codes: List[str]):
     """Check if the container belongs to one of the authorized consignees"""
     authorized_df = filter_by_consignee(df, consignee_codes)
     container_mask = authorized_df['container_number'].isin(container_numbers)
     return authorized_df[container_mask], not authorized_df[container_mask].empty
-
-# ...existing code...
 
 
 @app.post("/ask")
@@ -219,16 +166,18 @@ def ask(body: QueryWithConsigneeBody):
     # ---------------------------------------------------------------
 
     try:
-        # Set consignee codes in thread-local storage so tools can access them
-        # DO NOT include consignee codes in agent prompt - it confuses routing with long lists
+        # Pass consignee context to the agent including authorization info
+        consignee_context = f"user {','.join(consignee_codes)}: {q}"
+        #consignee_context = f"user: {q}"
+
+        # Set consignee codes in a global context that tools can access
         import threading
         threading.current_thread().consignee_codes = consignee_codes
 
         try:
-            # Pass clean query without consignee codes to prevent routing confusion
-            result = AGENT.invoke({"input": q})
+            result = AGENT.invoke({"input": consignee_context})
         except TypeError:
-            result = AGENT.invoke({"input": q})
+            result = AGENT.invoke({"input": consignee_context})
 
         # Clear the context after use
         if hasattr(threading.current_thread(), 'consignee_codes'):
@@ -253,42 +202,9 @@ def ask(body: QueryWithConsigneeBody):
         # ---- NEW: Fallback when agent stops due to iteration/time limit ----
         if re.search(r"Agent stopped due to iteration limit or time limit\.", output, re.IGNORECASE):
             fallback = route_query(q, consignee_codes)  # Pass consignee codes
-            
-            # Handle list/dict returns from transit analysis functions
-            if isinstance(fallback, list) and len(fallback) > 0 and isinstance(fallback[0], dict):
-                # Transit analysis functions return [{"summary": {...}, "container_details": [...}}]
-                item = fallback[0]
-                if "summary" in item and "container_details" in item:
-                    summary = item["summary"]
-                    containers = item["container_details"]
-                    
-                    # Format summary message
-                    if "ocean_bl_number" in summary:
-                        msg = f"Transit Analysis for Ocean BL: {summary['ocean_bl_number']}\n\n"
-                    elif "po_number" in summary:
-                        msg = f"Transit Analysis for PO: {summary['po_number']}\n\n"
-                    else:
-                        msg = "Transit Analysis Summary:\n\n"
-                    
-                    msg += f"Total Containers: {summary.get('total_containers', 0)}\n"
-                    msg += f"Arrived: {summary.get('arrived_containers', 0)}, In Transit: {summary.get('in_transit_containers', 0)}\n"
-                    msg += f"Average Transit Time: {summary.get('avg_transit_days', 'N/A')} days\n"
-                    msg += f"Average Delay: {summary.get('avg_delay_days', 'N/A')} days\n"
-                    msg += f"Delayed Containers: {summary.get('delayed_containers', 0)}\n"
-                    msg += f"On-Time/Early: {summary.get('on_time_or_early_containers', 0)}"
-                    
-                    return {
-                        "response": sanitize_response(msg),
-                        "observation": sanitize_response(msg),
-                        "table": containers,  # Container details as table
-                        "mode": "router-fallback"
-                    }
-            
-            # Default string response
-            fallback_str = str(fallback) if not isinstance(fallback, str) else fallback
             return {
-                "response": sanitize_response(fallback_str),
-                "observation": sanitize_response(fallback_str),
+                "response": fallback,
+                "observation": fallback,
                 "table": [],
                 "mode": "router-fallback"
             }
@@ -380,7 +296,7 @@ def ask(body: QueryWithConsigneeBody):
         observation = result.get("intermediate_steps", [])
 
         return {
-            "response": sanitize_response(message),              # now surfaces the detailed observation in Postman
+            "response": message,              # now surfaces the detailed observation in Postman
             "observation": observation,  # explicit field for clients that need it
             "table": table_data,
             "mode": "agent"
@@ -392,41 +308,8 @@ def ask(body: QueryWithConsigneeBody):
         # Try router fallback before failing
         try:
             fallback = route_query(q, consignee_codes)  # Pass consignee codes
-            
-            # Handle list/dict returns from transit analysis functions
-            if isinstance(fallback, list) and len(fallback) > 0 and isinstance(fallback[0], dict):
-                # Transit analysis functions return [{"summary": {...}, "container_details": [...}}]
-                item = fallback[0]
-                if "summary" in item and "container_details" in item:
-                    summary = item["summary"]
-                    containers = item["container_details"]
-                    
-                    # Format summary message
-                    if "ocean_bl_number" in summary:
-                        msg = f"Transit Analysis for Ocean BL: {summary['ocean_bl_number']}\n\n"
-                    elif "po_number" in summary:
-                        msg = f"Transit Analysis for PO: {summary['po_number']}\n\n"
-                    else:
-                        msg = "Transit Analysis Summary:\n\n"
-                    
-                    msg += f"Total Containers: {summary.get('total_containers', 0)}\n"
-                    msg += f"Arrived: {summary.get('arrived_containers', 0)}, In Transit: {summary.get('in_transit_containers', 0)}\n"
-                    msg += f"Average Transit Time: {summary.get('avg_transit_days', 'N/A')} days\n"
-                    msg += f"Average Delay: {summary.get('avg_delay_days', 'N/A')} days\n"
-                    msg += f"Delayed Containers: {summary.get('delayed_containers', 0)}\n"
-                    msg += f"On-Time/Early: {summary.get('on_time_or_early_containers', 0)}"
-                    
-                    return {
-                        "response": sanitize_response(msg),
-                        "observation": "Fallback response due to agent error",
-                        "table": containers,  # Container details as table
-                        "mode": "router-fallback"
-                    }
-            
-            # Default string response
-            fallback_str = str(fallback) if not isinstance(fallback, str) else fallback
             return {
-                "response": sanitize_response(fallback_str),
+                "response": fallback,
                 "observation": "Fallback response due to agent error",
                 "table": [],
                 "mode": "router-fallback"
