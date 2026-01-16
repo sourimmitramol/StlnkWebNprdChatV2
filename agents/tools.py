@@ -1373,106 +1373,6 @@ def get_current_location(query: str) -> str:
 # 1️⃣ Container Milestones
 # ------------------------------------------------------------------
 
-# def get_container_milestones(input_str: str) -> str:
-#     """
-#     Retrieve all milestone events for a given container, PO, or OBL number.
-#     Search order:
-#       1. container_number
-#       2. po_number_multiple
-#       3. ocean_bl_no_multiple
-#     Output:
-#       Returns a descriptive text block exactly in your desired format.
-#     """
-#     import pandas as pd
-
-#     query = str(input_str).strip()
-#     if not query:
-#         return "Please provide a container number, PO number, or OBL number."
-
-#     df = _df().copy()
-
-#     # Normalize required columns
-#     for col in ["container_number", "po_number_multiple", "ocean_bl_no_multiple"]:
-#         if col in df.columns:
-#             df[col] = df[col].astype(str).fillna("").str.strip()
-
-#     container_no = None
-#     header_text = ""
-
-#     # 1) Try direct container match
-#     match_container = df[df["container_number"].str.replace(" ", "").str.upper() == query.replace(" ", "").upper()]
-#     if not match_container.empty:
-#         container_no = match_container.iloc[0]["container_number"]
-#         header_text = ""
-#         row = match_container.iloc[0]
-#     else:
-#         # 2) Try PO match
-#         match_po = df[df["po_number_multiple"].str.contains(query, case=False, na=False)]
-#         if not match_po.empty:
-#             container_no = match_po.iloc[0]["container_number"]
-#             header_text = f"The Container <con>{container_no}</con> is associated with the PO <po>{query}</po> . Status is in below : \n\n"
-#             row = match_po.iloc[0]
-#         else:
-#             # 3) Try OBL match
-#             match_obl = df[df["ocean_bl_no_multiple"].str.contains(query, case=False, na=False)]
-#             if not match_obl.empty:
-#                 container_no = match_obl.iloc[0]["container_number"]
-#                 header_text = f"The Container <con>{container_no}</con> is associated with the OBL <obl>{query}</obl> . Status is in below : \n\n"
-#                 row = match_obl.iloc[0]
-#             else:
-#                 return f"No record found for {query}."
-
-#     # ---- milestone rows with priority (prevents bad data ordering from choosing wrong "latest") ----
-#     # Higher rank = more final/completed status.
-#     milestone_defs = [
-#         ("<strong>Departed From</strong>", row.get("load_port"), row.get("atd_lp"), 20),
-#         ("<strong>Arrived at Final Load Port</strong>", row.get("final_load_port"), row.get("ata_flp"), 30),
-#         ("<strong>Departed from Final Load Port</strong>", row.get("final_load_port"), row.get("atd_flp"), 40),
-#         ("<strong>Expected at Discharge Port</strong>", row.get("discharge_port"), row.get("derived_ata_dp") or row.get("eta_dp"), 50),
-#         ("<strong>Reached at Discharge Port</strong>", row.get("discharge_port"), row.get("ata_dp"), 60),
-#         ("<strong>Reached at Last CY</strong>", row.get("last_cy_location"), row.get("equipment_arrived_at_last_cy"), 70),
-#         ("<strong>Out Gate at Last CY</strong>", row.get("out_gate_at_last_cy_lcn"), row.get("out_gate_at_last_cy"), 80),
-#         ("<strong>Delivered at</strong>", row.get("delivery_date_to_consignee_lcn"), row.get("delivery_date_to_consignee"), 90),
-#         ("<strong>Empty Container Returned to</strong>", row.get("empty_container_return_lcn"), row.get("empty_container_return_date"), 100),
-#     ]
-
-#     milestone_rows = []
-#     for event, location, raw_date, rank in milestone_defs:
-#         dt = pd.to_datetime(raw_date, errors="coerce")
-#         if pd.isna(dt):
-#             continue
-#         milestone_rows.append(
-#             {
-#                 "event": event,
-#                 "location": None if pd.isna(location) else location,
-#                 "date": dt.strftime("%Y-%m-%d"),
-#                 "_dt": dt,
-#                 "_rank": rank,
-#             }
-#         )
-
-#     if not milestone_rows:
-#         return f"No milestones found for container {container_no}."
-
-#     milestones_df = pd.DataFrame(milestone_rows)
-
-#     # Sort chronologically for display
-#     # milestones_df = milestones_df.sort_values("_dt", ascending=True)
-
-#     # Pick "latest status" by (rank first, then date)
-#     last_row = max(milestone_rows, key=lambda x: (x["_rank"], x["_dt"]))
-#     latest_text = f"The Container <con>{container_no}</con> {last_row['event']} {last_row['location']} on {last_row['date']}"
-
-#     # Convert milestone dataframe to string (no internal helper cols)
-#     milestone_text = milestones_df[["event", "location", "date"]].to_string(index=False, header=False)
-
-#     result = (
-#         f"{header_text}"
-#         f"{latest_text}\n\n"
-#         f" <MILESTONE> {milestone_text}."
-#     )
-#     return result
-
 
 
 def get_container_milestones(input_str: str) -> str:
@@ -1607,8 +1507,6 @@ def get_container_milestones(input_str: str) -> str:
     )
     return result
 # ...existing code...
-
-
 
 
 def safe_date(v):
@@ -9997,45 +9895,48 @@ TOOLS = [
         name="Get Booking Details",
         func=get_booking_details,
         description=(
-            "PRIMARY TOOL for BOOKING NUMBER lookups (booking ⇄ PO ⇄ container ⇄ ocean BL/OBL).\n"
+            "PRIMARY TOOL for IDENTIFIER MAPPING queries (booking ⇄ PO ⇄ container ⇄ ocean BL/OBL).\n"
             "\n"
-            "USE THIS TOOL when user asks about BOOKING NUMBERS:\n"
-            "CORRECT usage examples:\n"
-            "- 'what is the booking number of PO 5300008696' → Input: '5300008696'\n"
-            "- 'booking number of 5300008696' → Input: '5300008696'\n"
-            "- 'booking number for PO 5300008696' → Input: '5300008696'\n"
-            "- 'what is the booking number of container MSBU4522691' → Input: 'MSBU4522691'\n"
-            "- 'booking number of MSBU4522691' → Input: 'MSBU4522691'\n"
-            "- 'booking number of BL MOLWMNL2400017' → Input: 'MOLWMNL2400017'\n"
-            "- 'PO of booking VN2084805' → Input: 'VN2084805'\n"
-            "- 'container of booking TH2017962' → Input: 'TH2017962'\n"
-            "- 'BL of booking GT3000512' → Input: 'GT3000512'\n"
+            "**CRITICAL**: Use this tool for SIMPLE LOOKUP queries asking 'WHAT' or 'WHICH':\n"
+            "CORRECT usage - Use THIS tool for:\n"
+            "- 'What are the POs in container TCLU4703170?' ← USE THIS\n"
+            "- 'What PO does container ABCD1234567 have?'\n"
+            "- 'Which PO is in container WXYZ9876543?'\n"
+            "- 'Show me the PO for container TCLU4703170'\n"
+            "- 'What is the booking number of PO 5300008696?'\n"
+            "- 'What is the booking number of container MSBU4522691?'\n"
+            "- 'What containers are in PO 6300134648?'\n"
+            "- 'Which containers does booking VN2084805 have?'\n"
+            "- 'What is the ocean BL for container TCLU4703170?'\n"
             "\n"
-            "PO NUMBER HANDLING (CRITICAL):\n"
-            "- PO numbers are typically 7-10 digits (e.g., 5300008696, 5300009636)\n"
-            "- Input can be: 'PO 5300008696', '5300008696', 'PO5300008696', 'po 5300008696'\n"
-            "- Tool searches po_number_multiple column (comma-separated values)\n"
-            "- Returns booking_number_multiple + container + discharge_port + consignee\n"
+            "DO NOT use for STATUS/MILESTONE queries:\n"
+            "- 'What is the status of container X?' → Use 'Get Container Milestones'\n"
+            "- 'Where is container Y?' → Use 'Get Container Milestones'\n"
+            "- 'Track container Z' → Use 'Get Container Milestones'\n"
+            "- 'What are the milestones for PO X?' → Use 'Get Container Milestones'\n"
             "\n"
-            " CONTAINER HANDLING:\n"
-            "- Container format: 4 letters + 7 digits (e.g., MSBU4522691, MRKU0496086)\n"
-            "- Returns booking_number_multiple for that container\n"
+            "Keywords that indicate THIS tool:\n"
+            "- 'what po', 'which po', 'po in container', 'po for container', 'po number for'\n"
+            "- 'what container', 'which container', 'container in po', 'container for po'\n"
+            "- 'what booking', 'booking number of', 'booking for'\n"
+            "- 'what bl', 'which bl', 'bl for', 'ocean bl of'\n"
             "\n"
-            " BARE IDENTIFIER SUPPORT:\n"
-            "Agent retries may pass only the code without context words.\n"
-            "This tool MUST handle:\n"
-            "- '5300008696' (7+ digits) → Treat as PO number → return booking\n"
-            "- 'MSBU4522691' (4 letters + 7 digits) → Treat as container → return booking\n"
-            "- 'MOLWMNL2400017' (ocean BL pattern) → Treat as BL → return booking\n"
-            "- 'VN2084805' (booking pattern) → Return PO/container/BL mapping\n"
+            "Returns simple mapping data:\n"
+            "- container_number, po_number_multiple, ocean_bl_no_multiple, booking_number_multiple\n"
+            "- discharge_port, consignee_code_multiple\n"
             "\n"
-            " DO NOT USE for:\n"
-            "- Status queries (use 'Get Container Milestones')\n"
-            "- Milestone queries (use 'Get Container Milestones')\n"
-            "- ETA of PO (use 'Get ETA For PO')\n"
-            "- Transit analysis (use transit tools)\n"
+            "PO NUMBER HANDLING:\n"
+            "- Input can be: 'PO 5300008696', '5300008696', 'PO5300008696'\n"
+            "- Searches po_number_multiple column (comma-separated values)\n"
             "\n"
-            " ETA delegation: 'ETA of booking X' → delegates to 'Get ETA For Booking'\n"
+            "CONTAINER HANDLING:\n"
+            "- Container format: 4 letters + 7 digits (e.g., TCLU4703170, MSBU4522691)\n"
+            "\n"
+            "BARE IDENTIFIER SUPPORT:\n"
+            "- '5300008696' (7+ digits) → Treat as PO → return mapping\n"
+            "- 'TCLU4703170' (AAAA#######) → Treat as container → return mapping\n"
+            "- 'MOLWMNL2400017' (BL pattern) → Treat as BL → return mapping\n"
+            "- 'VN2084805' (booking pattern) → Return mapping\n"
         )
     ),
     Tool(
@@ -10125,6 +10026,7 @@ TOOLS = [
     ),
 
 ]
+
 
 
 
