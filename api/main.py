@@ -219,18 +219,16 @@ def ask(body: QueryWithConsigneeBody):
     # ---------------------------------------------------------------
 
     try:
-        # Pass consignee context to the agent including authorization info
-        consignee_context = f"user {','.join(consignee_codes)}: {q}"
-        #consignee_context = f"user: {q}"
-
-        # Set consignee codes in a global context that tools can access
+        # Set consignee codes in thread-local storage so tools can access them
+        # DO NOT include consignee codes in agent prompt - it confuses routing with long lists
         import threading
         threading.current_thread().consignee_codes = consignee_codes
 
         try:
-            result = AGENT.invoke({"input": consignee_context})
+            # Pass clean query without consignee codes to prevent routing confusion
+            result = AGENT.invoke({"input": q})
         except TypeError:
-            result = AGENT.invoke({"input": consignee_context})
+            result = AGENT.invoke({"input": q})
 
         # Clear the context after use
         if hasattr(threading.current_thread(), 'consignee_codes'):
