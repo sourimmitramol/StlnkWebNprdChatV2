@@ -260,3 +260,28 @@ AttributeError: 'list' object has no attribute 'strip'
 2026-01-16 12:26:11,335 - shipping_chatbot - INFO - User_Query: What are the POs in the container TCLU4703170?, c_codes: ['0000866']
 2026-01-16 12:26:14,053 - shipping_chatbot - INFO - [get_booking_details] Received query: 'container TCLU4703170'
 2026-01-16 12:26:14,054 - shipping_chatbot - INFO - [get_booking_details] Extracted identifiers: container=TCLU4703170, po=None, obl=None, booking=None
+2026-01-16 12:34:17,733 - shipping_chatbot - INFO - User_Query: What are the POs in the container TCLU4703170?, c_codes: ['0000866']
+2026-01-16 12:34:20,348 - shipping_chatbot - INFO - [get_booking_details] Received query: 'container TCLU4703170'
+2026-01-16 12:34:20,348 - shipping_chatbot - INFO - [get_booking_details] Extracted identifiers: container=TCLU4703170, po=None, obl=None, booking=None
+2026-01-16 12:34:29,488 - shipping_chatbot - INFO - User_Query: What are the POs in the container TCLU4703170?, c_codes: ['0000866']
+2026-01-16 12:34:32,409 - shipping_chatbot - INFO - [get_booking_details] Received query: 'container TCLU4703170'
+2026-01-16 12:34:32,409 - shipping_chatbot - INFO - [get_booking_details] Extracted identifiers: container=TCLU4703170, po=None, obl=None, booking=None
+2026-01-16 12:36:13,982 - shipping_chatbot - INFO - User_Query: What is the container carrying the PO 5302997239?, c_codes: ['0000866']
+2026-01-16 12:36:16,868 - shipping_chatbot - INFO - [get_containers_PO_OBL_by_supplier] Extracted: container=None, po=5302997239, obl=None, is_lookup=False
+2026-01-16 12:36:16,877 - shipping_chatbot - INFO - [get_containers_PO_OBL_by_supplier] PO lookup: po_norm=5302997239, found 1 rows
+2026-01-16 12:36:16,884 - shipping_chatbot - INFO - [get_containers_PO_OBL_by_supplier] Returning 1 supplier record(s) for PO 5302997239
+2026-01-16 12:39:05,130 - shipping_chatbot - INFO - User_Query: What is the container carrying the PO 5302997239?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-16 12:39:09,762 - shipping_chatbot - INFO - [get_container_milestones] Searching for PO: 5302997239
+2026-01-16 12:39:09,861 - shipping_chatbot - INFO - [get_container_milestones] PO match results: 1 rows found
+2026-01-16 12:44:15,528 - shipping_chatbot - INFO - User_Query: What is the container carrying the PO 5302997239?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-16 12:44:17,958 - shipping_chatbot - INFO - [get_container_milestones] Searching for PO: 5302997239
+2026-01-16 12:44:18,038 - shipping_chatbot - INFO - [get_container_milestones] PO match results: 1 rows found
+2026-01-16 12:45:00,820 - shipping_chatbot - INFO - User_Query: What is the container carrying the PO 5302997239?, c_codes: ['0000866']
+2026-01-16 12:45:03,297 - shipping_chatbot - INFO - [get_booking_details] Received query: 'PO 5302997239'
+2026-01-16 12:45:03,297 - shipping_chatbot - INFO - [get_booking_details] Extracted identifiers: container=None, po=5302997239, obl=None, booking=None
+2026-01-16 13:20:05,974 - shipping_chatbot - INFO - User_Query: What is the container carrying the PO 5302997239?, c_codes: ['0000866', '0001363']
+2026-01-16 13:20:08,427 - shipping_chatbot - INFO - [get_booking_details] Received query: 'PO 5302997239'
+2026-01-16 13:20:08,427 - shipping_chatbot - INFO - [get_booking_details] Extracted identifiers: container=None, po=5302997239, obl=None, booking=None
+2026-01-16 13:21:21,412 - shipping_chatbot - INFO - User_Query: What is the container carrying the PO 5302997239?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-16 13:21:24,413 - shipping_chatbot - INFO - [get_container_milestones] Searching for PO: 5302997239
+2026-01-16 13:21:24,586 - shipping_chatbot - INFO - [get_container_milestones] PO match results: 1 rows found
