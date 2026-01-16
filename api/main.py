@@ -83,6 +83,56 @@ def filter_by_consignee(df, consignee_codes: List[str]):
     return df[mask]
 
 
+def sanitize_response(response_text: str) -> str:
+    """
+    Remove consignee code references from response text to avoid exposing internal codes to users.
+    
+    Removes patterns like:
+    - "for user 0000866"
+    - "for consignee 0000866"
+    - "for consignee code 0000866"
+    - "user 0000866,0001363"
+    - "for user code 0000866"
+    
+    Args:
+        response_text: The response text to sanitize
+        
+    Returns:
+        Sanitized response text without consignee code references
+    """
+    if not response_text or not isinstance(response_text, str):
+        return response_text
+    
+    # Pattern 1: Remove "for user XXXXX" or "for consignee XXXXX" (single or comma-separated codes)
+    response_text = re.sub(
+        r'\s+for\s+(?:user|consignee)(?:\s+code[s]?)?\s+[\d,\s]+',
+        '',
+        response_text,
+        flags=re.IGNORECASE
+    )
+    
+    # Pattern 2: Remove "user XXXXX:" at the beginning (e.g., "user 0000866: What are...")
+    response_text = re.sub(
+        r'^\s*(?:user|consignee)(?:\s+code[s]?)?\s+[\d,\s]+\s*:\s*',
+        '',
+        response_text,
+        flags=re.IGNORECASE
+    )
+    
+    # Pattern 3: Remove standalone "for user/consignee code(s) XXXXX"
+    response_text = re.sub(
+        r'\s+for\s+(?:the\s+)?(?:user|consignee)(?:\s+code[s]?)?\s+[\d,\s]+',
+        '',
+        response_text,
+        flags=re.IGNORECASE
+    )
+    
+    # Pattern 4: Clean up any double spaces or trailing/leading whitespace
+    response_text = re.sub(r'\s+', ' ', response_text).strip()
+    
+    return response_text
+
+
 def check_container_authorization(df, container_numbers: List[str], consignee_codes: List[str]):
     """Check if the container belongs to one of the authorized consignees"""
     authorized_df = filter_by_consignee(df, consignee_codes)
@@ -230,16 +280,17 @@ def ask(body: QueryWithConsigneeBody):
                     msg += f"On-Time/Early: {summary.get('on_time_or_early_containers', 0)}"
                     
                     return {
-                        "response": msg,
-                        "observation": msg,
+                        "response": sanitize_response(msg),
+                        "observation": sanitize_response(msg),
                         "table": containers,  # Container details as table
                         "mode": "router-fallback"
                     }
             
             # Default string response
+            fallback_str = str(fallback) if not isinstance(fallback, str) else fallback
             return {
-                "response": str(fallback) if not isinstance(fallback, str) else fallback,
-                "observation": str(fallback) if not isinstance(fallback, str) else fallback,
+                "response": sanitize_response(fallback_str),
+                "observation": sanitize_response(fallback_str),
                 "table": [],
                 "mode": "router-fallback"
             }
@@ -331,7 +382,7 @@ def ask(body: QueryWithConsigneeBody):
         observation = result.get("intermediate_steps", [])
 
         return {
-            "response": message,              # now surfaces the detailed observation in Postman
+            "response": sanitize_response(message),              # now surfaces the detailed observation in Postman
             "observation": observation,  # explicit field for clients that need it
             "table": table_data,
             "mode": "agent"
@@ -368,15 +419,16 @@ def ask(body: QueryWithConsigneeBody):
                     msg += f"On-Time/Early: {summary.get('on_time_or_early_containers', 0)}"
                     
                     return {
-                        "response": msg,
+                        "response": sanitize_response(msg),
                         "observation": "Fallback response due to agent error",
                         "table": containers,  # Container details as table
                         "mode": "router-fallback"
                     }
             
             # Default string response
+            fallback_str = str(fallback) if not isinstance(fallback, str) else fallback
             return {
-                "response": str(fallback) if not isinstance(fallback, str) else fallback,
+                "response": sanitize_response(fallback_str),
                 "observation": "Fallback response due to agent error",
                 "table": [],
                 "mode": "router-fallback"
@@ -384,19 +436,4 @@ def ask(body: QueryWithConsigneeBody):
         except Exception as fallback_exc:
             logger.error(f"Router fallback also failed: {fallback_exc}")
             raise HTTPException(status_code=500, detail=f"Agent failed: {exc}")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
