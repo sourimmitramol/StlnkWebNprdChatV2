@@ -285,3 +285,89 @@ AttributeError: 'list' object has no attribute 'strip'
 2026-01-16 13:21:21,412 - shipping_chatbot - INFO - User_Query: What is the container carrying the PO 5302997239?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
 2026-01-16 13:21:24,413 - shipping_chatbot - INFO - [get_container_milestones] Searching for PO: 5302997239
 2026-01-16 13:21:24,586 - shipping_chatbot - INFO - [get_container_milestones] PO match results: 1 rows found
+2026-01-16 13:31:47,914 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-16 13:31:47,915 - shipping_chatbot - INFO - Agent created with 52 tools
+2026-01-16 13:31:47,915 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-16 13:32:33,643 - shipping_chatbot - INFO - User_Query: What is the container carrying the PO 5302997239?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-16 13:32:33,643 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-16 13:32:57,734 - shipping_chatbot - INFO - Fetched 19279 rows
+2026-01-16 13:32:57,734 - shipping_chatbot - INFO - Starting preprocessing on 19279 rows
+2026-01-16 13:32:57,863 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-16 13:32:59,101 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-16 13:32:59,323 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-16 13:32:59,904 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-16 13:32:59,904 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-16 13:32:59,904 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-16 13:32:59,943 - shipping_chatbot - INFO - Pre-processing finished - 19279 rows remain
+2026-01-16 13:33:02,567 - shipping_chatbot - INFO - [get_booking_details] Received query: 'PO 5302997239'
+2026-01-16 13:33:02,567 - shipping_chatbot - INFO - [get_booking_details] Extracted identifiers: container=None, po=5302997239, obl=None, booking=None
+2026-01-16 13:33:29,955 - shipping_chatbot - INFO - User_Query: What is the container carrying the PO 5302997239?, c_codes: ['0000866']
+2026-01-16 13:33:32,446 - shipping_chatbot - INFO - [get_booking_details] Received query: 'PO 5302997239'
+2026-01-16 13:33:32,446 - shipping_chatbot - INFO - [get_booking_details] Extracted identifiers: container=None, po=5302997239, obl=None, booking=None
+2026-01-16 16:11:28,887 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-16 16:11:28,888 - shipping_chatbot - INFO - Agent created with 52 tools
+2026-01-16 16:11:28,889 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-16 16:17:20,020 - shipping_chatbot - INFO - User_Query: What are the POs arriving in Los Angeles?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-16 16:17:20,020 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-16 16:17:34,350 - shipping_chatbot - INFO - Fetched 19279 rows
+2026-01-16 16:17:34,366 - shipping_chatbot - INFO - Starting preprocessing on 19279 rows
+2026-01-16 16:17:34,434 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-16 16:17:35,026 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-16 16:17:35,185 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-16 16:17:35,751 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-16 16:17:35,751 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-16 16:17:35,751 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-16 16:17:35,787 - shipping_chatbot - INFO - Pre-processing finished - 19279 rows remain
+2026-01-16 16:17:38,760 - shipping_chatbot - INFO - [get_upcoming_pos] Period: next 7 days (default), Dates: 2026-01-16 to 2026-01-23
+2026-01-16 16:17:38,816 - shipping_chatbot - INFO - [get_upcoming_pos] Found BARE port code: USLAX (matched in discharge_port)
+2026-01-16 16:17:38,817 - shipping_chatbot - INFO - [get_upcoming_pos] After discharge_port filter (USLAX): 20 rows
+2026-01-16 16:17:38,817 - shipping_chatbot - INFO - [get_upcoming_pos] Sample discharge ports after filter: ['LOS ANGELES, CA(USLAX)', 'LOS ANGELES, CA(USLAX)', 'LOS ANGELES, CA(USLAX)', 'LOS ANGELES, CA(USLAX)', 'LOS ANGELES, CA(USLAX)']
+2026-01-16 16:17:38,819 - shipping_chatbot - INFO - [get_upcoming_pos] Returning 20 PO records
+2026-01-16 16:32:23,926 - shipping_chatbot - INFO - User_Query: Please provide the shipment status of 5302970007, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-16 16:32:26,715 - shipping_chatbot - INFO - [get_container_milestones] Searching for PO: 5302970007
+2026-01-16 16:32:26,854 - shipping_chatbot - INFO - [get_container_milestones] PO match results: 1 rows found
+2026-01-16 16:33:59,965 - shipping_chatbot - INFO - User_Query: List out any delay shipments in August, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-16 16:34:02,466 - shipping_chatbot - INFO - [get_delayed_containers] Query: 'delayed shipments in August 2025', consignee_code: None
+2026-01-16 16:34:02,466 - shipping_chatbot - INFO - [get_delayed_containers] Time filter: August 2025 (2025-08-01 to 2025-08-31)
+2026-01-16 16:34:02,584 - shipping_chatbot - INFO - [get_delayed_containers] After time filter: 1433 containers
+2026-01-16 16:36:53,958 - shipping_chatbot - INFO - [get_delayed_containers] Query: 'delayed shipments in August 2025', consignee_code: None
+2026-01-16 16:36:53,958 - shipping_chatbot - INFO - [get_delayed_containers] Time filter: August 2025 (2025-08-01 to 2025-08-31)
+2026-01-16 16:36:54,073 - shipping_chatbot - INFO - [get_delayed_containers] After time filter: 1433 containers
+2026-01-16 17:01:24,527 - shipping_chatbot - INFO - User_Query: What is the consignee of 5302943326, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-16 17:01:27,361 - shipping_chatbot - INFO - [get_containers_PO_OBL_by_supplier] Extracted: container=None, po=5302943326, obl=None, is_lookup=False
+2026-01-16 17:01:27,478 - shipping_chatbot - INFO - [get_containers_PO_OBL_by_supplier] PO lookup: po_norm=5302943326, found 1 rows
+2026-01-16 17:01:27,499 - shipping_chatbot - INFO - [get_containers_PO_OBL_by_supplier] Returning 1 supplier record(s) for PO 5302943326
+2026-01-16 17:04:47,819 - shipping_chatbot - INFO - User_Query: Booking number of 5302943326, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-16 17:04:50,646 - shipping_chatbot - INFO - [get_booking_details] Received query: '5302943326'
+2026-01-16 17:04:50,646 - shipping_chatbot - INFO - [get_booking_details] Extracted identifiers: container=None, po=5302943326, obl=None, booking=None
+2026-01-16 18:19:09,035 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-16 18:19:09,035 - shipping_chatbot - INFO - Agent created with 52 tools
+2026-01-16 18:19:09,035 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-16 18:20:12,635 - shipping_chatbot - INFO - User_Query: where is DRYU9463499 ?, c_codes: ['0000866']
+2026-01-16 18:20:12,641 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-16 18:23:56,931 - shipping_chatbot - INFO - Fetched 19279 rows
+2026-01-16 18:23:56,938 - shipping_chatbot - INFO - Starting preprocessing on 19279 rows
+2026-01-16 18:23:57,231 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-16 18:24:00,132 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-16 18:24:00,850 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-16 18:24:02,913 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-16 18:24:02,918 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-16 18:24:02,924 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-16 18:24:03,079 - shipping_chatbot - INFO - Pre-processing finished - 19279 rows remain
+2026-01-16 18:33:45,295 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-16 18:33:45,295 - shipping_chatbot - INFO - Agent created with 52 tools
+2026-01-16 18:33:45,295 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-16 18:34:17,132 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-16 18:34:17,132 - shipping_chatbot - INFO - Agent created with 52 tools
+2026-01-16 18:34:17,132 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-16 18:36:14,253 - shipping_chatbot - INFO - User_Query: where is DRYU9463499 ?, c_codes: ['0000866']
+2026-01-16 18:36:14,257 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-16 18:39:46,760 - shipping_chatbot - INFO - Fetched 19279 rows
+2026-01-16 18:39:46,760 - shipping_chatbot - INFO - Starting preprocessing on 19279 rows
+2026-01-16 18:39:46,908 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-16 18:39:47,760 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-16 18:39:48,009 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-16 18:39:48,801 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-16 18:39:48,810 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-16 18:39:48,810 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-16 18:39:48,866 - shipping_chatbot - INFO - Pre-processing finished - 19279 rows remain
