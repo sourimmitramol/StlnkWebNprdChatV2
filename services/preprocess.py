@@ -163,6 +163,23 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
     for col in date_columns:
         if col in df.columns:
             try:
+                # Special handling for cargo_ready_date which may have comma-separated values
+                if col == 'cargo_ready_date':
+                    def extract_first_cargo_date(val):
+                        """Extract first date from comma-separated values like '15-01-25, 15-01-25'"""
+                        if pd.isna(val) or not val:
+                            return None
+                        val_str = str(val).strip()
+                        if not val_str or val_str.lower() in ['nan', 'nat', 'none', '']:
+                            return None
+                        # Extract first date if comma-separated
+                        if ',' in val_str:
+                            return val_str.split(',')[0].strip()
+                        return val_str
+                    
+                    # Extract first date before datetime conversion
+                    df[col] = df[col].apply(extract_first_cargo_date)
+                
                 # Use errors='coerce' to turn invalid parsing into NaT (Not a Time)
                 # This is CRITICAL: it ensures we don't have strings like 'NAN' or 'TBD' mixed with datetimes
                 df[col] = pd.to_datetime(df[col], errors='coerce')
