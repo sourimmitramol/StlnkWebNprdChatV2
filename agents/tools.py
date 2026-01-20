@@ -7896,11 +7896,7 @@ def get_eta_for_booking(question: str = None, consignee_code: str = None, **kwar
         "discharge_port",
         "revised_eta",
         "eta_dp",
-        "derived_ata_dp",
         "ata_dp",
-        "status",
-        "_eta_preferred",
-        "_status_date",
         "consignee_code_multiple",
     ]
     out_cols = [c for c in out_cols if c in matches.columns]
@@ -7911,9 +7907,8 @@ def get_eta_for_booking(question: str = None, consignee_code: str = None, **kwar
         if dcol in out.columns and pd.api.types.is_datetime64_any_dtype(out[dcol]):
             out[dcol] = out[dcol].dt.strftime("%Y-%m-%d")
 
-    out = out.rename(columns={"_eta_preferred": "eta", "_status_date": "status_date"})
+    #out = out.rename(columns={"_eta_preferred": "eta", "_status_date": "status_date"})
     return out.where(pd.notnull(out), None).to_dict(orient="records")
-
 
 
 
@@ -7969,10 +7964,32 @@ def get_booking_details(question: str = None, consignee_code: str = None, **kwar
             if m_numeric:
                 po_no = m_numeric.group(1)
 
+    # **CRITICAL FIX**: Improved OBL extraction with explicit patterns
+    obl_no = None
     try:
         obl_no = extract_ocean_bl_number(q_extract)
     except Exception:
-        obl_no = None
+        pass
+    
+    # **ENHANCED OBL EXTRACTION**: If extract_ocean_bl_number failed, try explicit patterns
+    if not obl_no:
+        # Pattern 1: "OBL# MLGDMLWCN0001321" or "OBL MLGDMLWCN0001321"
+        m_obl = re.search(r'\bOBL\s*#?\s*([A-Z0-9]{10,24})\b', q_upper)
+        if m_obl:
+            obl_no = m_obl.group(1)
+        
+        # Pattern 2: "booking number of OBL MLGDMLWCN0001321"
+        if not obl_no:
+            m_obl2 = re.search(r'\b(?:booking\s+number\s+of\s+)?(?:OBL|BL)\s+([A-Z0-9]{10,24})\b', q_upper)
+            if m_obl2:
+                obl_no = m_obl2.group(1)
+        
+        # Pattern 3: Tokens starting with common OBL prefixes
+        if not obl_no:
+            # Common OBL prefixes: MLGD, MAEU, MOLU, MSCU, etc.
+            m_obl3 = re.search(r'\b((?:MLGD|MAEU|MOLU|MSCU|COSU|HLCU|ZIMU|ONEY|EGLV)[A-Z0-9]{6,20})\b', q_upper)
+            if m_obl3:
+                obl_no = m_obl3.group(1)
 
     # **CRITICAL FIX**: Extract booking number more reliably
     booking_no = None
@@ -7980,7 +7997,10 @@ def get_booking_details(question: str = None, consignee_code: str = None, **kwar
     # Pattern 1: Explicit "booking number X" or "booking X"
     m_booking = re.search(r'\b(?:booking\s+(?:number\s+)?|booking\s+#\s*)([A-Z0-9]{6,20})\b', q_upper)
     if m_booking:
-        booking_no = m_booking.group(1)
+        cand = m_booking.group(1)
+        # Avoid capturing OBL tokens as booking (if they start with OBL prefixes)
+        if not re.match(r'^(?:MLGD|MAEU|MOLU|MSCU|COSU|HLCU|ZIMU|ONEY|EGLV)', cand):
+            booking_no = cand
     
     # Pattern 2: "of booking X" (for queries like "PO of booking VN2084805")
     if not booking_no:
@@ -8006,8 +8026,20 @@ def get_booking_details(question: str = None, consignee_code: str = None, **kwar
     except:
         pass
 
-    # Intent flags
-    wants_booking_number = bool(re.search(r"\bbooking\s+number\b", q_lower)) and not booking_no
+    # Intent flags - **ENHANCED** to handle more query patterns
+    # Detect "booking number" queries: 
+    # - "booking number of X", "which booking", "what booking", "booking for X", "booking associated with X"
+    wants_booking_number = False
+    if not booking_no:  # Only if we haven't already found a booking number
+        if re.search(r"\bbooking\s+number\b", q_lower):
+            wants_booking_number = True
+        elif re.search(r"\b(?:which|what)\s+booking", q_lower):
+            wants_booking_number = True
+        elif re.search(r"\bbooking\s+(?:are|is)\s+(?:associated|related|linked)", q_lower):
+            wants_booking_number = True
+        elif re.search(r"\bbooking\s+(?:for|of)\b", q_lower):
+            wants_booking_number = True
+    
     wants_eta = bool(re.search(r"\beta\b", q_lower)) and booking_no
     wants_po_of_booking = bool(re.search(r"\bpo\b", q_lower) and booking_no)
     wants_container_of_booking = bool(re.search(r"\bcontainer\b", q_lower) and booking_no)
@@ -8026,6 +8058,11 @@ def get_booking_details(question: str = None, consignee_code: str = None, **kwar
     # interpret it as "booking number lookup" so agent/tool retries succeed.
     if (container_no or po_no or obl_no) and not (wants_eta or wants_po_of_booking or wants_container_of_booking or wants_bl_of_booking):
         wants_booking_number = True
+    
+    try:
+        logger.info(f"[get_booking_details] Intent flags: wants_booking_number={wants_booking_number}, wants_eta={wants_eta}, wants_po={wants_po_of_booking}, wants_container={wants_container_of_booking}, wants_bl={wants_bl_of_booking}")
+    except:
+        pass
 
     # 1) "ETA of booking <X>" -> delegate to existing ETA tool
     if booking_no and wants_eta:
@@ -8148,12 +8185,51 @@ def get_booking_details(question: str = None, consignee_code: str = None, **kwar
                 return f"No data found for PO {po_no}."
 
         elif obl_no:
-            bl_col = _find_ocean_bl_col(df) or ("ocean_bl_no_multiple" if "ocean_bl_no_multiple" in df.columns else None)
+            # **CRITICAL FIX**: Use robust BL column finder and matching
+            bl_col = _find_ocean_bl_col(df)
             if not bl_col:
+                bl_col = "ocean_bl_no_multiple" if "ocean_bl_no_multiple" in df.columns else None
+            if not bl_col:
+                try:
+                    logger.error(f"[get_booking_details] Ocean BL column not found. Available columns: {df.columns.tolist()}")
+                except:
+                    pass
                 return "Ocean BL column not found in the dataset."
+            
             bl_norm = _normalize_bl_token(obl_no)
+            try:
+                logger.info(f"[get_booking_details] Searching for OBL. Column: {bl_col}, Normalized OBL: {bl_norm}")
+            except:
+                pass
+            
+            # Try tokenized matching first (handles comma-separated values)
             mask = df[bl_col].apply(lambda cell: _bl_in_cell(cell, bl_norm))
             matches = df[mask].copy()
+            try:
+                logger.info(f"[get_booking_details] Tokenized matching found {len(matches)} matches")
+            except:
+                pass
+            
+            # **FALLBACK**: Try normalized substring matching
+            if matches.empty:
+                try:
+                    df_temp = df.copy()
+                    df_temp['_bl_norm'] = df_temp[bl_col].astype(str).str.upper().str.replace(r'[^A-Z0-9]', '', regex=True)
+                    mask_substring = df_temp['_bl_norm'].str.contains(bl_norm, na=False, regex=False)
+                    matches = df[mask_substring].copy()
+                    logger.info(f"[get_booking_details] Substring matching found {len(matches)} matches")
+                except Exception as e:
+                    logger.error(f"[get_booking_details] Fallback BL matching error: {e}")
+            
+            # **SECOND FALLBACK**: Try simple contains without normalization
+            if matches.empty:
+                try:
+                    mask_simple = df[bl_col].astype(str).str.upper().str.contains(obl_no.upper(), na=False, regex=False)
+                    matches = df[mask_simple].copy()
+                    logger.info(f"[get_booking_details] Simple contains matching found {len(matches)} matches")
+                except Exception as e:
+                    logger.error(f"[get_booking_details] Simple contains error: {e}")
+            
             if matches.empty:
                 return f"No data found for OBL/BL {obl_no}."
 
@@ -8192,6 +8268,284 @@ def get_booking_details(question: str = None, consignee_code: str = None, **kwar
         return out.where(pd.notnull(out), None).to_dict(orient="records")
 
     return "Please ask a booking-related question (booking number of PO/container/BL, ETA of booking, or PO/container/BL of booking)."
+
+
+
+# def get_booking_details(question: str = None, consignee_code: str = None, **kwargs):
+#     """
+#     Booking-related lookup tool:
+#     - "booking number of PO <po>" / "booking number of <po>" -> booking_number_multiple
+#     - "booking number of container <container>" / "booking number of <container>" -> booking_number_multiple
+#     - "booking number of BL/OBL <bl>" / "booking number of <bl>" -> booking_number_multiple
+#     - "ETA of booking <booking>" -> delegates to get_eta_for_booking()
+#     - "PO of booking <booking>" / "container of booking <booking>" / "BL of booking <booking>" -> mapping outputs
+#     Notes:
+#     - booking_number_multiple is comma-separated.
+#     - Uses _df() (thread-local consignee scoping) + optional consignee_code param filtering.
+#     """
+#     import pandas as pd
+
+#     q = (question or kwargs.get("query") or kwargs.get("input") or "").strip()
+#     if not q:
+#         return "Please provide a booking/PO/container/BL query."
+
+#     try:
+#         logger.info(f"[get_booking_details] Received query: {q!r}")
+#     except:
+#         pass
+
+#     q_lower = q.lower()
+#     q_upper = q.upper()
+
+#     # --- Remove injected/metadata-like prefixes so we don't mis-extract codes as POs ---
+#     q_extract = re.sub(
+#         r"\b(?:for\s+)?(?:consignee|user)(?:\s+code)?\s+\d{5,10}\b",
+#         "",
+#         q,
+#         flags=re.IGNORECASE,
+#     ).strip()
+
+#     # Extract identifiers
+#     container_no = extract_container_number(q_extract)
+#     if not container_no:
+#         m_cont = re.search(r"\b([A-Z]{4}\d{7})\b", q_upper)
+#         container_no = m_cont.group(1) if m_cont else None
+
+#     po_no = extract_po_number(q_extract)
+#     if not po_no:
+#         # Try explicit "PO" prefix
+#         m_po = re.search(r"\bPO\s*#?\s*(\d{5,})\b", q_upper)
+#         po_no = m_po.group(1) if m_po else None
+#     if not po_no:
+#         # **CRITICAL FIX**: If query has "booking number of <digits>", treat as PO
+#         if re.search(r"\bbooking\s+number\s+of\b", q_lower):
+#             m_numeric = re.search(r"\b(\d{7,})\b", q_upper)
+#             if m_numeric:
+#                 po_no = m_numeric.group(1)
+
+#     try:
+#         obl_no = extract_ocean_bl_number(q_extract)
+#     except Exception:
+#         obl_no = None
+
+#     # **CRITICAL FIX**: Extract booking number more reliably
+#     booking_no = None
+    
+#     # Pattern 1: Explicit "booking number X" or "booking X"
+#     m_booking = re.search(r'\b(?:booking\s+(?:number\s+)?|booking\s+#\s*)([A-Z0-9]{6,20})\b', q_upper)
+#     if m_booking:
+#         booking_no = m_booking.group(1)
+    
+#     # Pattern 2: "of booking X" (for queries like "PO of booking VN2084805")
+#     if not booking_no:
+#         m_of_booking = re.search(r'\bof\s+booking\s+(?:number\s+)?([A-Z0-9]{6,20})\b', q_upper)
+#         if m_of_booking:
+#             booking_no = m_of_booking.group(1)
+    
+#     # Pattern 3: Fallback - only extract if query contains "booking" keyword
+#     if not booking_no and re.search(r"\bbooking\b", q_lower):
+#         booking_no = _extract_booking_number(q_extract)
+
+#     # Agent/tool retries often pass a bare booking token (e.g., "VN2084805") without the word "booking".
+#     # If the input isn't clearly a PO/container/BL, treat booking-like tokens as booking numbers.
+#     if not booking_no and not (po_no or container_no or obl_no):
+#         booking_no = _extract_booking_number(q_extract)
+
+#     # Guard: if BL extractor grabbed a container-like token, prefer container semantics
+#     if obl_no and re.fullmatch(r"[A-Z]{4}\d{7}", str(obl_no).upper().strip()):
+#         obl_no = None
+
+#     try:
+#         logger.info(f"[get_booking_details] Extracted identifiers: container={container_no}, po={po_no}, obl={obl_no}, booking={booking_no}")
+#     except:
+#         pass
+
+#     # Intent flags
+#     wants_booking_number = bool(re.search(r"\bbooking\s+number\b", q_lower)) and not booking_no
+#     wants_eta = bool(re.search(r"\beta\b", q_lower)) and booking_no
+#     wants_po_of_booking = bool(re.search(r"\bpo\b", q_lower) and booking_no)
+#     wants_container_of_booking = bool(re.search(r"\bcontainer\b", q_lower) and booking_no)
+#     wants_bl_of_booking = bool(re.search(r"\b(?:bl|obl|bill\s+of\s+lading)\b", q_lower) and booking_no)
+
+#     # **CRITICAL FIX**: If user asks "X of booking Y", set the appropriate flag
+#     if booking_no and not (wants_eta or wants_po_of_booking or wants_container_of_booking or wants_bl_of_booking):
+#         if re.search(r'\bpo\s+of\s+booking\b', q_lower):
+#             wants_po_of_booking = True
+#         elif re.search(r'\bcontainer\s+of\s+booking\b', q_lower):
+#             wants_container_of_booking = True
+#         elif re.search(r'\b(?:bl|obl)\s+of\s+booking\b', q_lower):
+#             wants_bl_of_booking = True
+
+#     # If caller passes a bare identifier (PO/container/BL) without intent words,
+#     # interpret it as "booking number lookup" so agent/tool retries succeed.
+#     if (container_no or po_no or obl_no) and not (wants_eta or wants_po_of_booking or wants_container_of_booking or wants_bl_of_booking):
+#         wants_booking_number = True
+
+#     # 1) "ETA of booking <X>" -> delegate to existing ETA tool
+#     if booking_no and wants_eta:
+#         return get_eta_for_booking(question=q_extract, consignee_code=consignee_code)
+
+#     df = _df().copy()
+#     if df is None or getattr(df, "empty", True):
+#         return "No shipment records available for your authorized consignees."
+
+#     # Optional explicit consignee filter (in addition to thread-local scoping)
+#     if consignee_code and "consignee_code_multiple" in df.columns:
+#         codes = [c.strip().upper() for c in str(consignee_code).split(",") if c.strip()]
+#         if codes:
+#             pat = r"|".join([re.escape(c) for c in codes])
+#             df = df[df["consignee_code_multiple"].astype(str).str.upper().str.contains(pat, na=False)].copy()
+#             if df.empty:
+#                 return "No records found for provided consignee code(s)."
+
+#     # Agent retries sometimes pass only the raw identifier (e.g., "VN2084805")
+#     # without the word "booking". If it exists in booking_number_multiple, treat it
+#     # as a booking number so we can return PO/container/BL mapping in one call.
+#     if not booking_no and "booking_number_multiple" in df.columns:
+#         m_code = re.search(r"\b[A-Z0-9]{6,20}\b", q_upper)
+#         if m_code:
+#             cand = m_code.group(0)
+#             if not re.fullmatch(r"\d{5,}", cand) and not re.fullmatch(r"[A-Z]{4}\d{7}", cand):
+#                 cand_norm = _normalize_booking_token(cand)
+#                 try:
+#                     mask_cand = df["booking_number_multiple"].apply(lambda cell: _booking_in_cell(cell, cand_norm))
+#                     if mask_cand.any():
+#                         booking_no = cand
+#                 except Exception:
+#                     pass
+
+#     if "booking_number_multiple" not in df.columns:
+#         return "Booking number column (booking_number_multiple) not found in the dataset."
+
+#     # If a booking number was provided (or inferred) but the user/agent didn't specify
+#     # PO/container/BL explicitly, default to returning the mapping for that booking.
+#     # This avoids multi-turn retries like: tool_input="VN2084805" -> "booking number VN2084805" -> ...
+#     if booking_no and not (wants_eta or wants_po_of_booking or wants_container_of_booking or wants_bl_of_booking):
+#         wants_po_of_booking = True
+
+#     # -------------------------
+#     # A) "PO/container/BL of booking <booking>" - **ENHANCED**
+#     # -------------------------
+#     if booking_no and (wants_po_of_booking or wants_container_of_booking or wants_bl_of_booking):
+#         booking_norm = _normalize_booking_token(booking_no)
+#         mask = df["booking_number_multiple"].apply(lambda cell: _booking_in_cell(cell, booking_norm))
+#         matches = df[mask].copy()
+#         if matches.empty:
+#             return f"No data found for booking {booking_no}."
+
+#         out_cols = [
+#             "container_number",
+#             "po_number_multiple",
+#             "po_number",
+#             "ocean_bl_no_multiple",
+#             "booking_number_multiple",
+#             "discharge_port",
+#         ]
+#         # include ETA/arrival context if present
+#         for c in ["revised_eta", "eta_dp", "ata_dp", "derived_ata_dp"]:
+#             if c in matches.columns:
+#                 out_cols.append(c)
+
+#         out_cols = [c for c in out_cols if c in matches.columns]
+#         out = matches[out_cols].drop_duplicates().head(100).copy()
+
+#         # Format dates if present
+#         date_cols = [c for c in ["revised_eta", "eta_dp", "ata_dp", "derived_ata_dp"] if c in out.columns]
+#         if date_cols:
+#             out = ensure_datetime(out, date_cols)
+#             for c in date_cols:
+#                 if pd.api.types.is_datetime64_any_dtype(out[c]):
+#                     out[c] = out[c].dt.strftime("%Y-%m-%d")
+
+#         return out.where(pd.notnull(out), None).to_dict(orient="records")
+
+#     # -------------------------
+#     # B) "booking number of PO/container/BL"
+#     # -------------------------
+#     if wants_booking_number:
+#         matches = pd.DataFrame()
+
+#         # Priority: container > PO > BL
+#         if container_no:
+#             if "container_number" not in df.columns:
+#                 return "Container number column not found in the dataset."
+#             clean = clean_container_number(container_no)
+#             cont_norm = df["container_number"].astype(str).str.upper().str.replace(r"[^A-Z0-9]", "", regex=True)
+#             matches = df[cont_norm == clean].copy()
+#             if matches.empty:
+#                 matches = df[df["container_number"].astype(str).str.contains(container_no, case=False, na=False)].copy()
+#             if matches.empty:
+#                 # **FALLBACK**: Maybe it's actually a PO misidentified as container
+#                 if re.match(r"^\d{7,}$", container_no):
+#                     po_col = "po_number_multiple" if "po_number_multiple" in df.columns else "po_number"
+#                     if po_col in df.columns:
+#                         po_norm = _normalize_po_token(container_no)
+#                         mask = df[po_col].apply(lambda cell: _po_in_cell(cell, po_norm))
+#                         matches = df[mask].copy()
+#                         if not matches.empty:
+#                             pass  # Found as PO, continue
+#                         else:
+#                             return f"No booking found for container or PO {container_no}."
+#                     else:
+#                         return f"No data found for container {container_no}."
+#                 else:
+#                     return f"No data found for container {container_no}."
+
+#         elif po_no:
+#             po_col = "po_number_multiple" if "po_number_multiple" in df.columns else ("po_number" if "po_number" in df.columns else None)
+#             if not po_col:
+#                 return "PO column not found in the dataset."
+#             po_norm = _normalize_po_token(po_no)
+#             mask = df[po_col].apply(lambda cell: _po_in_cell(cell, po_norm))
+#             matches = df[mask].copy()
+#             if matches.empty:
+#                 return f"No data found for PO {po_no}."
+
+#         elif obl_no:
+#             bl_col = _find_ocean_bl_col(df) or ("ocean_bl_no_multiple" if "ocean_bl_no_multiple" in df.columns else None)
+#             if not bl_col:
+#                 return "Ocean BL column not found in the dataset."
+#             bl_norm = _normalize_bl_token(obl_no)
+#             mask = df[bl_col].apply(lambda cell: _bl_in_cell(cell, bl_norm))
+#             matches = df[mask].copy()
+#             if matches.empty:
+#                 return f"No data found for OBL/BL {obl_no}."
+
+#         else:
+#             # **ENHANCED FALLBACK**: if user wrote "booking number of 5300008696" (no PO prefix)
+#             # treat as PO-like numeric token if present and not a container/booking token
+#             m_num = re.search(r"\b(\d{7,})\b", q_upper)  # POs are typically 7+ digits
+#             if m_num:
+#                 po_guess = m_num.group(1)
+#                 po_col = "po_number_multiple" if "po_number_multiple" in df.columns else ("po_number" if "po_number" in df.columns else None)
+#                 if po_col:
+#                     po_norm = _normalize_po_token(po_guess)
+#                     mask = df[po_col].apply(lambda cell: _po_in_cell(cell, po_norm))
+#                     matches = df[mask].copy()
+#                     if matches.empty:
+#                         # **SECONDARY FALLBACK**: Try simple contains match
+#                         matches = df[df[po_col].astype(str).str.upper().str.contains(po_guess, na=False)].copy()
+#                     if matches.empty:
+#                         return f"No booking found for PO {po_guess}. Please verify the PO number."
+#                 else:
+#                     return "PO column not found in the dataset."
+#             else:
+#                 return "Please specify a PO number, container number, or ocean BL/OBL to look up the booking number."
+
+#         out_cols = [
+#             "container_number",
+#             "po_number_multiple",
+#             "po_number",
+#             "ocean_bl_no_multiple",
+#             "booking_number_multiple",
+#             "discharge_port",
+#             "consignee_code_multiple",
+#         ]
+#         out_cols = [c for c in out_cols if c in matches.columns]
+#         out = matches[out_cols].drop_duplicates().head(100).copy()
+#         return out.where(pd.notnull(out), None).to_dict(orient="records")
+
+#     return "Please ask a booking-related question (booking number of PO/container/BL, ETA of booking, or PO/container/BL of booking)."
 
 
 ################### fd related query strated from here #########################
@@ -9707,7 +10061,7 @@ def get_cargo_ready_date(query: str) -> str:
     # Handle comma-separated cargo_ready_date values (take first date and parse)
     if 'cargo_ready_date' in result_df.columns:
         def parse_cargo_date(val):
-            """Extract and parse first date from comma-separated values like '15-01-25, 15-01-25'"""
+            """Extract and parse first date from comma-separated values like '09-01-26' (DD-MM-YY format)"""
             if pd.isna(val) or not val:
                 return pd.NaT
             
@@ -9726,7 +10080,7 @@ def get_cargo_ready_date(query: str) -> str:
             if not first_date_str:
                 return pd.NaT
             
-            # Try to parse with explicit format dd-MM-yy (e.g., 15-01-25)
+            # Try explicit format dd-MM-yy (e.g., 09-01-26 = January 9, 2026)
             try:
                 parsed_date = pd.to_datetime(first_date_str, format='%d-%m-%y', errors='coerce')
                 if pd.notna(parsed_date):
@@ -9734,9 +10088,33 @@ def get_cargo_ready_date(query: str) -> str:
             except:
                 pass
             
-            # Try other common formats
+            # Try dd-MM-yyyy format
             try:
-                parsed_date = pd.to_datetime(first_date_str, errors='coerce')
+                parsed_date = pd.to_datetime(first_date_str, format='%d-%m-%Y', errors='coerce')
+                if pd.notna(parsed_date):
+                    return parsed_date
+            except:
+                pass
+            
+            # Try dd/MM/yy format
+            try:
+                parsed_date = pd.to_datetime(first_date_str, format='%d/%m/%y', errors='coerce')
+                if pd.notna(parsed_date):
+                    return parsed_date
+            except:
+                pass
+            
+            # Try dd/MM/yyyy format
+            try:
+                parsed_date = pd.to_datetime(first_date_str, format='%d/%m/%Y', errors='coerce')
+                if pd.notna(parsed_date):
+                    return parsed_date
+            except:
+                pass
+            
+            # **CRITICAL**: Use dayfirst=True to prefer DD-MM-YY interpretation
+            try:
+                parsed_date = pd.to_datetime(first_date_str, dayfirst=True, errors='coerce')
                 if pd.notna(parsed_date):
                     return parsed_date
             except:
@@ -9895,7 +10273,7 @@ def get_cargo_ready_date(query: str) -> str:
         if date_col in result_df.columns:
             if pd.api.types.is_datetime64_any_dtype(result_df[date_col]):
                 result_df[date_col] = result_df[date_col].apply(
-                    lambda x: x.strftime('%Y-%m-%d') if pd.notna(x) else None
+                    lambda x: x.strftime("%Y-%m-%d") if pd.notna(x) else None
                 )
     
     # ------------------------------------------------------------------
@@ -10157,7 +10535,7 @@ TOOLS = [
     Tool(
         name="Get Cargo Ready Date",
         func=get_cargo_ready_date,
-        #return_direct=True,
+        return_direct=True,
         description=(
             "PRIMARY TOOL FOR ALL CARGO READY DATE QUERIES.\n"
             "\n"
