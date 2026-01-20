@@ -317,9 +317,9 @@ QUERY_BANK: Dict[str, Dict[str, Any]] = {
     "movement_stats": {
         "description": "Stats for arrivals/departures today at ports.",
         "patterns": [
-            r"what containers depature from ([\w\s]+) today",
-            r"how many will be depature today from ([\w\s]+)",
-            r"how many containers will be depature today from ([\w\s]+)",
+            r"what containers departure from ([\w\s]+) today",
+            r"how many will be departure today from ([\w\s]+)",
+            r"how many containers will be departure today from ([\w\s]+)",
         ],
         "handler": get_movement_stats,
         "extract": lambda m: {"location": m.group(1), "direction": "departure"},
@@ -328,7 +328,7 @@ QUERY_BANK: Dict[str, Dict[str, Any]] = {
         "description": "Generic lookup for specific fields (consignee, vendor, carrier, ready date, etc.)",
         "patterns": [
             (r"what is the consignee of\s+([\w\d\-]+)", "consignee_name_multiple"),
-            (r"cargo ready date for\s+([\w\d\-]+)", "cargo_received_date_multiple"),
+            (r"cargo ready date for\s+([\w\d\-]+)", "cargo_ready_date"),
             (r"shipped quantity for\s+([\w\d\-]+)", "shipped_qty_multiple"),
             (
                 r"what is the (?:shipper|supplier) for (?:po/container/obl#)?\s*([\w\d\-]+)",
@@ -404,7 +404,15 @@ def match_query_bank(
         try:
             logger.info("QUERY_BANK: Attempting LLM Intent Classification")
             resp = llm.invoke(INTENT_CLASSIFIER_PROMPT.format(query=query))
-            data = json.loads(resp.content.strip().split("```json")[-1].split("```")[0])
+            content = resp.content.strip()
+
+            # Robust JSON extraction
+            if "```json" in content:
+                content = content.split("```json")[-1].split("```")[0].strip()
+            elif "```" in content:
+                content = content.split("```")[1].split("```")[0].strip()
+
+            data = json.loads(content)
 
             intent = data.get("intent")
             params = data.get("params", {})

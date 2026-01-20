@@ -522,3 +522,74 @@ else:
 2026-01-20 14:34:12,433 - shipping_chatbot - INFO - AzureChatOpenAI ready
 2026-01-20 14:34:12,433 - shipping_chatbot - INFO - Agent created with 4 tools
 2026-01-20 14:34:12,433 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-20 14:52:07,958 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-20 14:52:07,959 - shipping_chatbot - INFO - Agent created with 4 tools
+2026-01-20 14:52:07,959 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-20 14:54:11,484 - shipping_chatbot - INFO - User_Query: who is the supplier for FBIU0348756, consignee_code: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-20 14:54:11,484 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-20 14:54:25,519 - shipping_chatbot - INFO - Fetched 18991 rows
+2026-01-20 14:54:25,525 - shipping_chatbot - INFO - Starting preprocessing on 18991 rows
+2026-01-20 14:54:25,690 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-20 14:54:26,951 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-20 14:54:27,319 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-20 14:54:28,208 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-20 14:54:28,210 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-20 14:54:28,211 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-20 14:54:28,283 - shipping_chatbot - INFO - Pre-processing finished - 18991 rows remain
+2026-01-20 14:54:28,643 - shipping_chatbot - ERROR - Agent failed: "Input to ChatPromptTemplate is missing variables {'Y, YES, TRUE, 1, HOT'}.  Expected: ['Y, YES, TRUE, 1, HOT', 'agent_scratchpad', 'chat_history', 'consignee_code', 'input'] Received: ['input', 'chat_history', 'consignee_code', 'intermediate_steps', 'agent_scratchpad']"
+Traceback (most recent call last):
+  File "C:\Users\CHOWDHURYRaju\Desktop\roshan\StlnkWebNprdChatV2\api\main.py", line 201, in ask
+    result = AGENT.invoke(
+             ^^^^^^^^^^^^^
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\chains\base.py", line 166, in invoke
+    raise e
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\chains\base.py", line 156, in invoke
+    self._call(inputs, run_manager=run_manager)
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\agents\agent.py", line 1433, in _call
+    next_step_output = self._take_next_step(
+                       ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\agents\agent.py", line 1139, in _take_next_step
+    [
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\agents\agent.py", line 1139, in <listcomp>
+    [
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\agents\agent.py", line 1167, in _iter_next_step
+    output = self.agent.plan(
+             ^^^^^^^^^^^^^^^^
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\agents\agent.py", line 398, in plan
+    for chunk in self.runnable.stream(inputs, config={"callbacks": callbacks}):
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain_core\runnables\base.py", line 2775, in stream
+    yield from self.transform(iter([input]), config, **kwargs)
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain_core\runnables\base.py", line 2762, in transform
+    yield from self._transform_stream_with_config(
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain_core\runnables\base.py", line 1778, in _transform_stream_with_config
+    chunk: Output = context.run(next, iterator)  # type: ignore
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain_core\runnables\base.py", line 2726, in _transform
+    for output in final_pipeline:
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain_core\runnables\base.py", line 1154, in transform
+    for ichunk in input:
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain_core\runnables\base.py", line 4644, in transform
+    yield from self.bound.transform(
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain_core\runnables\base.py", line 1154, in transform
+    for ichunk in input:
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain_core\runnables\base.py", line 1172, in transform
+    yield from self.stream(final, config, **kwargs)
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain_core\runnables\base.py", line 814, in stream
+    yield self.invoke(input, config, **kwargs)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain_core\prompts\base.py", line 128, in invoke
+    return self._call_with_config(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain_core\runnables\base.py", line 1509, in _call_with_config
+    context.run(
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain_core\runnables\config.py", line 365, in call_func_with_variable_args
+    return func(input, **kwargs)  # type: ignore[call-arg]
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain_core\prompts\base.py", line 111, in _format_prompt_with_error_handling
+    _inner_input = self._validate_input(inner_input)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain_core\prompts\base.py", line 103, in _validate_input
+    raise KeyError(
+KeyError: "Input to ChatPromptTemplate is missing variables {'Y, YES, TRUE, 1, HOT'}.  Expected: ['Y, YES, TRUE, 1, HOT', 'agent_scratchpad', 'chat_history', 'consignee_code', 'input'] Received: ['input', 'chat_history', 'consignee_code', 'intermediate_steps', 'agent_scratchpad']"
+2026-01-20 14:54:28,864 - shipping_chatbot - INFO - Router: Set context (codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392'], has_history: False) for query: who is the supplier for FBIU0348756
+2026-01-20 14:54:29,029 - shipping_chatbot - INFO - Consignee filtering validated: 12583 rows for codes ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']

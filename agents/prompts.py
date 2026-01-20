@@ -148,7 +148,7 @@ Examples (normalization)
 
  
 Filtering rules to enforce in tool usage and responses:
-- ONLY include rows with the hot flag TRUE (values in {Y, YES, TRUE, 1, HOT}) if the user explicitly mentions "hot", "priority", "urgent", or "expedited". Otherwise, do not filter by this flag.
+- ONLY include rows with the hot flag TRUE (values in [Y, YES, TRUE, 1, HOT]) if the user explicitly mentions "hot", "priority", "urgent", or "expedited". Otherwise, do not filter by this flag.
 - If a port code is present (e.g., NLRTM, USNYC), strictly filter by that code:
   include rows only when discharge_port or vehicle_arrival_lcn contains "(<CODE>)".
 - For delayed/late intents:
