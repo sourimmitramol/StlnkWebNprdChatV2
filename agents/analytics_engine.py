@@ -36,7 +36,8 @@ BUSINESS RULES:
 - NEVER let code output data for consignees outside the authorized list.
 - Use `pd.to_datetime` for any date comparisons not already handled in preprocessing.
 - For month-only queries (e.g., 'October'), assume year 2025.
-- For hot/priority/urgent queries, filter where `hot_container_flag` is True, 'Y', 'YES', or 1.
+- ONLY if the user explicitly mentions 'hot', 'priority', 'urgent', or 'expedited' in the query, filter where `hot_container_flag` is True, 'Y', 'YES', or 1. Otherwise, ignore this flag.
+- ALWAYS use `pd.notna()` or `pd.to_datetime()` when needed, as `pd` is available.
 - If the user asks for a 'list' or 'show', ensure `result` contains a readable list or table of the relevant records.
 - Return ONLY the final answer as a string by assigning it to a variable named `result`.
 
@@ -66,6 +67,12 @@ class ShipmentAnalyst:
     def analyze(self, question: str, df: pd.DataFrame) -> str:
         try:
             logger.info(f"Analyst Engine processing query: {question}")
+
+            from .query_bank import match_query_bank
+
+            bank_result = match_query_bank(question, df, llm=self.llm)
+            if bank_result:
+                return bank_result
 
             # Retrieve chat history from thread-local storage for context
             history = getattr(threading.current_thread(), "chat_history", [])
@@ -109,10 +116,11 @@ class ShipmentAnalyst:
             logger.info("=" * 40)
 
             # 2. Execute Code
-            local_vars = {"df": df, "pd": pd, "result": None}
-            exec(code, {}, local_vars)
+            # Use same dict for both globals and locals to fix closure issues (lambda scopes)
+            exec_context = {"df": df, "pd": pd, "result": None}
+            exec(code, exec_context, exec_context)
 
-            result = local_vars.get(
+            result = exec_context.get(
                 "result", "Code executed but no 'result' variable found."
             )
 

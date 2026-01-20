@@ -14,6 +14,8 @@ This document serves as the "Knowledge Base" for the AI Agent's Data Analyst Eng
 All dates are normalized to `YYYY-MM-DD`.
 
 ### Load Port (Origin)
+- `cargo_ready_date`: Date the cargo was ready at the factory/supplier.
+- `cargo_received_date_multiple`: Date(s) the cargo was received at the load port.
 - `etd_lp`: Estimated Time of Departure from Load Port.
 - `atd_lp`: Actual Time of Departure from Load Port.
 - `load_port`: Name and code of the origin port (e.g., `SHANGHAI(CNSHA)`).
@@ -28,7 +30,9 @@ All dates are normalized to `YYYY-MM-DD`.
 ### Final Destination & Delivery
 - `eta_fd`: Estimated Arrival at Final Destination (Warehouse/DC).
 - `delivery_date_to_consignee`: Date the cargo was delivered to the customer.
+- `delivery_location_to_consignee`: Location where the cargo was delivered.
 - `empty_container_return_date`: Date the empty container was returned to the yard.
+- `empty_container_return_lcn`: Location where the empty container was returned.
 
 ## 3. Derived Analytics Fields
 These fields are calculated during preprocessing and are preferred for analytics queries.

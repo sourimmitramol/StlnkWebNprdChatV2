@@ -1,493 +1,524 @@
-2026-01-12 10:27:33,123 - shipping_chatbot - INFO - AzureChatOpenAI ready
-2026-01-13 10:57:10,110 - shipping_chatbot - INFO - AzureChatOpenAI ready
-2026-01-13 10:57:10,111 - shipping_chatbot - INFO - Agent created with 51 tools
-2026-01-13 10:57:10,111 - shipping_chatbot - INFO - Agent ready for HTTP requests
-2026-01-13 10:58:02,056 - shipping_chatbot - INFO - User_Query: What is container of 5302997239?, consignee_code: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
-2026-01-13 10:58:02,057 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
-2026-01-13 10:58:13,980 - shipping_chatbot - INFO - Fetched 20280 rows
-2026-01-13 10:58:13,983 - shipping_chatbot - INFO - Starting preprocessing on 20280 rows
-2026-01-13 10:58:14,077 - shipping_chatbot - INFO - Removed 0 duplicate rows
-2026-01-13 10:58:14,705 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
-2026-01-13 10:58:14,862 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
-2026-01-13 10:58:15,418 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
-2026-01-13 10:58:15,420 - shipping_chatbot - INFO - Added `actual_transit_days` column
-2026-01-13 10:58:15,420 - shipping_chatbot - INFO - Added `estimated_transit_days` column
-2026-01-13 10:58:15,446 - shipping_chatbot - INFO - Pre-processing finished - 20280 rows remain
-2026-01-13 10:58:17,874 - shipping_chatbot - INFO - [get_booking_details] Received query: '5302997239'
-2026-01-13 10:58:17,879 - shipping_chatbot - INFO - [get_booking_details] Extracted identifiers: container=None, po=5302997239, obl=None, booking=None
-2026-01-13 10:58:36,818 - shipping_chatbot - INFO - User_Query: show its status?, consignee_code: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
-2026-01-13 10:58:45,858 - shipping_chatbot - INFO - [get_container_milestones] Searching for PO: 0000866
-2026-01-13 10:58:45,914 - shipping_chatbot - INFO - [get_container_milestones] PO match results: 0 rows found
-2026-01-13 11:00:39,162 - shipping_chatbot - INFO - User_Query: What is status of 5302997239?, consignee_code: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
-2026-01-13 11:00:42,016 - shipping_chatbot - INFO - [get_container_milestones] Searching for PO: 5302997239
-2026-01-13 11:00:42,128 - shipping_chatbot - INFO - [get_container_milestones] PO match results: 1 rows found
-2026-01-13 11:01:18,802 - shipping_chatbot - INFO - User_Query: Booking number of 5302943326, consignee_code: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
-2026-01-13 11:01:22,335 - shipping_chatbot - INFO - [get_booking_details] Received query: '5302943326'
-2026-01-13 11:01:22,336 - shipping_chatbot - INFO - [get_booking_details] Extracted identifiers: container=None, po=5302943326, obl=None, booking=None
-2026-01-13 11:38:29,820 - shipping_chatbot - INFO - User_Query: Booking number of 5302943326, consignee_code: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
-2026-01-13 11:38:33,299 - shipping_chatbot - INFO - [get_booking_details] Received query: '5302943326'
-2026-01-13 11:38:33,300 - shipping_chatbot - INFO - [get_booking_details] Extracted identifiers: container=None, po=5302943326, obl=None, booking=None
-2026-01-13 11:39:53,948 - shipping_chatbot - INFO - User_Query: which is the container carrying it, consignee_code: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
-2026-01-13 11:59:13,423 - shipping_chatbot - INFO - User_Query: what is the status, consignee_code: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
-2026-01-13 11:59:17,836 - shipping_chatbot - INFO - [get_container_milestones] Searching for PO: 0000866
-2026-01-13 11:59:17,873 - shipping_chatbot - INFO - [get_container_milestones] PO match results: 0 rows found
-2026-01-13 12:03:23,465 - shipping_chatbot - INFO - AzureChatOpenAI ready
-2026-01-13 12:03:23,465 - shipping_chatbot - INFO - Agent created with 51 tools
-2026-01-13 12:03:23,470 - shipping_chatbot - INFO - Agent ready for HTTP requests
-2026-01-13 12:05:26,810 - shipping_chatbot - INFO - User_Query: What are the POs in the container TCLU4703170?, consignee_code: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
-2026-01-13 12:05:26,810 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
-2026-01-13 12:05:40,871 - shipping_chatbot - INFO - Fetched 20280 rows
-2026-01-13 12:05:40,873 - shipping_chatbot - INFO - Starting preprocessing on 20280 rows
-2026-01-13 12:05:40,961 - shipping_chatbot - INFO - Removed 0 duplicate rows
-2026-01-13 12:05:41,531 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
-2026-01-13 12:05:41,713 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
-2026-01-13 12:05:42,329 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
-2026-01-13 12:05:42,330 - shipping_chatbot - INFO - Added `actual_transit_days` column
-2026-01-13 12:05:42,331 - shipping_chatbot - INFO - Added `estimated_transit_days` column
-2026-01-13 12:05:42,363 - shipping_chatbot - INFO - Pre-processing finished - 20280 rows remain
-2026-01-13 12:06:43,714 - shipping_chatbot - INFO - User_Query: What are the POs in the container TCLU4703170?, consignee_code: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
-2026-01-13 12:07:28,589 - shipping_chatbot - INFO - User_Query: Find POs inside it, consignee_code: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
-2026-01-13 12:07:31,131 - shipping_chatbot - INFO - [get_booking_details] Received query: 'TCLU4703170'
-2026-01-13 12:07:31,137 - shipping_chatbot - INFO - [get_booking_details] Extracted identifiers: container=TCLU4703170, po=None, obl=None, booking=None
-2026-01-13 12:08:00,901 - shipping_chatbot - INFO - User_Query: current status, consignee_code: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
-2026-01-13 12:08:46,627 - shipping_chatbot - INFO - User_Query: which carrier involved, consignee_code: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
-2026-01-13 12:09:07,367 - shipping_chatbot - INFO - Router: Set consignee codes ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392'] for query: which carrier involved
-2026-01-13 12:09:07,451 - shipping_chatbot - INFO - Consignee filtering validated: 7829 rows for codes ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
-2026-01-13 16:26:46,781 - shipping_chatbot - INFO - AzureChatOpenAI ready
-2026-01-13 16:26:46,781 - shipping_chatbot - INFO - Agent created with 52 tools
-2026-01-13 16:26:46,781 - shipping_chatbot - INFO - Agent ready for HTTP requests
-2026-01-13 16:29:49,557 - shipping_chatbot - INFO - User_Query: share the status of 5302853301, consignee_code: ['0002990']
-2026-01-13 16:29:49,558 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
-2026-01-13 16:30:07,556 - shipping_chatbot - INFO - Fetched 20365 rows
-2026-01-13 16:30:07,561 - shipping_chatbot - INFO - Starting preprocessing on 20365 rows
-2026-01-13 16:30:07,670 - shipping_chatbot - INFO - Removed 0 duplicate rows
-2026-01-13 16:30:08,294 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
-2026-01-13 16:30:08,466 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
-2026-01-13 16:30:09,066 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
-2026-01-13 16:30:09,070 - shipping_chatbot - INFO - Added `actual_transit_days` column
-2026-01-13 16:30:09,070 - shipping_chatbot - INFO - Added `estimated_transit_days` column
-2026-01-13 16:30:09,099 - shipping_chatbot - INFO - Pre-processing finished - 20365 rows remain
-2026-01-13 16:30:11,615 - shipping_chatbot - INFO - [get_container_milestones] Searching for PO: 5302853301
-2026-01-13 16:30:11,620 - shipping_chatbot - INFO - [get_container_milestones] PO match results: 2 rows found
-2026-01-13 16:31:31,231 - shipping_chatbot - INFO - User_Query: let me know the associated obl no, please, consignee_code: ['0002990']
-2026-01-13 16:31:33,682 - shipping_chatbot - INFO - [get_booking_details] Received query: '5302853301'
-2026-01-13 16:31:33,683 - shipping_chatbot - INFO - [get_booking_details] Extracted identifiers: container=None, po=5302853301, obl=None, booking=None
-2026-01-13 16:37:59,280 - shipping_chatbot - INFO - User_Query: what are the cargo carrieried by ZIM INTEGRATED, consignee_code: ['0002990']
-2026-01-13 16:38:15,686 - shipping_chatbot - INFO - Router: Set consignee codes ['0002990'] for query: what are the cargo carrieried by ZIM INTEGRATED
-2026-01-13 16:38:15,736 - shipping_chatbot - INFO - Consignee filtering validated: 554 rows for codes ['0002990']
-2026-01-13 16:39:01,086 - shipping_chatbot - INFO - User_Query: Find the container carried by ZIM INTEGRATED carrier, consignee_code: ['0002990']
-2026-01-13 16:39:17,201 - shipping_chatbot - INFO - Router: Set consignee codes ['0002990'] for query: Find the container carried by ZIM INTEGRATED carrier
-2026-01-13 16:39:17,249 - shipping_chatbot - INFO - Consignee filtering validated: 554 rows for codes ['0002990']
-2026-01-13 16:39:52,461 - shipping_chatbot - INFO - User_Query: Find the container carried by ZIM INTEGRATED as true carrier scac name, consignee_code: ['0002990']
-2026-01-13 16:40:08,632 - shipping_chatbot - INFO - Router: Set consignee codes ['0002990'] for query: Find the container carried by ZIM INTEGRATED as true carrier scac name
-2026-01-13 16:40:08,690 - shipping_chatbot - INFO - Consignee filtering validated: 554 rows for codes ['0002990']
-2026-01-13 16:40:49,435 - shipping_chatbot - INFO - User_Query: Any container shipped by EXPEDITORS INTERNATIONAL, consignee_code: ['0002990']
-2026-01-13 16:41:04,711 - shipping_chatbot - INFO - Router: Set consignee codes ['0002990'] for query: Any container shipped by EXPEDITORS INTERNATIONAL
-2026-01-13 16:41:04,762 - shipping_chatbot - INFO - Consignee filtering validated: 554 rows for codes ['0002990']
-2026-01-13 16:41:55,038 - shipping_chatbot - INFO - User_Query: Any container shipped where final carrier name contain EXPEDITORS INTERNATIONAL, consignee_code: ['0002990']
-2026-01-13 16:42:11,909 - shipping_chatbot - INFO - Router: Set consignee codes ['0002990'] for query: Any container shipped where final carrier name contain EXPEDITORS INTERNATIONAL
-2026-01-13 16:42:11,967 - shipping_chatbot - INFO - Consignee filtering validated: 554 rows for codes ['0002990']
-2026-01-13 16:42:42,411 - shipping_chatbot - INFO - User_Query: Check full dataset and find if any container shipped where final carrier name contain EXPEDITORS INTERNATIONAL, consignee_code: ['0002990']
-2026-01-13 16:42:59,683 - shipping_chatbot - INFO - Router: Set consignee codes ['0002990'] for query: Check full dataset and find if any container shipped where final carrier name contain EXPEDITORS INTERNATIONAL
-2026-01-13 16:42:59,742 - shipping_chatbot - INFO - Consignee filtering validated: 554 rows for codes ['0002990']
-2026-01-13 16:45:44,590 - shipping_chatbot - INFO - AzureChatOpenAI ready
-2026-01-13 16:45:44,590 - shipping_chatbot - INFO - Agent created with 52 tools
-2026-01-13 16:45:44,592 - shipping_chatbot - INFO - Agent ready for HTTP requests
-2026-01-13 16:45:49,927 - shipping_chatbot - INFO - AzureChatOpenAI ready
-2026-01-13 16:45:49,927 - shipping_chatbot - INFO - Agent created with 52 tools
-2026-01-13 16:45:49,927 - shipping_chatbot - INFO - Agent ready for HTTP requests
-2026-01-13 16:48:05,210 - shipping_chatbot - INFO - User_Query: Find the container having 5302940688, consignee_code: ['0000866', '0005179']
-2026-01-13 16:48:05,210 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
-2026-01-13 16:48:22,669 - shipping_chatbot - INFO - Fetched 20365 rows
-2026-01-13 16:48:22,673 - shipping_chatbot - INFO - Starting preprocessing on 20365 rows
-2026-01-13 16:48:22,758 - shipping_chatbot - INFO - Removed 0 duplicate rows
-2026-01-13 16:48:23,353 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
-2026-01-13 16:48:23,507 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
-2026-01-13 16:48:24,083 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
-2026-01-13 16:48:24,083 - shipping_chatbot - INFO - Added `actual_transit_days` column
-2026-01-13 16:48:24,086 - shipping_chatbot - INFO - Added `estimated_transit_days` column
-2026-01-13 16:48:24,120 - shipping_chatbot - INFO - Pre-processing finished - 20365 rows remain
-2026-01-13 16:48:26,481 - shipping_chatbot - INFO - [get_booking_details] Received query: '5302940688'
-2026-01-13 16:48:26,486 - shipping_chatbot - INFO - [get_booking_details] Extracted identifiers: container=None, po=5302940688, obl=None, booking=None
-2026-01-13 16:48:30,050 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Get Booking Details | Tool Input: 5302940688
-2026-01-13 16:48:30,050 - shipping_chatbot - INFO - AGENT_STEP: 2 | Tool Used: _Exception | Tool Input: Invalid or incomplete response
-2026-01-13 16:54:03,577 - shipping_chatbot - INFO - AzureChatOpenAI ready
-2026-01-13 16:54:03,578 - shipping_chatbot - INFO - Agent created with 52 tools
-2026-01-13 16:54:03,578 - shipping_chatbot - INFO - Agent ready for HTTP requests
-2026-01-13 16:54:08,199 - shipping_chatbot - INFO - AzureChatOpenAI ready
-2026-01-13 16:54:08,200 - shipping_chatbot - INFO - Agent created with 52 tools
-2026-01-13 16:54:08,200 - shipping_chatbot - INFO - Agent ready for HTTP requests
-2026-01-13 16:54:26,930 - shipping_chatbot - INFO - AzureChatOpenAI ready
-2026-01-13 16:54:26,930 - shipping_chatbot - INFO - Agent created with 52 tools
-2026-01-13 16:54:26,930 - shipping_chatbot - INFO - Agent ready for HTTP requests
-2026-01-13 17:17:51,112 - shipping_chatbot - INFO - User_Query: Find the container having 5302940688, consignee_code: ['0000866', '0005179']
-2026-01-13 17:17:51,115 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
-2026-01-13 17:18:03,870 - shipping_chatbot - INFO - Fetched 20365 rows
-2026-01-13 17:18:03,873 - shipping_chatbot - INFO - Starting preprocessing on 20365 rows
-2026-01-13 17:18:03,957 - shipping_chatbot - INFO - Removed 0 duplicate rows
-2026-01-13 17:18:04,532 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
-2026-01-13 17:18:04,689 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
-2026-01-13 17:18:05,284 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
-2026-01-13 17:18:05,286 - shipping_chatbot - INFO - Added `actual_transit_days` column
-2026-01-13 17:18:05,287 - shipping_chatbot - INFO - Added `estimated_transit_days` column
-2026-01-13 17:18:05,314 - shipping_chatbot - INFO - Pre-processing finished - 20365 rows remain
-2026-01-13 17:18:07,764 - shipping_chatbot - INFO - [get_container_milestones] Searching for PO: 5302940688
-2026-01-13 17:18:07,773 - shipping_chatbot - INFO - [get_container_milestones] PO match results: 3 rows found
-2026-01-13 17:18:07,779 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Get Container Milestones | Tool Input: PO 5302940688
-2026-01-13 17:18:58,930 - shipping_chatbot - INFO - User_Query: let me know the container carrying 5302940688, consignee_code: ['0000866', '0005179']
-2026-01-13 17:19:01,494 - shipping_chatbot - INFO - [get_container_milestones] Searching for PO: 5302940688
-2026-01-13 17:19:01,510 - shipping_chatbot - INFO - [get_container_milestones] PO match results: 3 rows found
-2026-01-13 17:19:01,515 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Get Container Milestones | Tool Input: PO 5302940688
-2026-01-13 17:20:23,931 - shipping_chatbot - INFO - User_Query: let me share full milestone about MRKU2967035, consignee_code: ['0000866', '0005179']
-2026-01-13 17:20:26,371 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Get Container Milestones | Tool Input: MRKU2967035
-2026-01-13 17:21:04,527 - shipping_chatbot - INFO - User_Query: let me share update status about HASU5098806, consignee_code: ['0000866', '0005179']
-2026-01-13 17:21:07,178 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Get Container Milestones | Tool Input: HASU5098806
-2026-01-13 17:21:34,271 - shipping_chatbot - INFO - User_Query: let me the obl associated with it, consignee_code: ['0000866', '0005179']
-2026-01-13 17:21:37,377 - shipping_chatbot - INFO - [get_containers_PO_OBL_by_supplier] Extracted: container=None, po=0000866, obl=None
-2026-01-13 17:21:37,392 - shipping_chatbot - INFO - [get_containers_PO_OBL_by_supplier] PO lookup: po_norm=0000866, found 0 rows
-2026-01-13 17:21:38,400 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Get Containers or PO or OBL By Supplier | Tool Input: consignee_code: 0000866, 0005179
-2026-01-15 09:16:20,571 - shipping_chatbot - INFO - AzureChatOpenAI ready
-2026-01-15 09:16:20,571 - shipping_chatbot - INFO - Agent created with 4 tools
-2026-01-15 09:16:20,571 - shipping_chatbot - INFO - Agent ready for HTTP requests
-2026-01-15 09:17:00,423 - shipping_chatbot - INFO - User_Query: who is the supplier for FBIU0348756, consignee_code: ['0000866']
-2026-01-15 09:17:00,424 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
-2026-01-15 09:17:16,544 - shipping_chatbot - INFO - Fetched 19284 rows
-2026-01-15 09:17:16,559 - shipping_chatbot - INFO - Starting preprocessing on 19284 rows
-2026-01-15 09:17:16,857 - shipping_chatbot - INFO - Removed 0 duplicate rows
-2026-01-15 09:17:19,254 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
-2026-01-15 09:17:20,001 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
-2026-01-15 09:17:20,952 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
-2026-01-15 09:17:20,952 - shipping_chatbot - INFO - Added `actual_transit_days` column
-2026-01-15 09:17:20,959 - shipping_chatbot - INFO - Added `estimated_transit_days` column
-2026-01-15 09:17:20,999 - shipping_chatbot - INFO - Pre-processing finished - 19284 rows remain
-2026-01-15 09:17:23,349 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Get Container Milestones | Tool Input: container FBIU0348756
-2026-01-15 09:17:57,140 - shipping_chatbot - INFO - User_Query: who is the supplier for FBIU0348756, consignee_code: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
-2026-01-15 09:17:59,515 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Get Container Milestones | Tool Input: FBIU0348756
-2026-01-15 09:19:32,701 - shipping_chatbot - INFO - User_Query: what is the container for 5303013468, consignee_code: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
-2026-01-15 09:19:35,107 - shipping_chatbot - INFO - [get_container_milestones] Searching for PO: 5303013468
-2026-01-15 09:19:35,151 - shipping_chatbot - INFO - [get_container_milestones] PO match results: 1 rows found
-2026-01-15 09:19:35,157 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Get Container Milestones | Tool Input: PO 5303013468
-2026-01-15 12:49:49,039 - shipping_chatbot - INFO - AzureChatOpenAI ready
-2026-01-15 12:49:49,039 - shipping_chatbot - INFO - Agent created with 4 tools
-2026-01-15 12:49:49,039 - shipping_chatbot - INFO - Agent ready for HTTP requests
-2026-01-15 13:06:58,903 - shipping_chatbot - INFO - User_Query: What is the ceo message, consignee_code: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
-2026-01-15 13:06:58,908 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
-2026-01-15 13:07:18,099 - shipping_chatbot - INFO - Fetched 19284 rows
-2026-01-15 13:07:18,102 - shipping_chatbot - INFO - Starting preprocessing on 19284 rows
-2026-01-15 13:07:18,205 - shipping_chatbot - INFO - Removed 0 duplicate rows
-2026-01-15 13:07:18,815 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
-2026-01-15 13:07:18,979 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
-2026-01-15 13:07:19,554 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
-2026-01-15 13:07:19,554 - shipping_chatbot - INFO - Added `actual_transit_days` column
-2026-01-15 13:07:19,559 - shipping_chatbot - INFO - Added `estimated_transit_days` column
-2026-01-15 13:07:19,589 - shipping_chatbot - INFO - Pre-processing finished - 19284 rows remain
-2026-01-15 13:07:26,455 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Handle Non-shipping queries | Tool Input: The CEO message typically refers to a communication from the Chief Executive Officer of a company, often addressing employees, customers, or stakeholders about the company's vision, achievements, goals, or important updates. If you are looking for a specific CEO message, please provide more context or specify the company or organization.
-2026-01-15 13:07:26,455 - shipping_chatbot - INFO - AGENT_STEP: 2 | Tool Used: Handle Non-shipping queries | Tool Input: The CEO message usually refers to a statement or communication from the Chief Executive Officer of a company. If you are asking about a specific CEO message, please provide the name of the company or more context so I can assist you better.
-2026-01-15 13:08:04,276 - shipping_chatbot - INFO - User_Query: What is the ceo message of america, consignee_code: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
-2026-01-15 13:08:12,024 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Handle Non-shipping queries | Tool Input: The CEO message of America is not a specific or standard term. If you mean a message from the CEO of a particular American company or organization, please specify the company name. Alternatively, if you are referring to a general statement or speech by a CEO in America, please provide more details.
-2026-01-15 13:08:41,100 - shipping_chatbot - INFO - User_Query: What mcs generally do, consignee_code: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
-2026-01-15 13:08:46,013 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Handle Non-shipping queries | Tool Input: MCS (MOL Chemical Shipping) generally provides specialized shipping and logistics services, focusing on the transportation of chemical products and other specialized cargo. They offer container shipping, logistics solutions, supply chain management, and related services to ensure safe, efficient, and reliable delivery of goods globally.
-2026-01-15 13:09:20,133 - shipping_chatbot - INFO - User_Query: can you list his services offered, consignee_code: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
-2026-01-15 13:09:24,340 - shipping_chatbot - ERROR - Agent failed: unexpected character after line continuation character (analytics_engine.py, line 88)
-Traceback (most recent call last):
-  File "C:\Users\CHOWDHURYRaju\Desktop\roshan\StlnkWebNprdChatV2\api\main.py", line 196, in ask
-    result = AGENT.invoke({
-             ^^^^^^^^^^^^^^
-  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\chains\base.py", line 166, in invoke
-    raise e
-  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\chains\base.py", line 156, in invoke
-    self._call(inputs, run_manager=run_manager)
-  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\agents\agent.py", line 1433, in _call
-    next_step_output = self._take_next_step(
-                       ^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\agents\agent.py", line 1139, in _take_next_step
-    [
-  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\agents\agent.py", line 1139, in <listcomp>
-    [
-  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\agents\agent.py", line 1224, in _iter_next_step
-    yield self._perform_agent_action(
-          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\agents\agent.py", line 1246, in _perform_agent_action
-    observation = tool.run(
-                  ^^^^^^^^^
-  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain_core\tools.py", line 452, in run
-    raise e
-  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain_core\tools.py", line 409, in run
-    context.run(
-  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain_core\tools.py", line 633, in _run
-    else self.func(*args, **kwargs)
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\CHOWDHURYRaju\Desktop\roshan\StlnkWebNprdChatV2\agents\tools.py", line 3244, in analyze_data_with_pandas
-    from agents.analytics_engine import unified_shipment_analyst
-  File "C:\Users\CHOWDHURYRaju\Desktop\roshan\StlnkWebNprdChatV2\agents\analytics_engine.py", line 88
-    \"\"\"
-     ^
-SyntaxError: unexpected character after line continuation character
-2026-01-15 13:09:24,490 - shipping_chatbot - INFO - Router: Set consignee codes ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392'] for query: can you list his services offered
-2026-01-15 13:09:24,564 - shipping_chatbot - INFO - Consignee filtering validated: 7513 rows for codes ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
-2026-01-15 13:09:51,633 - shipping_chatbot - INFO - User_Query: what are the services offerred by mcs, consignee_code: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
-2026-01-15 13:09:56,613 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Handle Non-shipping queries | Tool Input: MCS (MOL Chemical Shipping) offers a range of services primarily focused on specialized shipping and logistics. Their services typically include container shipping, chemical logistics, supply chain management, cargo handling, and transportation solutions tailored for chemical and other specialized cargo. They ensure safe, efficient, and reliable delivery of goods globally, often providing value-added services such as tracking, customs clearance support, and tailored logistics solutions to meet customer needs.
-2026-01-15 13:10:44,483 - shipping_chatbot - INFO - User_Query: do they have any offices in egypt, consignee_code: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
-2026-01-15 13:10:50,926 - shipping_chatbot - ERROR - Agent failed: unexpected character after line continuation character (analytics_engine.py, line 88)
-Traceback (most recent call last):
-  File "C:\Users\CHOWDHURYRaju\Desktop\roshan\StlnkWebNprdChatV2\api\main.py", line 196, in ask
-    result = AGENT.invoke({
-             ^^^^^^^^^^^^^^
-  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\chains\base.py", line 166, in invoke
-    raise e
-  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\chains\base.py", line 156, in invoke
-    self._call(inputs, run_manager=run_manager)
-  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\agents\agent.py", line 1433, in _call
-    next_step_output = self._take_next_step(
-                       ^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\agents\agent.py", line 1139, in _take_next_step
-    [
-  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\agents\agent.py", line 1139, in <listcomp>
-    [
-  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\agents\agent.py", line 1224, in _iter_next_step
-    yield self._perform_agent_action(
-          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\agents\agent.py", line 1246, in _perform_agent_action
-    observation = tool.run(
-                  ^^^^^^^^^
-  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain_core\tools.py", line 452, in run
-    raise e
-  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain_core\tools.py", line 409, in run
-    context.run(
-  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain_core\tools.py", line 633, in _run
-    else self.func(*args, **kwargs)
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\CHOWDHURYRaju\Desktop\roshan\StlnkWebNprdChatV2\agents\tools.py", line 3244, in analyze_data_with_pandas
-    from agents.analytics_engine import unified_shipment_analyst
-  File "C:\Users\CHOWDHURYRaju\Desktop\roshan\StlnkWebNprdChatV2\agents\analytics_engine.py", line 88
-    \"\"\"
-     ^
-SyntaxError: unexpected character after line continuation character
-2026-01-15 13:10:50,928 - shipping_chatbot - INFO - Router: Set consignee codes ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392'] for query: do they have any offices in egypt
-2026-01-15 13:10:51,036 - shipping_chatbot - INFO - Consignee filtering validated: 7513 rows for codes ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
-2026-01-15 13:11:45,051 - shipping_chatbot - INFO - User_Query: do mcs have any offices in romania, consignee_code: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
-2026-01-15 13:11:47,739 - shipping_chatbot - ERROR - Agent failed: unexpected character after line continuation character (analytics_engine.py, line 88)
-Traceback (most recent call last):
-  File "C:\Users\CHOWDHURYRaju\Desktop\roshan\StlnkWebNprdChatV2\api\main.py", line 196, in ask
-    result = AGENT.invoke({
-             ^^^^^^^^^^^^^^
-  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\chains\base.py", line 166, in invoke
-    raise e
-  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\chains\base.py", line 156, in invoke
-    self._call(inputs, run_manager=run_manager)
-  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\agents\agent.py", line 1433, in _call
-    next_step_output = self._take_next_step(
-                       ^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\agents\agent.py", line 1139, in _take_next_step
-    [
-  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\agents\agent.py", line 1139, in <listcomp>
-    [
-  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\agents\agent.py", line 1224, in _iter_next_step
-    yield self._perform_agent_action(
-          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain\agents\agent.py", line 1246, in _perform_agent_action
-    observation = tool.run(
-                  ^^^^^^^^^
-  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain_core\tools.py", line 452, in run
-    raise e
-  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain_core\tools.py", line 409, in run
-    context.run(
-  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain_core\tools.py", line 633, in _run
-    else self.func(*args, **kwargs)
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\CHOWDHURYRaju\Desktop\roshan\StlnkWebNprdChatV2\agents\tools.py", line 3244, in analyze_data_with_pandas
-    from agents.analytics_engine import unified_shipment_analyst
-  File "C:\Users\CHOWDHURYRaju\Desktop\roshan\StlnkWebNprdChatV2\agents\analytics_engine.py", line 88
-    \"\"\"
-     ^
-SyntaxError: unexpected character after line continuation character
-2026-01-15 13:11:47,740 - shipping_chatbot - INFO - Router: Set consignee codes ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392'] for query: do mcs have any offices in romania
-2026-01-15 13:11:47,796 - shipping_chatbot - INFO - Consignee filtering validated: 7513 rows for codes ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
-2026-01-15 13:13:58,692 - shipping_chatbot - INFO - AzureChatOpenAI ready
-2026-01-15 13:13:58,692 - shipping_chatbot - INFO - Agent created with 4 tools
-2026-01-15 13:13:58,692 - shipping_chatbot - INFO - Agent ready for HTTP requests
-2026-01-15 13:14:04,043 - shipping_chatbot - INFO - User_Query: do mcs have any offices in romania, consignee_code: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
-2026-01-15 13:14:04,047 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
-2026-01-15 13:14:26,239 - shipping_chatbot - INFO - Fetched 19284 rows
-2026-01-15 13:14:26,239 - shipping_chatbot - INFO - Starting preprocessing on 19284 rows
-2026-01-15 13:14:26,334 - shipping_chatbot - INFO - Removed 0 duplicate rows
-2026-01-15 13:14:26,987 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
-2026-01-15 13:14:27,182 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
-2026-01-15 13:14:27,789 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
-2026-01-15 13:14:27,789 - shipping_chatbot - INFO - Added `actual_transit_days` column
-2026-01-15 13:14:27,789 - shipping_chatbot - INFO - Added `estimated_transit_days` column
-2026-01-15 13:14:27,818 - shipping_chatbot - INFO - Pre-processing finished - 19284 rows remain
-2026-01-15 13:14:31,716 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Handle Non-shipping queries | Tool Input: MCS is a global logistics and shipping company with offices in many countries. However, there is no publicly available information confirming that MCS has an office specifically in Romania. For the most accurate and up-to-date information, it is recommended to contact MCS directly or visit their official website.
-2026-01-15 13:15:38,256 - shipping_chatbot - INFO - User_Query: what are the services offered by mcs, consignee_code: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
-2026-01-15 13:15:42,621 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Handle Non-shipping queries | Tool Input: MCS (Marine Container Services) typically offers a range of logistics and shipping services including container shipping, freight forwarding, supply chain management, customs clearance, warehousing, and distribution. For detailed and specific services, please refer to MCS's official website or contact their customer service directly.
-2026-01-15 13:16:22,985 - shipping_chatbot - INFO - User_Query: what is mcs mission, vision and values, consignee_code: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
-2026-01-15 13:16:27,494 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Handle Non-shipping queries | Tool Input: MCS's mission, vision, and values are not part of the shipping dataset. Generally, companies like MCS focus on providing reliable, efficient, and customer-centric logistics and shipping solutions. For the exact mission, vision, and values of MCS, please refer to their official website or corporate publications.
-2026-01-15 13:18:12,103 - shipping_chatbot - INFO - User_Query: what is mcs mission, consignee_code: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
-2026-01-15 13:18:18,263 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Handle Non-shipping queries | Tool Input: MCS's mission statement is not available in the shipping dataset. For accurate information about MCS's mission, please refer to MCS's official website or contact their corporate communications.
-2026-01-15 13:18:18,263 - shipping_chatbot - INFO - AGENT_STEP: 2 | Tool Used: Handle Non-shipping queries | Tool Input: MCS's mission statement is not available in the shipping dataset. For accurate information about MCS's mission, please refer to MCS's official website or contact their corporate communications.
-2026-01-15 14:17:35,274 - shipping_chatbot - INFO - AzureChatOpenAI ready
-2026-01-15 14:17:35,274 - shipping_chatbot - INFO - Agent created with 4 tools
-2026-01-15 14:17:35,274 - shipping_chatbot - INFO - Agent ready for HTTP requests
-2026-01-15 14:18:28,932 - shipping_chatbot - INFO - User_Query: hello, consignee_code: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
-2026-01-15 14:18:28,932 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
-2026-01-15 14:18:44,815 - shipping_chatbot - INFO - Fetched 19284 rows
-2026-01-15 14:18:44,815 - shipping_chatbot - INFO - Starting preprocessing on 19284 rows
-2026-01-15 14:18:44,905 - shipping_chatbot - INFO - Removed 0 duplicate rows
-2026-01-15 14:18:45,488 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
-2026-01-15 14:18:45,647 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
-2026-01-15 14:18:46,282 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
-2026-01-15 14:18:46,282 - shipping_chatbot - INFO - Added `actual_transit_days` column
-2026-01-15 14:18:46,282 - shipping_chatbot - INFO - Added `estimated_transit_days` column
-2026-01-15 14:18:46,323 - shipping_chatbot - INFO - Pre-processing finished - 19284 rows remain
-2026-01-15 14:18:50,171 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Handle Non-shipping queries | Tool Input: {'query': 'hello', 'chat_history': []}
-2026-01-15 14:19:27,481 - shipping_chatbot - INFO - User_Query: who is the ceo of hongkong, consignee_code: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
-2026-01-15 14:19:33,504 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Handle Non-shipping queries | Tool Input: {'query': 'Who is the CEO of Hong Kong?'}
-2026-01-15 14:19:55,485 - shipping_chatbot - INFO - User_Query: what is her message, consignee_code: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
-2026-01-15 14:20:04,473 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Handle Non-shipping queries | Tool Input: {'query': 'what is her message', 'chat_history': []}
-2026-01-15 14:21:03,483 - shipping_chatbot - INFO - User_Query: what mcs vision for business, consignee_code: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
-2026-01-15 14:21:10,335 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Handle Non-shipping queries | Tool Input: {'query': 'What is MCS vision for business?'}
-2026-01-15 14:21:49,969 - shipping_chatbot - INFO - User_Query: what are the services it can offer, consignee_code: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
-2026-01-15 14:22:02,342 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Handle Non-shipping queries | Tool Input: {'query': 'What services can MCS offer?'}
-2026-01-15 14:23:26,394 - shipping_chatbot - INFO - User_Query: can you draw a quick timeline about its start to till date, consignee_code: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
-2026-01-15 14:23:32,439 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Handle Non-shipping queries | Tool Input: {'query': 'Could you please clarify what specific event or process you want a timeline for? For example, is it related to a shipment, a project, or something else? Also, please specify the start event or date and the end event or date you want included in the timeline.'}
-2026-01-15 14:23:32,439 - shipping_chatbot - INFO - AGENT_STEP: 2 | Tool Used: Handle Non-shipping queries | Tool Input: {'query': 'Please specify what event or process you want a timeline for, including the start point and the current date or end point, so I can assist you accurately.'}
-2026-01-15 14:24:07,444 - shipping_chatbot - INFO - User_Query: how enrich is mcs history, consignee_code: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
-2026-01-15 14:24:16,185 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Handle Non-shipping queries | Tool Input: {'query': 'MCS history is rich and extensive, reflecting its expertise and long-standing presence in the shipping and logistics industry. MCS has developed comprehensive data capabilities, advanced analytics, and a strong network of global operations to support efficient container and shipment management.'}
-2026-01-15 14:25:13,100 - shipping_chatbot - INFO - User_Query: when does it got global Alliance, consignee_code: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
-2026-01-15 14:25:19,802 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Handle Non-shipping queries | Tool Input: {'query': 'When did Global Alliance form or start?'}
-2026-01-15 14:26:02,429 - shipping_chatbot - INFO - User_Query: when 130th anniversary was observed, consignee_code: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
-2026-01-15 14:26:09,773 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Handle Non-shipping queries | Tool Input: {'query': 'The 130th anniversary of an event or organization is observed 130 years after its founding or establishment date. To provide a specific date, please specify the event or organization you are referring to.'}
-2026-01-16 10:12:49,446 - shipping_chatbot - INFO - AzureChatOpenAI ready
-2026-01-16 10:12:49,448 - shipping_chatbot - INFO - Agent created with 4 tools
-2026-01-16 10:12:49,448 - shipping_chatbot - INFO - Agent ready for HTTP requests
-2026-01-16 10:12:53,433 - shipping_chatbot - INFO - AzureChatOpenAI ready
-2026-01-16 10:12:53,434 - shipping_chatbot - INFO - Agent created with 4 tools
-2026-01-16 10:12:53,435 - shipping_chatbot - INFO - Agent ready for HTTP requests
-2026-01-16 10:13:10,806 - shipping_chatbot - INFO - AzureChatOpenAI ready
-2026-01-16 10:13:10,806 - shipping_chatbot - INFO - Agent created with 4 tools
-2026-01-16 10:13:10,807 - shipping_chatbot - INFO - Agent ready for HTTP requests
-2026-01-16 10:14:59,833 - shipping_chatbot - INFO - User_Query: What is starlink, consignee_code: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
-2026-01-16 10:14:59,835 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
-2026-01-16 10:15:18,582 - shipping_chatbot - INFO - Fetched 19279 rows
-2026-01-16 10:15:18,588 - shipping_chatbot - INFO - Starting preprocessing on 19279 rows
-2026-01-16 10:15:18,810 - shipping_chatbot - INFO - Removed 0 duplicate rows
-2026-01-16 10:15:20,147 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
-2026-01-16 10:15:20,307 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
-2026-01-16 10:15:20,914 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
-2026-01-16 10:15:20,917 - shipping_chatbot - INFO - Added `actual_transit_days` column
-2026-01-16 10:15:20,917 - shipping_chatbot - INFO - Added `estimated_transit_days` column
-2026-01-16 10:15:20,943 - shipping_chatbot - INFO - Pre-processing finished - 19279 rows remain
-2026-01-16 10:15:21,013 - shipping_chatbot - ERROR - Agent failed: cannot access local variable 'chat_history' where it is not associated with a value
-Traceback (most recent call last):
-  File "C:\Users\CHOWDHURYRaju\Desktop\roshan\StlnkWebNprdChatV2\api\main.py", line 192, in ask
-    threading.current_thread().chat_history = chat_history
-                                              ^^^^^^^^^^^^
-UnboundLocalError: cannot access local variable 'chat_history' where it is not associated with a value
-2026-01-16 10:15:21,014 - shipping_chatbot - INFO - Router: Set context (codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392'], has_history: False) for query: What is starlink
-2026-01-16 10:15:21,085 - shipping_chatbot - INFO - Consignee filtering validated: 12915 rows for codes ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
-2026-01-16 10:15:59,872 - shipping_chatbot - INFO - User_Query: and MCS, consignee_code: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
-2026-01-16 10:15:59,982 - shipping_chatbot - ERROR - Agent failed: cannot access local variable 'chat_history' where it is not associated with a value
-Traceback (most recent call last):
-  File "C:\Users\CHOWDHURYRaju\Desktop\roshan\StlnkWebNprdChatV2\api\main.py", line 192, in ask
-    threading.current_thread().chat_history = chat_history
-                                              ^^^^^^^^^^^^
-UnboundLocalError: cannot access local variable 'chat_history' where it is not associated with a value
-2026-01-16 10:15:59,983 - shipping_chatbot - INFO - Router: Set context (codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392'], has_history: False) for query: and MCS
-2026-01-16 10:16:00,111 - shipping_chatbot - INFO - Consignee filtering validated: 12915 rows for codes ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
-2026-01-16 10:18:38,447 - shipping_chatbot - INFO - User_Query: who is carry Lin and what is his msg, consignee_code: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
-2026-01-16 10:18:38,614 - shipping_chatbot - ERROR - Agent failed: cannot access local variable 'chat_history' where it is not associated with a value
-Traceback (most recent call last):
-  File "C:\Users\CHOWDHURYRaju\Desktop\roshan\StlnkWebNprdChatV2\api\main.py", line 192, in ask
-    threading.current_thread().chat_history = chat_history
-                                              ^^^^^^^^^^^^
-UnboundLocalError: cannot access local variable 'chat_history' where it is not associated with a value
-2026-01-16 10:18:38,615 - shipping_chatbot - INFO - Router: Set context (codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392'], has_history: False) for query: who is carry Lin and what is his msg
-2026-01-16 10:18:38,792 - shipping_chatbot - INFO - Consignee filtering validated: 12915 rows for codes ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
-2026-01-16 10:20:23,835 - shipping_chatbot - INFO - User_Query: does it has any office in vietnam, consignee_code: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
-2026-01-16 10:20:23,951 - shipping_chatbot - ERROR - Agent failed: cannot access local variable 'chat_history' where it is not associated with a value
-Traceback (most recent call last):
-  File "C:\Users\CHOWDHURYRaju\Desktop\roshan\StlnkWebNprdChatV2\api\main.py", line 192, in ask
-    threading.current_thread().chat_history = chat_history
-                                              ^^^^^^^^^^^^
-UnboundLocalError: cannot access local variable 'chat_history' where it is not associated with a value
-2026-01-16 10:20:23,952 - shipping_chatbot - INFO - Router: Set context (codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392'], has_history: False) for query: does it has any office in vietnam
-2026-01-16 10:20:24,105 - shipping_chatbot - INFO - Consignee filtering validated: 12915 rows for codes ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
-2026-01-16 10:20:49,597 - shipping_chatbot - INFO - User_Query: what their business offering, consignee_code: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
-2026-01-16 10:20:49,739 - shipping_chatbot - ERROR - Agent failed: cannot access local variable 'chat_history' where it is not associated with a value
-Traceback (most recent call last):
-  File "C:\Users\CHOWDHURYRaju\Desktop\roshan\StlnkWebNprdChatV2\api\main.py", line 192, in ask
-    threading.current_thread().chat_history = chat_history
-                                              ^^^^^^^^^^^^
-UnboundLocalError: cannot access local variable 'chat_history' where it is not associated with a value
-2026-01-16 10:20:49,739 - shipping_chatbot - INFO - Router: Set context (codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392'], has_history: False) for query: what their business offering
-2026-01-16 10:20:49,921 - shipping_chatbot - INFO - Consignee filtering validated: 12915 rows for codes ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
-2026-01-16 10:22:12,308 - shipping_chatbot - INFO - User_Query: What is status of 5302997239?, consignee_code: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
-2026-01-16 10:22:12,402 - shipping_chatbot - ERROR - Agent failed: cannot access local variable 'chat_history' where it is not associated with a value
-Traceback (most recent call last):
-  File "C:\Users\CHOWDHURYRaju\Desktop\roshan\StlnkWebNprdChatV2\api\main.py", line 192, in ask
-    threading.current_thread().chat_history = chat_history
-                                              ^^^^^^^^^^^^
-UnboundLocalError: cannot access local variable 'chat_history' where it is not associated with a value
-2026-01-16 10:22:12,404 - shipping_chatbot - INFO - Router: Set context (codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392'], has_history: False) for query: What is status of 5302997239?
-2026-01-16 10:22:12,501 - shipping_chatbot - INFO - Consignee filtering validated: 12915 rows for codes ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
-2026-01-16 10:22:12,624 - shipping_chatbot - INFO - [get_container_milestones] Searching for PO: 5302997239
-2026-01-16 10:22:12,708 - shipping_chatbot - INFO - [get_container_milestones] PO match results: 1 rows found
-2026-01-16 10:23:56,524 - shipping_chatbot - INFO - User_Query: What is status of the PO 5302850125?, consignee_code: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
-2026-01-16 10:23:56,622 - shipping_chatbot - ERROR - Agent failed: cannot access local variable 'chat_history' where it is not associated with a value
-Traceback (most recent call last):
-  File "C:\Users\CHOWDHURYRaju\Desktop\roshan\StlnkWebNprdChatV2\api\main.py", line 192, in ask
-    threading.current_thread().chat_history = chat_history
-                                              ^^^^^^^^^^^^
-UnboundLocalError: cannot access local variable 'chat_history' where it is not associated with a value
-2026-01-16 10:23:56,622 - shipping_chatbot - INFO - Router: Set context (codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392'], has_history: False) for query: What is status of the PO 5302850125?
-2026-01-16 10:23:56,744 - shipping_chatbot - INFO - Consignee filtering validated: 12915 rows for codes ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
-2026-01-16 10:23:56,858 - shipping_chatbot - INFO - [get_container_milestones] Searching for PO: 5302850125
-2026-01-16 10:23:56,961 - shipping_chatbot - INFO - [get_container_milestones] PO match results: 4 rows found
-2026-01-16 10:25:45,607 - shipping_chatbot - INFO - User_Query: What are the POs in the container TCLU4703170?, consignee_code: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
-2026-01-16 10:25:45,756 - shipping_chatbot - ERROR - Agent failed: cannot access local variable 'chat_history' where it is not associated with a value
-Traceback (most recent call last):
-  File "C:\Users\CHOWDHURYRaju\Desktop\roshan\StlnkWebNprdChatV2\api\main.py", line 192, in ask
-    threading.current_thread().chat_history = chat_history
-                                              ^^^^^^^^^^^^
-UnboundLocalError: cannot access local variable 'chat_history' where it is not associated with a value
-2026-01-16 10:25:45,756 - shipping_chatbot - INFO - Router: Set context (codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392'], has_history: False) for query: What are the POs in the container TCLU4703170?
-2026-01-16 10:25:45,857 - shipping_chatbot - INFO - Consignee filtering validated: 12915 rows for codes ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
-2026-01-16 10:36:41,543 - shipping_chatbot - INFO - User_Query: Can you quickly share general enquiry email address, please, consignee_code: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
-2026-01-16 10:36:41,628 - shipping_chatbot - ERROR - Agent failed: cannot access local variable 'chat_history' where it is not associated with a value
-Traceback (most recent call last):
-  File "C:\Users\CHOWDHURYRaju\Desktop\roshan\StlnkWebNprdChatV2\api\main.py", line 192, in ask
-    threading.current_thread().chat_history = chat_history
-                                              ^^^^^^^^^^^^
-UnboundLocalError: cannot access local variable 'chat_history' where it is not associated with a value
-2026-01-16 10:36:41,630 - shipping_chatbot - INFO - Router: Set context (codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392'], has_history: False) for query: Can you quickly share general enquiry email address, please
-2026-01-16 10:36:41,738 - shipping_chatbot - INFO - Consignee filtering validated: 12915 rows for codes ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
-2026-01-16 12:21:31,622 - shipping_chatbot - INFO - User_Query: Can you quickly share contact detail for hong kong office, please, consignee_code: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
-2026-01-16 12:21:31,749 - shipping_chatbot - ERROR - Agent failed: cannot access local variable 'chat_history' where it is not associated with a value
-Traceback (most recent call last):
-  File "C:\Users\CHOWDHURYRaju\Desktop\roshan\StlnkWebNprdChatV2\api\main.py", line 192, in ask
-    threading.current_thread().chat_history = chat_history
-                                              ^^^^^^^^^^^^
-UnboundLocalError: cannot access local variable 'chat_history' where it is not associated with a value
-2026-01-16 12:21:31,751 - shipping_chatbot - INFO - Router: Set context (codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392'], has_history: False) for query: Can you quickly share contact detail for hong kong office, please
-2026-01-16 12:21:31,871 - shipping_chatbot - INFO - Consignee filtering validated: 12915 rows for codes ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
-2026-01-16 13:01:34,059 - shipping_chatbot - INFO - User_Query: What is starlink, consignee_code: ['0000866']
-2026-01-16 13:01:34,060 - shipping_chatbot - ERROR - Agent failed: name 'AGENT' is not defined
-Traceback (most recent call last):
-  File "C:\Users\CHOWDHURYRaju\Desktop\roshan\StlnkWebNprdChatV2\api\main.py", line 201, in ask
-    result = AGENT.invoke(
-             ^^^^^
-NameError: name 'AGENT' is not defined
-2026-01-16 13:01:34,061 - shipping_chatbot - INFO - Router: Set context (codes: ['0000866'], has_history: False) for query: What is starlink
-2026-01-16 13:01:34,061 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
-2026-01-16 13:01:51,248 - shipping_chatbot - INFO - Fetched 19279 rows
-2026-01-16 13:01:51,252 - shipping_chatbot - INFO - Starting preprocessing on 19279 rows
-2026-01-16 13:01:51,332 - shipping_chatbot - INFO - Removed 0 duplicate rows
-2026-01-16 13:01:51,922 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
-2026-01-16 13:01:52,072 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
-2026-01-16 13:01:52,557 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
-2026-01-16 13:01:52,558 - shipping_chatbot - INFO - Added `actual_transit_days` column
-2026-01-16 13:01:52,559 - shipping_chatbot - INFO - Added `estimated_transit_days` column
-2026-01-16 13:01:52,595 - shipping_chatbot - INFO - Pre-processing finished - 19279 rows remain
-2026-01-16 13:01:52,651 - shipping_chatbot - INFO - Consignee filtering validated: 2116 rows for codes ['0000866']
-2026-01-16 13:02:07,220 - shipping_chatbot - INFO - User_Query: What is starlink, consignee_code: ['0000866']
 2026-01-16 13:08:06,391 - shipping_chatbot - INFO - User_Query: What is starlink, consignee_code: ['0000866']
+2026-01-16 14:35:40,799 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-16 14:35:40,799 - shipping_chatbot - INFO - Agent created with 4 tools
+2026-01-16 14:35:40,799 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-16 14:36:39,146 - shipping_chatbot - INFO - User_Query: What is starlink, consignee_code: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-16 14:36:39,147 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-16 14:36:53,570 - shipping_chatbot - INFO - Fetched 19279 rows
+2026-01-16 14:36:53,572 - shipping_chatbot - INFO - Starting preprocessing on 19279 rows
+2026-01-16 14:36:53,658 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-16 14:36:54,200 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-16 14:36:54,350 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-16 14:36:54,886 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-16 14:36:54,890 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-16 14:36:54,890 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-16 14:36:54,917 - shipping_chatbot - INFO - Pre-processing finished - 19279 rows remain
+2026-01-16 14:37:02,503 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Handle Non-shipping queries | Tool Input: {'query': 'What is Starlink?'}
+2026-01-16 14:43:13,385 - shipping_chatbot - INFO - User_Query: and mcs, consignee_code: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-16 14:43:21,725 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Handle Non-shipping queries | Tool Input: {'query': 'What is MCS?'}
+2026-01-16 14:43:58,998 - shipping_chatbot - INFO - User_Query: Can you quickly share its website, please, consignee_code: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-16 14:44:05,268 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Handle Non-shipping queries | Tool Input: {'query': 'What is the website of MOL Consolidation Service (MCS)?'}
+2026-01-16 14:44:54,340 - shipping_chatbot - INFO - User_Query: what is there business offerings, consignee_code: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-16 14:45:07,030 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Handle Non-shipping queries | Tool Input: {'query': 'What are the business offerings of MOL Consolidation Service (MCS)?'}
+2026-01-16 14:49:24,646 - shipping_chatbot - INFO - User_Query: What is status of 5302997239?, consignee_code: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-16 14:49:26,994 - shipping_chatbot - INFO - [get_container_milestones] Searching for PO: 5302997239
+2026-01-16 14:49:27,041 - shipping_chatbot - INFO - [get_container_milestones] PO match results: 1 rows found
+2026-01-16 14:49:27,050 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Get Container Milestones | Tool Input: PO 5302997239
+2026-01-16 14:50:03,878 - shipping_chatbot - INFO - User_Query: What is status of the PO 5302850125?, consignee_code: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-16 14:50:06,195 - shipping_chatbot - INFO - [get_container_milestones] Searching for PO: 5302850125
+2026-01-16 14:50:06,240 - shipping_chatbot - INFO - [get_container_milestones] PO match results: 4 rows found
+2026-01-16 14:50:06,246 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Get Container Milestones | Tool Input: PO 5302850125
+2026-01-16 14:50:32,278 - shipping_chatbot - INFO - User_Query: What are the POs in the container TCLU4703170?, consignee_code: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-16 14:50:34,655 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Get Container Milestones | Tool Input: container TCLU4703170
+2026-01-16 14:51:24,831 - shipping_chatbot - INFO - User_Query: What is the container carrying the PO 5302997239?, consignee_code: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-16 14:51:27,166 - shipping_chatbot - INFO - [get_container_milestones] Searching for PO: 5302997239
+2026-01-16 14:51:27,217 - shipping_chatbot - INFO - [get_container_milestones] PO match results: 1 rows found
+2026-01-16 14:51:27,224 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Get Container Milestones | Tool Input: PO 5302997239
+2026-01-16 14:52:15,978 - shipping_chatbot - INFO - User_Query: What are the POs arriving in Los Angeles?, consignee_code: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-16 14:52:19,575 - shipping_chatbot - INFO - Analyst Engine processing query: filter rows where hot_container_flag is TRUE and (discharge_port or vehicle_arrival_lcn) contains (USLAX) and ata_dp is not null; select distinct po_number_multiple
+2026-01-16 14:52:23,847 - shipping_chatbot - INFO - ========================================
+2026-01-16 14:52:23,847 - shipping_chatbot - INFO - ANALYST ENGINE DEBUG MODE
+2026-01-16 14:52:23,847 - shipping_chatbot - INFO - QUERY: filter rows where hot_container_flag is TRUE and (discharge_port or vehicle_arrival_lcn) contains (USLAX) and ata_dp is not null; select distinct po_number_multiple
+2026-01-16 14:52:23,847 - shipping_chatbot - INFO - GENERATED CODE:
+# Normalize hot_container_flag to boolean True
+hot_flags = ['TRUE', 'Y', 'YES', 1, True]
+mask_hot = df['hot_container_flag'].fillna('').astype(str).str.upper().isin([str(x).upper() for x in hot_flags])
+
+# Filter rows where discharge_port or vehicle_arrival_lcn contains 'USLAX'
+mask_port = df['discharge_port'].fillna('').str.contains('USLAX', na=False) | df['vehicle_arrival_lcn'].fillna('').str.contains('USLAX', na=False)
+
+# Filter rows where ata_dp is not null
+mask_ata = df['ata_dp'].notna()
+
+# Apply all filters
+filtered_df = df[mask_hot & mask_port & mask_ata]
+
+# Select distinct po_number_multiple values
+distinct_pos = filtered_df['po_number_multiple'].dropna().unique()
+
+# Format result as a comma-separated string of POs
+result = ', '.join(sorted(distinct_pos))
+2026-01-16 14:52:23,847 - shipping_chatbot - INFO - ========================================
+2026-01-16 14:52:23,865 - shipping_chatbot - INFO - ANALYST ENGINE SUCCESS: Result obtained (length: 17463)
+2026-01-16 14:54:38,383 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Analyze Data with Pandas | Tool Input: filter rows where hot_container_flag is TRUE and (discharge_port or vehicle_arrival_lcn) contains (USLAX) and ata_dp is not null; select distinct po_number_multiple
+2026-01-16 14:56:21,135 - shipping_chatbot - INFO - User_Query: give for wilson sporting goods co only, consignee_code: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-16 14:56:24,711 - shipping_chatbot - INFO - Analyst Engine processing query: Filter data where hot_container_flag is TRUE and consignee_code_multiple contains '0009633' (Wilson Sporting Goods Co). Return distinct po_number_multiple values for containers arriving at Los Angeles (USLAX) with ata_dp NOT NULL.
+2026-01-16 14:56:30,703 - shipping_chatbot - INFO - ========================================
+2026-01-16 14:56:30,703 - shipping_chatbot - INFO - ANALYST ENGINE DEBUG MODE
+2026-01-16 14:56:30,704 - shipping_chatbot - INFO - QUERY: Filter data where hot_container_flag is TRUE and consignee_code_multiple contains '0009633' (Wilson Sporting Goods Co). Return distinct po_number_multiple values for containers arriving at Los Angeles (USLAX) with ata_dp NOT NULL.
+2026-01-16 14:56:30,704 - shipping_chatbot - INFO - GENERATED CODE:
+# Normalize hot_container_flag to boolean True
+hot_flags = ['TRUE', 'Y', 'YES', 1, True]
+mask_hot = df['hot_container_flag'].astype(str).str.upper().isin([str(f).upper() for f in hot_flags])
+
+# Filter for consignee_code_multiple containing '0009633'
+mask_consignee = df['consignee_code_multiple'].str.contains('0009633', na=False)
+
+# Filter for discharge_port containing 'USLAX'
+mask_port = df['discharge_port'].str.contains('USLAX', na=False)
+
+# Filter for ata_dp not null
+mask_ata = df['ata_dp'].notna()
+
+# Apply all filters
+filtered_df = df[mask_hot & mask_consignee & mask_port & mask_ata]
+
+# Extract distinct po_number_multiple values, split by comma, strip spaces, and get unique
+po_series = filtered_df['po_number_multiple'].dropna().str.split(',')
+
+# Flatten list of lists and strip spaces
+po_list = [po.strip() for sublist in po_series for po in sublist]
+
+# Get unique POs
+unique_pos = sorted(set(po_list))
+
+result = ', '.join(unique_pos)
+2026-01-16 14:56:30,704 - shipping_chatbot - INFO - ========================================
+2026-01-16 14:56:30,714 - shipping_chatbot - INFO - ANALYST ENGINE SUCCESS: Result obtained (length: 0)
+2026-01-16 14:56:35,700 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Analyze Data with Pandas | Tool Input: Filter data where hot_container_flag is TRUE and consignee_code_multiple contains '0009633' (Wilson Sporting Goods Co). Return distinct po_number_multiple values for containers arriving at Los Angeles (USLAX) with ata_dp NOT NULL.
+2026-01-16 14:57:02,629 - shipping_chatbot - INFO - User_Query: give fro 00008666, consignee_code: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-16 14:58:05,515 - shipping_chatbot - INFO - User_Query: What are the POs arriving in Los Angeles?, consignee_code: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-16 14:58:13,521 - shipping_chatbot - INFO - Analyst Engine processing query: List distinct po_number_multiple where hot_container_flag is TRUE and ata_dp is not null and (discharge_port like '%(USLAX)%' or vehicle_arrival_lcn like '%(USLAX)%') and consignee_code_multiple in ('0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392')
+2026-01-16 14:58:22,308 - shipping_chatbot - INFO - ========================================
+2026-01-16 14:58:22,309 - shipping_chatbot - INFO - ANALYST ENGINE DEBUG MODE
+2026-01-16 14:58:22,309 - shipping_chatbot - INFO - QUERY: List distinct po_number_multiple where hot_container_flag is TRUE and ata_dp is not null and (discharge_port like '%(USLAX)%' or vehicle_arrival_lcn like '%(USLAX)%') and consignee_code_multiple in ('0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392')
+2026-01-16 14:58:22,309 - shipping_chatbot - INFO - GENERATED CODE:
+# Normalize hot_container_flag to boolean True
+hot_flags = ['TRUE', 'Y', 'YES', 1, True]
+
+# Filter conditions
+mask_hot = df['hot_container_flag'].isin(hot_flags)
+mask_ata = df['ata_dp'].notna()
+mask_port = df['discharge_port'].str.contains(r'\(USLAX\)', na=False) | df['vehicle_arrival_lcn'].str.contains(r'\(USLAX\)', na=False)
+authorized_consignees = ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+mask_consignee = df['consignee_code_multiple'].apply(lambda x: any(code in x.split(',') for code in authorized_consignees) if pd.notna(x) else False)
+
+filtered_df = df[mask_hot & mask_ata & mask_port & mask_consignee]
+
+# Extract distinct PO numbers from po_number_multiple (comma-separated)
+# Split and explode to get distinct POs
+po_series = filtered_df['po_number_multiple'].dropna().str.split(',').explode().str.strip().drop_duplicates()
+
+result = ', '.join(po_series.tolist())
+2026-01-16 14:58:22,309 - shipping_chatbot - INFO - ========================================
+2026-01-16 14:58:22,318 - shipping_chatbot - ERROR - Analyst Engine failed: name 'pd' is not defined
+Traceback (most recent call last):
+  File "C:\Users\CHOWDHURYRaju\Desktop\roshan\StlnkWebNprdChatV2\agents\analytics_engine.py", line 113, in analyze
+    exec(code, {}, local_vars)
+  File "<string>", line 9, in <module>
+  File "C:\Python311\Lib\site-packages\pandas\core\series.py", line 4935, in apply
+    ).apply()
+      ^^^^^^^
+  File "C:\Python311\Lib\site-packages\pandas\core\apply.py", line 1422, in apply
+    return self.apply_standard()
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python311\Lib\site-packages\pandas\core\apply.py", line 1502, in apply_standard
+    mapped = obj._map_values(
+             ^^^^^^^^^^^^^^^^
+  File "C:\Python311\Lib\site-packages\pandas\core\base.py", line 925, in _map_values
+    return algorithms.map_array(arr, mapper, na_action=na_action, convert=convert)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python311\Lib\site-packages\pandas\core\algorithms.py", line 1743, in map_array
+    return lib.map_infer(values, mapper, convert=convert)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "pandas/_libs/lib.pyx", line 2999, in pandas._libs.lib.map_infer
+  File "<string>", line 9, in <lambda>
+NameError: name 'pd' is not defined
+2026-01-16 14:58:22,475 - shipping_chatbot - ERROR - FAILED CODE:
+# Normalize hot_container_flag to boolean True
+hot_flags = ['TRUE', 'Y', 'YES', 1, True]
+
+# Filter conditions
+mask_hot = df['hot_container_flag'].isin(hot_flags)
+mask_ata = df['ata_dp'].notna()
+mask_port = df['discharge_port'].str.contains(r'\(USLAX\)', na=False) | df['vehicle_arrival_lcn'].str.contains(r'\(USLAX\)', na=False)
+authorized_consignees = ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+mask_consignee = df['consignee_code_multiple'].apply(lambda x: any(code in x.split(',') for code in authorized_consignees) if pd.notna(x) else False)
+
+filtered_df = df[mask_hot & mask_ata & mask_port & mask_consignee]
+
+# Extract distinct PO numbers from po_number_multiple (comma-separated)
+# Split and explode to get distinct POs
+po_series = filtered_df['po_number_multiple'].dropna().str.split(',').explode().str.strip().drop_duplicates()
+
+result = ', '.join(po_series.tolist())
+2026-01-16 14:58:35,100 - shipping_chatbot - INFO - Analyst Engine processing query: List distinct po_number_multiple where hot_container_flag in ('Y', 'YES', 'TRUE', '1', 'HOT') and ata_dp is not null and (discharge_port like '%(USLAX)%' or vehicle_arrival_lcn like '%(USLAX)%') and consignee_code_multiple in ('0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392')
+2026-01-16 14:58:45,681 - shipping_chatbot - INFO - ========================================
+2026-01-16 14:58:45,682 - shipping_chatbot - INFO - ANALYST ENGINE DEBUG MODE
+2026-01-16 14:58:45,682 - shipping_chatbot - INFO - QUERY: List distinct po_number_multiple where hot_container_flag in ('Y', 'YES', 'TRUE', '1', 'HOT') and ata_dp is not null and (discharge_port like '%(USLAX)%' or vehicle_arrival_lcn like '%(USLAX)%') and consignee_code_multiple in ('0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392')
+2026-01-16 14:58:45,683 - shipping_chatbot - INFO - GENERATED CODE:
+# Normalize hot_container_flag values to uppercase string for consistent filtering
+hot_flags = {'Y', 'YES', 'TRUE', '1', 'HOT'}
+
+# Filter for authorized consignee codes
+authorized_consignees = {
+    '0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569',
+    '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052',
+    '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360',
+    '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453',
+    '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359',
+    '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392'
+}
+
+# Create a mask for hot_container_flag
+hot_mask = df['hot_container_flag'].astype(str).str.upper().isin(hot_flags)
+
+# Create a mask for ata_dp not null
+ata_mask = df['ata_dp'].notna()
+
+# Create a mask for discharge_port or vehicle_arrival_lcn containing '(USLAX)'
+port_mask = (
+    df['discharge_port'].str.contains(r'\(USLAX\)', na=False) |
+    df['vehicle_arrival_lcn'].str.contains(r'\(USLAX\)', na=False)
+)
+
+# Create a mask for authorized consignee codes in consignee_code_multiple (comma-separated)
+# We check if any authorized code is contained in the string
+consignee_mask = df['consignee_code_multiple'].apply(
+    lambda x: any(code in str(x).split(',') for code in authorized_consignees)
+)
+
+# Combine all masks
+final_mask = hot_mask & ata_mask & port_mask & consignee_mask
+
+# Filter dataframe
+filtered_df = df.loc[final_mask, 'po_number_multiple'].dropna().unique()
+
+# Convert numpy array to sorted list and join by comma
+po_list = sorted(filtered_df)
+result = ', '.join(po_list)
+2026-01-16 14:58:45,684 - shipping_chatbot - INFO - ========================================
+2026-01-16 14:58:45,693 - shipping_chatbot - ERROR - Analyst Engine failed: name 'authorized_consignees' is not defined
+Traceback (most recent call last):
+  File "C:\Users\CHOWDHURYRaju\Desktop\roshan\StlnkWebNprdChatV2\agents\analytics_engine.py", line 113, in analyze
+    exec(code, {}, local_vars)
+  File "<string>", line 28, in <module>
+  File "C:\Python311\Lib\site-packages\pandas\core\series.py", line 4935, in apply
+    ).apply()
+      ^^^^^^^
+  File "C:\Python311\Lib\site-packages\pandas\core\apply.py", line 1422, in apply
+    return self.apply_standard()
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python311\Lib\site-packages\pandas\core\apply.py", line 1502, in apply_standard
+    mapped = obj._map_values(
+             ^^^^^^^^^^^^^^^^
+  File "C:\Python311\Lib\site-packages\pandas\core\base.py", line 925, in _map_values
+    return algorithms.map_array(arr, mapper, na_action=na_action, convert=convert)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python311\Lib\site-packages\pandas\core\algorithms.py", line 1743, in map_array
+    return lib.map_infer(values, mapper, convert=convert)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "pandas/_libs/lib.pyx", line 2999, in pandas._libs.lib.map_infer
+  File "<string>", line 29, in <lambda>
+NameError: name 'authorized_consignees' is not defined
+2026-01-16 14:58:45,693 - shipping_chatbot - ERROR - FAILED CODE:
+# Normalize hot_container_flag values to uppercase string for consistent filtering
+hot_flags = {'Y', 'YES', 'TRUE', '1', 'HOT'}
+
+# Filter for authorized consignee codes
+authorized_consignees = {
+    '0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569',
+    '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052',
+    '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360',
+    '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453',
+    '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359',
+    '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392'
+}
+
+# Create a mask for hot_container_flag
+hot_mask = df['hot_container_flag'].astype(str).str.upper().isin(hot_flags)
+
+# Create a mask for ata_dp not null
+ata_mask = df['ata_dp'].notna()
+
+# Create a mask for discharge_port or vehicle_arrival_lcn containing '(USLAX)'
+port_mask = (
+    df['discharge_port'].str.contains(r'\(USLAX\)', na=False) |
+    df['vehicle_arrival_lcn'].str.contains(r'\(USLAX\)', na=False)
+)
+
+# Create a mask for authorized consignee codes in consignee_code_multiple (comma-separated)
+# We check if any authorized code is contained in the string
+consignee_mask = df['consignee_code_multiple'].apply(
+    lambda x: any(code in str(x).split(',') for code in authorized_consignees)
+)
+
+# Combine all masks
+final_mask = hot_mask & ata_mask & port_mask & consignee_mask
+
+# Filter dataframe
+filtered_df = df.loc[final_mask, 'po_number_multiple'].dropna().unique()
+
+# Convert numpy array to sorted list and join by comma
+po_list = sorted(filtered_df)
+result = ', '.join(po_list)
+2026-01-16 14:58:52,843 - shipping_chatbot - INFO - Analyst Engine processing query: List distinct po_number_multiple where hot_container_flag in ('Y', 'YES', 'TRUE', '1', 'HOT') and ata_dp is not null and (discharge_port like '%(USLAX)%' or vehicle_arrival_lcn like '%(USLAX)%') and consignee_code_multiple in ('0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392')
+2026-01-16 14:59:02,057 - shipping_chatbot - INFO - ========================================
+2026-01-16 14:59:02,059 - shipping_chatbot - INFO - ANALYST ENGINE DEBUG MODE
+2026-01-16 14:59:02,060 - shipping_chatbot - INFO - QUERY: List distinct po_number_multiple where hot_container_flag in ('Y', 'YES', 'TRUE', '1', 'HOT') and ata_dp is not null and (discharge_port like '%(USLAX)%' or vehicle_arrival_lcn like '%(USLAX)%') and consignee_code_multiple in ('0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392')
+2026-01-16 14:59:02,060 - shipping_chatbot - INFO - GENERATED CODE:
+# Normalize hot_container_flag to uppercase string for consistent filtering
+hot_flags = {'Y', 'YES', 'TRUE', '1', 'HOT'}
+
+# Filter for authorized consignee codes
+authorized_consignees = {
+    '0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569',
+    '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052',
+    '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360',
+    '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453',
+    '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359',
+    '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392'
+}
+
+# Create a mask for hot_container_flag
+hot_mask = df['hot_container_flag'].astype(str).str.upper().isin(hot_flags)
+
+# Create a mask for ata_dp not null
+ata_mask = df['ata_dp'].notna()
+
+# Create a mask for discharge_port or vehicle_arrival_lcn containing (USLAX)
+port_mask = (
+    df['discharge_port'].str.contains(r'\(USLAX\)', na=False) |
+    df['vehicle_arrival_lcn'].str.contains(r'\(USLAX\)', na=False)
+)
+
+# Create a mask for authorized consignee codes in consignee_code_multiple
+# Since consignee_code_multiple is multiple codes comma separated, use str.contains for each authorized code
+# But to optimize, create a regex pattern joining all authorized codes separated by '|'
+import re
+pattern = '|'.join(authorized_consignees)
+consignee_mask = df['consignee_code_multiple'].str.contains(pattern, na=False)
+
+# Combine all masks
+final_mask = hot_mask & ata_mask & port_mask & consignee_mask
+
+# Filter dataframe
+filtered_df = df.loc[final_mask, 'po_number_multiple']
+
+# Extract distinct PO numbers from the comma-separated strings
+# Split by comma, strip spaces, flatten and get unique
+po_series = filtered_df.dropna().str.split(',').explode().str.strip().drop_duplicates()
+
+# Convert to list and join by comma for readable output
+result = ', '.join(po_series.tolist())
+2026-01-16 14:59:02,062 - shipping_chatbot - INFO - ========================================
+2026-01-16 14:59:02,119 - shipping_chatbot - INFO - ANALYST ENGINE SUCCESS: Result obtained (length: 17062)
+2026-01-16 15:01:03,862 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Analyze Data with Pandas | Tool Input: List distinct po_number_multiple where hot_container_flag is TRUE and ata_dp is not null and (discharge_port like '%(USLAX)%' or vehicle_arrival_lcn like '%(USLAX)%') and consignee_code_multiple in ('0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392')
+2026-01-16 15:01:03,862 - shipping_chatbot - INFO - AGENT_STEP: 2 | Tool Used: _Exception | Tool Input: Invalid or incomplete response
+2026-01-16 15:01:03,862 - shipping_chatbot - INFO - AGENT_STEP: 3 | Tool Used: Analyze Data with Pandas | Tool Input: List distinct po_number_multiple where hot_container_flag in ('Y', 'YES', 'TRUE', '1', 'HOT') and ata_dp is not null and (discharge_port like '%(USLAX)%' or vehicle_arrival_lcn like '%(USLAX)%') and consignee_code_multiple in ('0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392')
+2026-01-16 15:01:03,862 - shipping_chatbot - INFO - AGENT_STEP: 4 | Tool Used: Analyze Data with Pandas | Tool Input: List distinct po_number_multiple where hot_container_flag in ('Y', 'YES', 'TRUE', '1', 'HOT') and ata_dp is not null and (discharge_port like '%(USLAX)%' or vehicle_arrival_lcn like '%(USLAX)%') and consignee_code_multiple in ('0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392')
+2026-01-16 15:10:48,628 - shipping_chatbot - INFO - User_Query: Please provide the shipment status of 5302970007, consignee_code: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-16 15:10:51,504 - shipping_chatbot - INFO - [get_container_milestones] Searching for PO: 5302970007
+2026-01-16 15:10:51,548 - shipping_chatbot - INFO - [get_container_milestones] PO match results: 1 rows found
+2026-01-16 15:10:51,554 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Get Container Milestones | Tool Input: PO 5302970007
+2026-01-16 15:11:10,119 - shipping_chatbot - INFO - User_Query: List out any delay shipments in Augest, consignee_code: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-16 15:11:13,611 - shipping_chatbot - INFO - Analyst Engine processing query: Find shipments with hot_container_flag TRUE, ata_dp NOT NULL, delay_days > 0, and ata_dp in August 2025.
+2026-01-16 15:11:21,284 - shipping_chatbot - INFO - ========================================
+2026-01-16 15:11:21,284 - shipping_chatbot - INFO - ANALYST ENGINE DEBUG MODE
+2026-01-16 15:11:21,285 - shipping_chatbot - INFO - QUERY: Find shipments with hot_container_flag TRUE, ata_dp NOT NULL, delay_days > 0, and ata_dp in August 2025.
+2026-01-16 15:11:21,285 - shipping_chatbot - INFO - GENERATED CODE:
+# Filter for hot containers
+hot_flags = ['TRUE', 'Y', 'YES', 1, True]
+df['hot_flag_bool'] = df['hot_container_flag'].astype(str).str.upper().isin(['TRUE', 'Y', 'YES']) | (df['hot_container_flag'] == 1) | (df['hot_container_flag'] == True)
+
+# Convert ata_dp to datetime if not already
+df['ata_dp'] = pd.to_datetime(df['ata_dp'], errors='coerce')
+
+# Define August 2025 date range
+start_date = pd.Timestamp('2025-08-01')
+end_date = pd.Timestamp('2025-08-31')
+
+# Filter conditions
+cond = (
+    df['hot_flag_bool'] &
+    df['ata_dp'].notna() &
+    (df['delay_days'] > 0) &
+    (df['ata_dp'] >= start_date) &
+    (df['ata_dp'] <= end_date)
+)
+
+# Select relevant columns for output
+filtered = df.loc[cond, ['container_number', 'po_number_multiple', 'ata_dp', 'delay_days']]
+
+# Format result as readable string list
+if filtered.empty:
+    result = "No shipments found with hot_container_flag TRUE, ata_dp in August 2025, and delay_days > 0."
+else:
+    lines = []
+    for _, row in filtered.iterrows():
+        lines.append(f"Container: {row['container_number']}, POs: {row['po_number_multiple']}, Arrival: {row['ata_dp'].date()}, Delay Days: {row['delay_days']}")
+    result = "\n".join(lines)
+2026-01-16 15:11:21,285 - shipping_chatbot - INFO - ========================================
+2026-01-16 15:11:21,304 - shipping_chatbot - INFO - ANALYST ENGINE SUCCESS: Result obtained (length: 3757)
+2026-01-16 15:11:49,836 - shipping_chatbot - ERROR - Agent failed: 2 validation errors for AIMessage
+content
+  str type expected (type=type_error.str)
+content
+  value is not a valid list (type=type_error.list)
+Traceback (most recent call last):
+  File "C:\Users\CHOWDHURYRaju\Desktop\roshan\StlnkWebNprdChatV2\api\main.py", line 212, in ask
+    SESSION_HISTORY[session_id].add_ai_message(result.get("output", ""))
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain_core\chat_history.py", line 139, in add_ai_message
+    self.add_message(AIMessage(content=message))
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\langchain_core\messages\base.py", line 47, in __init__
+    return super().__init__(content=content, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\CHOWDHURYRaju\AppData\Roaming\Python\Python311\site-packages\pydantic\v1\main.py", line 347, in __init__
+    raise validation_error
+pydantic.v1.error_wrappers.ValidationError: 2 validation errors for AIMessage
+content
+  str type expected (type=type_error.str)
+content
+  value is not a valid list (type=type_error.list)
+2026-01-16 15:11:49,896 - shipping_chatbot - INFO - Router: Set context (codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392'], has_history: True) for query: List out any delay shipments in Augest
+2026-01-16 15:11:49,960 - shipping_chatbot - INFO - Consignee filtering validated: 12915 rows for codes ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-20 12:20:19,375 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-20 12:20:19,378 - shipping_chatbot - INFO - Agent created with 4 tools
+2026-01-20 12:20:19,378 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-20 12:22:12,331 - shipping_chatbot - INFO - User_Query: let me know vendor name for 5302842571, consignee_code: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-20 12:22:12,331 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-20 12:22:25,787 - shipping_chatbot - INFO - Fetched 18991 rows
+2026-01-20 12:22:25,792 - shipping_chatbot - INFO - Starting preprocessing on 18991 rows
+2026-01-20 12:22:26,005 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-20 12:22:27,238 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-20 12:22:27,631 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-20 12:22:28,529 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-20 12:22:28,531 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-20 12:22:28,536 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-20 12:22:28,657 - shipping_chatbot - INFO - Pre-processing finished - 18991 rows remain
+2026-01-20 12:22:32,661 - shipping_chatbot - INFO - Analyst Engine processing query: select supplier_vendor_name from dataset where po_number_multiple like '%5302842571%' and hot_container_flag in ('Y', 'YES', 'TRUE', '1', 'HOT')
+2026-01-20 12:22:35,660 - shipping_chatbot - INFO - ========================================
+2026-01-20 12:22:35,661 - shipping_chatbot - INFO - ANALYST ENGINE DEBUG MODE
+2026-01-20 12:22:35,661 - shipping_chatbot - INFO - QUERY: select supplier_vendor_name from dataset where po_number_multiple like '%5302842571%' and hot_container_flag in ('Y', 'YES', 'TRUE', '1', 'HOT')
+2026-01-20 12:22:35,661 - shipping_chatbot - INFO - GENERATED CODE:
+authorized_consignees = df['consignee_code_multiple'].dropna().unique().tolist()
+hot_flags = ['Y', 'YES', 'TRUE', '1', 'HOT']
+
+filtered_df = df[
+    df['po_number_multiple'].str.contains('5302842571', na=False) &
+    df['hot_container_flag'].astype(str).str.upper().isin(hot_flags) &
+    df['consignee_code_multiple'].apply(lambda x: any(consignee in x for consignee in authorized_consignees) if pd.notna(x) else False)
+]
+
+result = filtered_df['supplier_vendor_name'].dropna().unique().tolist()
+result = str(result)
+2026-01-20 12:22:35,661 - shipping_chatbot - INFO - ========================================
+2026-01-20 12:22:35,672 - shipping_chatbot - ERROR - Analyst Engine failed: name 'pd' is not defined
+Traceback (most recent call last):
+  File "C:\Users\CHOWDHURYRaju\Desktop\roshan\StlnkWebNprdChatV2\agents\analytics_engine.py", line 118, in analyze
+    exec(code, {}, local_vars)
+  File "<string>", line 7, in <module>
+  File "C:\Python311\Lib\site-packages\pandas\core\series.py", line 4935, in apply
+    ).apply()
+      ^^^^^^^
+  File "C:\Python311\Lib\site-packages\pandas\core\apply.py", line 1422, in apply
+    return self.apply_standard()
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python311\Lib\site-packages\pandas\core\apply.py", line 1502, in apply_standard
+    mapped = obj._map_values(
+             ^^^^^^^^^^^^^^^^
+  File "C:\Python311\Lib\site-packages\pandas\core\base.py", line 925, in _map_values
+    return algorithms.map_array(arr, mapper, na_action=na_action, convert=convert)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python311\Lib\site-packages\pandas\core\algorithms.py", line 1743, in map_array
+    return lib.map_infer(values, mapper, convert=convert)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "pandas/_libs/lib.pyx", line 2999, in pandas._libs.lib.map_infer
+  File "<string>", line 7, in <lambda>
+NameError: name 'pd' is not defined
+2026-01-20 12:22:35,734 - shipping_chatbot - ERROR - FAILED CODE:
+authorized_consignees = df['consignee_code_multiple'].dropna().unique().tolist()
+hot_flags = ['Y', 'YES', 'TRUE', '1', 'HOT']
+
+filtered_df = df[
+    df['po_number_multiple'].str.contains('5302842571', na=False) &
+    df['hot_container_flag'].astype(str).str.upper().isin(hot_flags) &
+    df['consignee_code_multiple'].apply(lambda x: any(consignee in x for consignee in authorized_consignees) if pd.notna(x) else False)
+]
+
+result = filtered_df['supplier_vendor_name'].dropna().unique().tolist()
+result = str(result)
+2026-01-20 12:22:36,767 - shipping_chatbot - INFO - [get_container_milestones] Searching for PO: 5302842571
+2026-01-20 12:22:36,812 - shipping_chatbot - INFO - [get_container_milestones] PO match results: 1 rows found
+2026-01-20 12:22:36,824 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Analyze Data with Pandas | Tool Input: select supplier_vendor_name from dataset where po_number_multiple like '%5302842571%' and hot_container_flag in ('Y', 'YES', 'TRUE', '1', 'HOT')
+2026-01-20 12:22:36,824 - shipping_chatbot - INFO - AGENT_STEP: 2 | Tool Used: Get Container Milestones | Tool Input: 5302842571
+2026-01-20 13:02:50,546 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-20 13:02:50,546 - shipping_chatbot - INFO - Agent created with 4 tools
+2026-01-20 13:02:50,546 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-20 14:14:24,677 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-20 14:14:24,679 - shipping_chatbot - INFO - Agent created with 4 tools
+2026-01-20 14:14:24,679 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-20 14:23:04,905 - shipping_chatbot - INFO - User_Query: cargo ready date for PO#6300146311, consignee_code: ['0028664', '0000866', '0005053', '0042485', '0042652', '0043881', '0043882', '0045831', '0048201', '0002907', '0048627', '0028664.']
+2026-01-20 14:23:04,905 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-20 14:23:18,264 - shipping_chatbot - INFO - Fetched 18991 rows
+2026-01-20 14:23:18,267 - shipping_chatbot - INFO - Starting preprocessing on 18991 rows
+2026-01-20 14:23:18,341 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-20 14:23:18,864 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-20 14:23:19,010 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-20 14:23:19,465 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-20 14:23:19,466 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-20 14:23:19,467 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-20 14:23:19,494 - shipping_chatbot - INFO - Pre-processing finished - 18991 rows remain
+2026-01-20 14:23:21,696 - shipping_chatbot - INFO - [get_container_milestones] Searching for PO: 6300146311
+2026-01-20 14:23:21,719 - shipping_chatbot - INFO - [get_container_milestones] PO match results: 1 rows found
+2026-01-20 14:23:21,732 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Get Container Milestones | Tool Input: PO 6300146311
+2026-01-20 14:24:21,728 - shipping_chatbot - INFO - User_Query: cargo ready date for PO#6300146311, consignee_code: ['0028664', '0000866', '0005053', '0042485', '0042652', '0043881', '0043882', '0045831', '0048201', '0002907', '0048627', '0028664.']
+2026-01-20 14:24:24,261 - shipping_chatbot - INFO - [get_container_milestones] Searching for PO: 6300146311
+2026-01-20 14:24:24,288 - shipping_chatbot - INFO - [get_container_milestones] PO match results: 1 rows found
+2026-01-20 14:24:24,293 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Get Container Milestones | Tool Input: PO 6300146311
+2026-01-20 14:25:34,807 - shipping_chatbot - INFO - User_Query: please check the vendor name of 6300146311, consignee_code: ['0028664', '0000866', '0005053', '0042485', '0042652', '0043881', '0043882', '0045831', '0048201', '0002907', '0048627', '0028664.']
+2026-01-20 14:25:38,361 - shipping_chatbot - INFO - Analyst Engine processing query: select supplier_vendor_name from dataset where '6300146311' in po_number_multiple and hot_container_flag in ('Y', 'YES', 'TRUE', '1', 'HOT')
+2026-01-20 14:25:43,163 - shipping_chatbot - INFO - ========================================
+2026-01-20 14:25:43,163 - shipping_chatbot - INFO - ANALYST ENGINE DEBUG MODE
+2026-01-20 14:25:43,163 - shipping_chatbot - INFO - QUERY: select supplier_vendor_name from dataset where '6300146311' in po_number_multiple and hot_container_flag in ('Y', 'YES', 'TRUE', '1', 'HOT')
+2026-01-20 14:25:43,163 - shipping_chatbot - INFO - GENERATED CODE:
+# Normalize hot_container_flag to string uppercase for consistent filtering
+hot_flags = ['Y', 'YES', 'TRUE', '1', 'HOT']
+
+# Filter rows where po_number_multiple contains '6300146311' and hot_container_flag is in hot_flags
+filtered_df = df[
+    df['po_number_multiple'].str.contains('6300146311', na=False) &
+    df['hot_container_flag'].astype(str).str.upper().isin(hot_flags)
+]
+
+# Extract unique supplier_vendor_name values, dropna to avoid nulls
+supplier_names = filtered_df['supplier_vendor_name'].dropna().unique()
+
+# Format result as a comma-separated string or indicate no results
+if len(supplier_names) > 0:
+    result = ", ".join(supplier_names)
+else:
+    result = "No supplier_vendor_name found for PO#6300146311 with hot container flag."
+2026-01-20 14:25:43,165 - shipping_chatbot - INFO - ========================================
+2026-01-20 14:25:43,169 - shipping_chatbot - INFO - ANALYST ENGINE SUCCESS: Result obtained (length: 72)
+2026-01-20 14:25:46,557 - shipping_chatbot - INFO - AGENT_STEP: 1 | Tool Used: Analyze Data with Pandas | Tool Input: select supplier_vendor_name from dataset where '6300146311' in po_number_multiple and hot_container_flag in ('Y', 'YES', 'TRUE', '1', 'HOT')
+2026-01-20 14:33:17,456 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-20 14:33:17,456 - shipping_chatbot - INFO - Agent created with 4 tools
+2026-01-20 14:33:17,456 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-20 14:33:30,404 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-20 14:33:30,404 - shipping_chatbot - INFO - Agent created with 4 tools
+2026-01-20 14:33:30,407 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-20 14:34:12,433 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-20 14:34:12,433 - shipping_chatbot - INFO - Agent created with 4 tools
+2026-01-20 14:34:12,433 - shipping_chatbot - INFO - Agent ready for HTTP requests

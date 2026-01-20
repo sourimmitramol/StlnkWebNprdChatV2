@@ -1381,6 +1381,13 @@ def get_container_milestones(input_str: str) -> str:
 
     # ---- milestone rows with priority (prevents bad data ordering) ----
     milestone_defs = [
+        ("<strong>Cargo Ready</strong>", None, row.get("cargo_ready_date"), 10),
+        (
+            "<strong>Cargo Received</strong>",
+            None,
+            row.get("cargo_received_date_multiple"),
+            15,
+        ),
         ("<strong>Departed From</strong>", row.get("load_port"), row.get("atd_lp"), 20),
         (
             "<strong>Arrived at Final Load Port</strong>",
@@ -1420,7 +1427,8 @@ def get_container_milestones(input_str: str) -> str:
         ),
         (
             "<strong>Delivered at</strong>",
-            row.get("delivery_date_to_consignee_lcn"),
+            row.get("delivery_location_to_consignee")
+            or row.get("delivery_date_to_consignee_lcn"),
             row.get("delivery_date_to_consignee"),
             90,
         ),
