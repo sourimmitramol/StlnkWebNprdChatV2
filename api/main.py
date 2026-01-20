@@ -28,6 +28,7 @@ from agents.tools import (
     get_delayed_pos,
     get_containers_arriving_soon,
     get_load_port_for_container,
+    get_cargo_ready_date,  # Add this
     answer_with_column_mapping,
     vector_search_tool,
     get_blob_sql_engine,
@@ -287,7 +288,21 @@ def ask(body: QueryWithConsigneeBody):
         if isinstance(result, str):
             result = {"output": result, "intermediate_steps": []}
 
-        output = (result.get("output") or "").strip()
+        # Handle both string and non-string outputs (for return_direct=True tools)
+        raw_output = result.get("output") or ""
+        
+        # If output is a list/dict (from return_direct=True), convert to JSON string for processing
+        # but also store the original for table_data
+        direct_data = None
+        if isinstance(raw_output, (list, dict)):
+            direct_data = raw_output
+            import json
+            output = json.dumps(raw_output, indent=2, default=str)
+        elif isinstance(raw_output, str):
+            output = raw_output.strip()
+        else:
+            output = str(raw_output)
+        
         print(result.get("intermediate_steps"))
         milestone_obs = _extract_milestone_observation(result.get("intermediate_steps", []))
 
@@ -346,17 +361,23 @@ def ask(body: QueryWithConsigneeBody):
 
         # -------- existing table extraction logic (operates on `output` only) ---
         table_data = []
-        json_match = re.search(r"(\[{.*?}\])", output, re.DOTALL)
-        if json_match:
-            try:
-                json_text = json_match.group(1)
-                table_data = ast.literal_eval(json_text)
-                output = output.replace(json_text, "").strip()
-                output = re.sub(r'```(json|python)?\s*', '', output)
-                output = re.sub(r'\s*```', '', output)
-                output = re.sub(r'\[\s*\]', '', output).strip()
-            except (SyntaxError, ValueError) as e:
-                logger.warning(f"Failed to parse JSON in response: {e}")
+        
+        # If we have direct_data from return_direct=True, use it
+        if direct_data and isinstance(direct_data, list):
+            table_data = direct_data
+        else:
+            # Otherwise, try to extract from output string
+            json_match = re.search(r"(\[{.*?}\])", output, re.DOTALL)
+            if json_match:
+                try:
+                    json_text = json_match.group(1)
+                    table_data = ast.literal_eval(json_text)
+                    output = output.replace(json_text, "").strip()
+                    output = re.sub(r'```(json|python)?\s*', '', output)
+                    output = re.sub(r'\s*```', '', output)
+                    output = re.sub(r'\[\s*\]', '', output).strip()
+                except (SyntaxError, ValueError) as e:
+                    logger.warning(f"Failed to parse JSON in response: {e}")
                 
         if not table_data and "```" in output:
             try:

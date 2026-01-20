@@ -5,3 +5,5 @@ __pycache__/
 venv/
 cache/
 app.log/
+shipment_blob.db/
+run_app.ps1/
