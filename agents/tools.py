@@ -65,10 +65,17 @@ def _df() -> pd.DataFrame:
                 # Extract numeric part (e.g., "0045831" from "EDDIE BAUER LLC(0045831)")
                 match = re.search(r"\((\d+)\)", code)
                 if match:
-                    numeric_codes.append(match.group(1))
+                    val = match.group(1)
+                    numeric_codes.append(val)
+                    numeric_codes.append(val.lstrip("0"))
                 else:
                     # If already just numeric, use as is
-                    numeric_codes.append(code.strip())
+                    val = code.strip()
+                    numeric_codes.append(val)
+                    numeric_codes.append(val.lstrip("0"))
+
+            # Remove duplicates and empty strings
+            numeric_codes = list(set([c for c in numeric_codes if c]))
 
             # Filter by consignee codes
             pattern = r"|".join([rf"\b{re.escape(code)}\b" for code in numeric_codes])
@@ -79,8 +86,8 @@ def _df() -> pd.DataFrame:
             )
             filtered_df = df[mask]
 
-            logger.debug(
-                f"Filtered DataFrame: {len(df)} -> {len(filtered_df)} rows for consignee codes: {numeric_codes}"
+            logger.info(
+                f"Consignee filtering validated: {len(filtered_df)} rows for codes {numeric_codes}"
             )
             return filtered_df
 
@@ -10241,14 +10248,15 @@ TOOLS = [
         func=get_container_milestones,
         return_direct=True,
         description=(
-            "Use this tool ONLY for tracking history, full milestone events, and detailed tracking timelines of a container or PO.\n"
+            "Use this tool for tracking history, full milestone events, current status, and detailed tracking timelines of a container or PO.\n"
             "\n"
             "Use this tool for:\n"
+            "- Determining status: 'what is the status of PO 123', 'status of container Y'\n"
             "- Full tracking history: 'show milestones for container X'\n"
             "- Movement timeline: 'what are the milestones for PO 5300009636'\n"
             "- Event history: 'track the timeline of container Y'\n"
             "\n"
-            "DO NOT use this tool for simple field lookups (like carrier, vendor, supplier, or ETA) unless the user specifically asks for 'milestones' or 'tracking history'.\n"
+            "DO NOT use this tool for simple field lookups (like carrier name, supplier name, or base fields) unless the user specifically asks for 'milestones' or 'status history'.\n"
         ),
     ),
     Tool(
@@ -10353,10 +10361,9 @@ TOOLS = [
         name="Analyze Data with Pandas",
         func=analyze_data_with_pandas,
         description=(
-            "THE PRIMARY DATA TOOL. Use this for ANY question regarding specific field lookups (e.g., 'who is the supplier for container X', 'vendor name for PO Y'), "
-            "as well as all counts, averages, trends, comparisons, or complex filtering. Examples: 'average transit time per carrier', "
-            "'how many containers to USLGB in Oct', 'which origin has most delays', 'percentage of hot containers'. "
-            "It uses a dynamic code engine to answer almost any data-driven question."
+            "THE PRIMARY DATA TOOL. Use this for ANY question regarding specific field lookups (e.g., 'who is the supplier', 'carrier name', 'discharge port'), "
+            "as well as all counts, averages, trends, comparisons, or complex filtering. "
+            "IMPORTANT: DO NOT use this tool for tracking status/milestones - use 'Get Container Milestones' for those."
         ),
     ),
     Tool(

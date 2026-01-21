@@ -9,11 +9,35 @@ logger = logging.getLogger("shipping_chatbot")
 
 
 def format_df(res_df: pd.DataFrame) -> str:
-    """Helper to format dataframe without tabulate dependency."""
+    """Helper to format dataframe without tabulate dependency. Formats dates as dd-mmm-yyyy."""
     try:
-        return res_df.to_markdown(index=False)
-    except:
+        if res_df is None or res_df.empty:
+            return "No data found."
+        temp_df = res_df.copy()
+        # Format any datetime columns to dd-mmm-yyyy
+        for col in temp_df.columns:
+            if pd.api.types.is_datetime64_any_dtype(temp_df[col]):
+                temp_df[col] = temp_df[col].dt.strftime("%d-%b-%Y")
+
+        try:
+            return temp_df.to_markdown(index=False)
+        except:
+            return temp_df.to_string(index=False)
+    except Exception as e:
+        logger.error(f"Error in format_df: {e}")
         return res_df.to_string(index=False)
+
+
+def clean_id(val: str) -> str:
+    """Removes symbols like #, :, etc. from identifiers."""
+    if not val:
+        return val
+    val = val.strip()
+    # Remove common prefixes like PO#, PO:, etc.
+    cleaned = re.sub(r"^(?i:po|container|obl|bl)[#:\s]*", "", val)
+    # Remove all remaining #, :, and internal spaces
+    cleaned = re.sub(r"[#:\s]+", "", cleaned)
+    return cleaned.strip()
 
 
 def get_delayed_shipments(
@@ -228,14 +252,31 @@ def get_movement_stats(
 
 
 def generic_attribute_lookup(df: pd.DataFrame, search_val: str, attr_col: str) -> str:
-    """Logic for Intent 9, 17, 19, 20, 21, 23, 31, 36, 40, 41, 42"""
+    """Logic for Intent 9, 17, 19, 20, 21, 23, 31, 36, 40, 41, 42. Handles specific quantity logic."""
     if not search_val:
         return "Please specify an identifier (PO, Container, or OBL) to lookup."
+
+    # Clean the search identifier (remove #, symbols, prefixes)
+    search_val = clean_id(search_val)
 
     # Map attribute synonym to actual column name
     from .prompts import map_synonym_to_column
 
     target_col = map_synonym_to_column(attr_col)
+
+    # Check for special quantity logic
+    is_detail_qty = attr_col.lower() in [
+        "detail quantity",
+        "cargo_detail_count",
+        "container detail quantity",
+    ]
+    is_general_qty = attr_col.lower() in [
+        "quantity",
+        "cargo_count",
+        "shipped quantity",
+        "shipped_qty_multiple",
+        "shipped_quantity",
+    ]
 
     mask = (
         (
@@ -248,24 +289,45 @@ def generic_attribute_lookup(df: pd.DataFrame, search_val: str, attr_col: str) -
             .astype(str)
             .str.contains(search_val, case=False, na=False)
         )
+        | (
+            df["po_number_multiple"]
+            .astype(str)
+            .apply(lambda x: search_val in [t.strip() for t in x.split(",")])
+        )
         | (df["ocean_bl_no_multiple"].astype(str).str.contains(search_val, na=False))
     )
 
-    result_df = df[mask]
+    result_df = df[mask].copy()
     if result_df.empty:
         logger.info(f"QUERY_BANK: attribute_lookup found NO records for '{search_val}'")
         return f"No records found matching identifier '{search_val}'."
 
-    if target_col not in df.columns:
-        logger.warning(
-            f"QUERY_BANK: attribute_lookup column '{target_col}' (from '{attr_col}') not found"
-        )
-        return f"Attribute field '{attr_col}' not found in the dataset."
-
-    # Build unique column list to avoid duplicates
     display_cols = ["container_number", "po_number_multiple"]
-    if target_col not in display_cols:
-        display_cols.append(target_col)
+
+    if is_detail_qty:
+        # concat(cargo_detail_count and detail_cargo_um)
+        result_df["detail_quantity"] = (
+            result_df["cargo_detail_count"].astype(str)
+            + " "
+            + result_df["detail_cargo_um"].astype(str)
+        )
+        display_cols.append("detail_quantity")
+    elif is_general_qty:
+        # concat(cargo_count and cargo_um) with extra col cargo_weight and cargo_meassure
+        result_df["quantity"] = (
+            result_df["cargo_count"].astype(str)
+            + " "
+            + result_df["cargo_um"].astype(str)
+        )
+        display_cols.extend(["quantity", "cargo_weight", "cargo_meassure"])
+    else:
+        if target_col not in df.columns:
+            logger.warning(
+                f"QUERY_BANK: attribute_lookup column '{target_col}' (from '{attr_col}') not found"
+            )
+            return f"Attribute field '{attr_col}' not found in the dataset."
+        if target_col not in display_cols:
+            display_cols.append(target_col)
 
     logger.info(
         f"QUERY_BANK: attribute_lookup found {len(result_df)} records for '{search_val}' (col: {target_col})"
@@ -351,28 +413,46 @@ QUERY_BANK: Dict[str, Dict[str, Any]] = {
     "attribute_lookup": {
         "description": "Generic lookup for specific fields (consignee, vendor, carrier, ready date, etc.)",
         "patterns": [
-            (r"what is the consignee of\s+([\w\d\-]+)", "consignee_name_multiple"),
-            (r"cargo ready date for\s+([\w\d\-]+)", "cargo_ready_date"),
-            (r"shipped quantity for\s+([\w\d\-]+)", "shipped_qty_multiple"),
+            (r"what is the consignee of\s+([\w\d\-#]+)", "consignee_name_multiple"),
+            (r"cargo ready date for\s+([\w\d\-#]+)", "cargo_ready_date"),
+            (r"shipped quantity for\s+([\w\d\-#]+)", "shipped_qty_multiple"),
             (
-                r"what is the (?:shipper|supplier) for (?:po/container/obl#)?\s*([\w\d\-]+)",
+                r"what is the (?:shipper|supplier) for (?:po/container/obl#)?\s*([\w\d\-#]+)",
                 "supplier_vendor_name",
             ),
             (r"which carrier (?:is handled it|handled it)", "final_carrier_name"),
-            (r"please check the vendor name of\s+([\w\d\-]+)", "supplier_vendor_name"),
-            (r"what is discharge port eta of\s+([\w\d\-]+)", "eta_dp"),
-            (r"what is the container number for po#\s*([\w\d\-]+)", "container_number"),
+            (r"please check the vendor name of\s+([\w\d\-#]+)", "supplier_vendor_name"),
+            (r"what is discharge port eta of\s*([\w\d\-#]+)", "eta_dp"),
             (
-                r"container (?:carrying|for) (?:the |)po\s*([\w\d\-]+)",
+                r"what is the container number for po#\s*([\w\d\-#]+)",
                 "container_number",
             ),
-            (r"what is po number in\s+([\w\d\-]+)", "po_number_multiple"),
+            (
+                r"container (?:carrying|for) (?:the |)po\s*([\w\d\-#]+)",
+                "container_number",
+            ),
+            (r"what is po number in\s*([\w\d\-#]+)", "po_number_multiple"),
+            (r"what is the quantity for\s*([\w\d\-#]+)", "quantity"),
+            (r"quantity of\s*([\w\d\-#]+)", "quantity"),
+            (r"what is the detail quantity for\s*([\w\d\-#]+)", "detail quantity"),
+            (r"detail quantity of\s*([\w\d\-#]+)", "detail quantity"),
         ],
         "handler": generic_attribute_lookup,
         "extract": lambda m, attr: {
             "search_val": m.group(1).split()[-1] if m.groups() else None,
             "attr_col": attr,
         },
+    },
+    "status_tracking": {
+        "description": "Checks status or milestones for a specific container or PO.",
+        "patterns": [
+            r"status of (?:the |)(?:po |container |)([\w\d\-]+)",
+            r"where is (?:the |)(?:po |container |)([\w\d\-]+)",
+            r"milestones of (?:the |)(?:po |container |)([\w\d\-]+)",
+        ],
+        "handler": lambda df, **kwargs: "NEEDS_MILESTONES:"
+        + kwargs.get("search_val", ""),
+        "extract": lambda m: {"search_val": m.group(1)},
     },
 }
 
@@ -389,6 +469,7 @@ INTENTS:
 6. booking_lookup: Find booking numbers or status. Params: {{search_val}}
 7. movement_stats: Arrival/departure counts at ports. Params: {{direction=['departure', 'arrival'], location, country, date_str}}
 8. attribute_lookup: Specific field lookups. Params: {{search_val, attr_col}}
+9. status_tracking: Status, location, or milestones for a specific PO/container ID. Params: {{search_val}}
    Mappings for attribute_lookup 'attr_col':
    - 'consignee' -> 'consignee_name_multiple'
    - 'ready date' / 'received' -> 'cargo_received_date_multiple'

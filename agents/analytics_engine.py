@@ -43,7 +43,11 @@ BUSINESS RULES:
 - For month-only queries (e.g., 'October'), assume year 2025.
 - ONLY if the user explicitly mentions 'hot', 'priority', 'urgent', or 'expedited' in the query, filter where `hot_container_flag` is True, 'Y', 'YES', or 1. Otherwise, ignore this flag.
 - ALWAYS use `pd.notna()` or `pd.to_datetime()` when needed; `pd` and `np` are already available.
-- If the user asks for a 'list' or 'show', ensure `result` contains a readable list or table of the relevant records.
+- ALWAYS format all dates in the final result as 'dd-mmm-yyyy' (e.g., 20-Oct-2025). Use `format_df(subset_df)` to get a properly formatted markdown table.
+- If the user asks for 'detail quantity', use: `df['cargo_detail_count'].astype(str) + ' ' + df['detail_cargo_um'].astype(str)`.
+- If the user asks for 'quantity' (general), use: `df['cargo_count'].astype(str) + ' ' + df['cargo_um'].astype(str)` AND include 'cargo_weight' and 'cargo_meassure' columns.
+- Before using any Identifier (PO, Container, OBL) in a filter, clean it by removing symbols like '#', ':', or prefixes like 'PO#'.
+- A helper function `format_df(res_df)` is available to return a formatted markdown string of your result dataframe.
 - Return ONLY the final answer as a string by assigning it to a variable named `result`.
 
 USER QUESTION: {question}
@@ -77,6 +81,10 @@ class ShipmentAnalyst:
 
             bank_result = match_query_bank(question, df, llm=self.llm)
             if bank_result:
+                if str(bank_result).startswith("NEEDS_MILESTONES:"):
+                    id_val = str(bank_result).split(":")[1]
+                    logger.info(f"Analyst redirecting to Milestones for ID: {id_val}")
+                    return f"This question is about tracking status/milestones. Please use the 'Get Container Milestones' tool for the ID: {id_val}. Do NOT use 'Analyze Data with Pandas' for status."
                 return bank_result
 
             # Retrieve chat history from thread-local storage for context
@@ -135,6 +143,9 @@ class ShipmentAnalyst:
             import numpy as np
 
             exec_context["np"] = np
+            from .query_bank import format_df
+
+            exec_context["format_df"] = format_df
 
             # --- SCHEMA GUARD: Validate and Repair Column Names ---
             valid_columns = df.columns.tolist()

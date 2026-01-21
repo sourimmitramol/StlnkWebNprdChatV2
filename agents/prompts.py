@@ -49,7 +49,7 @@ Context carry-over (PO/BL/container)
 - Prefer exact token matches; when matching PO in multi-valued cells, normalize tokens and allow suffix match when the query is digits-only.
  
 Tool preference rules:
-- For full tracking history, milestone details, or simple status checks of a PO/Container -> use "Get Container Milestones".
+- For full tracking history, milestone details, or status checks of a PO/Container -> ALWAYS use "Get Container Milestones".
 - For all field-level lookups (e.g., 'who is the supplier', 'what is the carrier', 'when was the cargo received'), all aggregations (counts, sums), all delay analysis, and port performance -> ALWAYS use "Analyze Data with Pandas".
 - Use "Get Today Date" for relative date queries.
 Known port/location codes (partial list; case-insensitive)
@@ -326,6 +326,9 @@ COLUMN_SYNONYMS = {
     "po": "po_number_multiple",
     "po#": "po_number_multiple",
     "order number": "po_number_multiple",
+    "po_number_multiple": "po_number_multiple",
+    "po_number": "po_number_multiple",
+    "po number multiple": "po_number_multiple",
     "booking number": "booking_number_multiple",
     "booking no": "booking_number_multiple",
     "booking#": "booking_number_multiple",
@@ -508,9 +511,19 @@ COLUMN_SYNONYMS = {
 
 
 def map_synonym_to_column(term: str) -> str:
-    term = term.lower().replace("_", " ").strip()
+    original_term = term.strip()
+    term_space = original_term.lower().replace("_", " ").strip()
 
-    return COLUMN_SYNONYMS.get(term, term)
+    # Try with space substitution
+    if term_space in COLUMN_SYNONYMS:
+        return COLUMN_SYNONYMS[term_space]
+
+    # Try original term (case-insensitive)
+    term_lower = original_term.lower()
+    if term_lower in COLUMN_SYNONYMS:
+        return COLUMN_SYNONYMS[term_lower]
+
+    return original_term
 
 
 INTENT_SYNONYMS = {
