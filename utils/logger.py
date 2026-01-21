@@ -1,7 +1,9 @@
 # utils/logger.py
 import logging
 import sys
+
 from config import settings
+
 
 def configure_logger() -> logging.Logger:
     logger = logging.getLogger("shipping_chatbot")
@@ -34,5 +36,5 @@ def configure_logger() -> logging.Logger:
 
     return logger
 
-logger = configure_logger()
 
+logger = configure_logger()

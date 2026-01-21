@@ -11,6 +11,7 @@ from langchain_community.vectorstores import FAISS
 from langchain_openai import AzureOpenAIEmbeddings
 
 from config import settings
+
 from .azure_blob import get_shipment_df
 
 logger = logging.getLogger("shipping_chatbot")
@@ -43,14 +44,14 @@ def _build_index() -> FAISS:
         for row in df.fillna("").astype(str).to_dict(orient="records")
     ]
 
-    # CRITICAL FIX: Increased chunk_size from 400 to 2000. 
+    # CRITICAL FIX: Increased chunk_size from 400 to 2000.
     # Splitting a row breaks the context (e.g. key 'ETA' separated from value).
     splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=100)
     chunks: List[str] = []
-    
+
     # Check if rows are effectively split. Ideally, we want 1 row = 1 chunk.
     for txt in rows_as_text:
-        # If the row is small enough, keep it as is. 
+        # If the row is small enough, keep it as is.
         # split_text will return [txt] if it fits.
         split_chunks = splitter.split_text(txt)
         chunks.extend(split_chunks)
@@ -59,16 +60,16 @@ def _build_index() -> FAISS:
 
     # Optimization: Increase batch size slightly if Azure permits (usually safe up to 16k tokens/req).
     # 50 rows * 500 chars ~= 25k chars ~= 6k tokens. Safe.
-    batch = 50 
+    batch = 50
     vectorstore = FAISS.from_texts(chunks[:batch], embeddings)
 
     for i in range(batch, len(chunks), batch):
-        vectorstore.add_texts(chunks[i:i + batch])
+        vectorstore.add_texts(chunks[i : i + batch])
         if i % (batch * 5) == 0:
             logger.debug(f"Indexed batch {i // batch + 1}/{len(chunks)//batch}")
-         
+
         # 0.2s should be sufficient.
-        time.sleep(0.2) 
+        time.sleep(0.2)
 
     VECTORSTORE_DIR.mkdir(parents=True, exist_ok=True)
     vectorstore.save_local(str(VECTORSTORE_DIR))
