@@ -59,8 +59,9 @@ def initialize_azure_agent(
         "5. Use 'Get Today Date' immediately for relative timing (today, next month, etc.) before choosing other tools.\n\n"
         "CRITICAL: You MUST respond in the structured JSON format specified below. Even your 'Final Answer' MUST be a JSON blob with action='Final Answer' and your response in 'action_input'.\n\n"
         "CONSIGNEE AUTHORIZATION CONTEXT:\n"
-        "- The 'Authorized Consignee(s)' listed below are for permission context.\n"
-        "- NEVER use these codes AS shipment identifiers (PO/Container/BL).\n\n"
+        "- The 'Authorized Consignee(s)' listed below are for permission context only.\n"
+        "- NEVER use these codes as shipment identifiers (PO/Container/BL).\n"
+        "- DO NOT include these codes in tool inputs (e.g., 'Analyze Data with Pandas'). Tools automatically filter by these codes using the system context. Only pass the actual shipment identifiers (PO/Container) asked by the user.\n\n"
         "CRITICAL DATE HANDLING RULES:\n"
         "- When the user mentions a month without a year (e.g., 'October', 'Oct', 'December'), ALWAYS assume the year is 2025\n"
         "- NEVER assume 2026 or any future year unless explicitly stated by the user\n"
@@ -75,7 +76,7 @@ def initialize_azure_agent(
             MessagesPlaceholder(variable_name="chat_history"),
             (
                 "human",
-                "AUTHORIZED CONSIGNNE CODES: {consignee_code}\n\nUSER QUESTION: {input}\n\n{agent_scratchpad}",
+                "USER QUESTION: {input}\n\nAUTHORIZED CONSIGNEE CODES: {consignee_code}\n\n{agent_scratchpad}",
             ),
         ]
     )

@@ -10,6 +10,11 @@ from config import settings
 
 logger = logging.getLogger("shipping_chatbot")
 
+import difflib
+import re
+
+from .prompts import COLUMN_SYNONYMS
+
 # Load data dictionary once for the analyst
 try:
     with open("docs/data_dictionary.md", "r") as f:
@@ -130,6 +135,64 @@ class ShipmentAnalyst:
             import numpy as np
 
             exec_context["np"] = np
+
+            # --- SCHEMA GUARD: Validate and Repair Column Names ---
+            valid_columns = df.columns.tolist()
+
+            def resolve_col(col_name: str) -> str:
+                # 1. Direct match
+                if col_name in valid_columns:
+                    return col_name
+                # 2. Case-insensitive match
+                for vc in valid_columns:
+                    if vc.lower() == col_name.lower():
+                        return vc
+                # 3. Synonym match
+                normalized = col_name.lower().replace("_", " ").strip()
+                if normalized in COLUMN_SYNONYMS:
+                    target = COLUMN_SYNONYMS[normalized]
+                    if target in valid_columns:
+                        return target
+                # 4. Fuzzy match
+                matches = difflib.get_close_matches(
+                    col_name, valid_columns, n=1, cutoff=0.7
+                )
+                if matches:
+                    return matches[0]
+                return col_name
+
+            # Find all strings in the code that are likely column names
+            # Specifically looking for df['col'], df["col"], or items in df[['col1', 'col2']]
+            # Also catch .str.contains('something') which we SHOULD NOT replace
+
+            # Simple approach: find all single/double quoted strings
+            potential_cols = re.findall(r"['\"]([a-zA-Z0-9_ ]+?)['\"]", code)
+            repaired_code = code
+
+            for p_col in set(potential_cols):
+                # We only want to resolve it if it looks like a column name
+                # (has letters, maybe underscores/spaces) and is NOT a valid column
+                if p_col not in valid_columns:
+                    # Check if it's used in a context that implies a column
+                    # e.g. df[p_col], df[[..., p_col, ...]], .rename(columns={p_col: ...})
+                    # For simplicity and effectiveness, we resolve it if it's a known synonym
+                    # or has a very high fuzzy match score.
+                    resolved = resolve_col(p_col)
+                    if resolved != p_col:
+                        logger.info(
+                            f"SCHEMA GUARD: Repairing column '{p_col}' -> '{resolved}'"
+                        )
+                        # Use regex to replace only when quoted to avoid partial matches
+                        repaired_code = re.sub(
+                            f"(['\"]){re.escape(p_col)}(['\"])",
+                            f"\\1{resolved}\\2",
+                            repaired_code,
+                        )
+
+            if repaired_code != code:
+                logger.info(f"REPAIRED CODE:\n{repaired_code}")
+                code = repaired_code
+            # -----------------------------------------------------
 
             exec(code, exec_context)
 

@@ -1,0 +1,49 @@
+EE
+======================================================================
+ERROR: test_schema_guard_integration (__main__.TestAnalystIntegration.test_schema_guard_integration)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Python311\Lib\unittest\mock.py", line 1372, in patched
+    with self.decoration_helper(patched,
+  File "C:\Python311\Lib\contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "C:\Python311\Lib\unittest\mock.py", line 1354, in decoration_helper
+    arg = exit_stack.enter_context(patching)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python311\Lib\contextlib.py", line 505, in enter_context
+    result = _enter(cm)
+             ^^^^^^^^^^
+  File "C:\Python311\Lib\unittest\mock.py", line 1443, in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+  File "C:\Python311\Lib\unittest\mock.py", line 1416, in get_original
+    raise AttributeError(
+AttributeError: <module 'agents.analytics_engine' from 'C:\\Users\\CHOWDHURYRaju\\Desktop\\roshan\\StlnkWebNprdChatV2\\agents\\analytics_engine.py'> does not have the attribute 'match_query_bank'
+
+======================================================================
+ERROR: test_schema_guard_typo (__main__.TestAnalystIntegration.test_schema_guard_typo)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Python311\Lib\unittest\mock.py", line 1372, in patched
+    with self.decoration_helper(patched,
+  File "C:\Python311\Lib\contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "C:\Python311\Lib\unittest\mock.py", line 1354, in decoration_helper
+    arg = exit_stack.enter_context(patching)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python311\Lib\contextlib.py", line 505, in enter_context
+    result = _enter(cm)
+             ^^^^^^^^^^
+  File "C:\Python311\Lib\unittest\mock.py", line 1443, in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+  File "C:\Python311\Lib\unittest\mock.py", line 1416, in get_original
+    raise AttributeError(
+AttributeError: <module 'agents.analytics_engine' from 'C:\\Users\\CHOWDHURYRaju\\Desktop\\roshan\\StlnkWebNprdChatV2\\agents\\analytics_engine.py'> does not have the attribute 'match_query_bank'
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.028s
+
+FAILED (errors=2)

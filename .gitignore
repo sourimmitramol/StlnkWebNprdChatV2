@@ -7,5 +7,6 @@ cache/
 app.log/
 GIT_WORKFLOW.md
 run_app.ps1
+test_out.txt
 docs/implementation_plan_analyst.md
 

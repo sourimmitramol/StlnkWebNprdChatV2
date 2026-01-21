@@ -232,21 +232,45 @@ def generic_attribute_lookup(df: pd.DataFrame, search_val: str, attr_col: str) -
     if not search_val:
         return "Please specify an identifier (PO, Container, or OBL) to lookup."
 
+    # Map attribute synonym to actual column name
+    from .prompts import map_synonym_to_column
+
+    target_col = map_synonym_to_column(attr_col)
+
     mask = (
-        (df["container_number"].str.contains(search_val, case=False, na=False))
-        | (df["po_number_multiple"].str.contains(search_val, case=False, na=False))
-        | (df["ocean_bl_no_multiple"].str.contains(search_val, na=False))
+        (
+            df["container_number"]
+            .astype(str)
+            .str.contains(search_val, case=False, na=False)
+        )
+        | (
+            df["po_number_multiple"]
+            .astype(str)
+            .str.contains(search_val, case=False, na=False)
+        )
+        | (df["ocean_bl_no_multiple"].astype(str).str.contains(search_val, na=False))
     )
 
     result_df = df[mask]
     if result_df.empty:
-        return f"No records found for {search_val}."
+        logger.info(f"QUERY_BANK: attribute_lookup found NO records for '{search_val}'")
+        return f"No records found matching identifier '{search_val}'."
 
-    if attr_col not in df.columns:
+    if target_col not in df.columns:
+        logger.warning(
+            f"QUERY_BANK: attribute_lookup column '{target_col}' (from '{attr_col}') not found"
+        )
         return f"Attribute field '{attr_col}' not found in the dataset."
 
-    cols = ["container_number", "po_number_multiple", attr_col]
-    return format_df(result_df[cols])
+    # Build unique column list to avoid duplicates
+    display_cols = ["container_number", "po_number_multiple"]
+    if target_col not in display_cols:
+        display_cols.append(target_col)
+
+    logger.info(
+        f"QUERY_BANK: attribute_lookup found {len(result_df)} records for '{search_val}' (col: {target_col})"
+    )
+    return format_df(result_df[display_cols])
 
 
 # Intent Registry
@@ -338,6 +362,10 @@ QUERY_BANK: Dict[str, Dict[str, Any]] = {
             (r"please check the vendor name of\s+([\w\d\-]+)", "supplier_vendor_name"),
             (r"what is discharge port eta of\s+([\w\d\-]+)", "eta_dp"),
             (r"what is the container number for po#\s*([\w\d\-]+)", "container_number"),
+            (
+                r"container (?:carrying|for) (?:the |)po\s*([\w\d\-]+)",
+                "container_number",
+            ),
             (r"what is po number in\s+([\w\d\-]+)", "po_number_multiple"),
         ],
         "handler": generic_attribute_lookup,
@@ -349,7 +377,10 @@ QUERY_BANK: Dict[str, Dict[str, Any]] = {
 }
 
 INTENT_CLASSIFIER_PROMPT = """
-Analyze the user's shipping query and map it to one of these predefined intents:
+Analyze the user's shipping query and map it to one of these predefined intents.
+If the query is technical (e.g., 'Filter rows where...', 'select attribute...'), treat it like a natural question.
+
+INTENTS:
 1. delayed_shipments: Queries about late or delayed containers/POs. Params: {{month, days, year}}
 2. hot_shipments: Queries about 'HOT', priority, or urgent containers. Params: {{vessel, month}}
 3. on_water: Shipments currently in transit on water. Params: {{}}
@@ -368,7 +399,10 @@ Analyze the user's shipping query and map it to one of these predefined intents:
    - 'container number' -> 'container_number'
    - 'po number' -> 'po_number_multiple'
 
-If query matches, return JSON with "intent" and "params". Else "none".
+Return ONLY a JSON blob with "intent" and "params". 
+Example: {{"intent": "attribute_lookup", "params": {{"search_val": "5302997239", "attr_col": "container_number"}}}}
+If no intent matches exactly, return {{"intent": "none", "params": {{}}}}
+
 User Query: {query}
 Return ONLY valid JSON.
 """

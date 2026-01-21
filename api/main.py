@@ -240,8 +240,14 @@ def ask(body: QueryWithConsigneeBody):
                         action, "tool_name", "Unknown"
                     )
                     tool_input = getattr(action, "tool_input", "None")
+                    observation = step[1] if len(step) > 1 else "None"
+                    # Truncate large observations for logs
+                    obs_str = str(observation)
+                    if len(obs_str) > 500:
+                        obs_str = obs_str[:500] + "... [TRUNCATED]"
+
                     logger.info(
-                        f"AGENT_STEP: {i+1} | Tool Used: {tool} | Tool Input: {tool_input}"
+                        f"AGENT_STEP: {i+1} | Tool Used: {tool} | Tool Input: {tool_input} | Observation: {obs_str}"
                     )
         # -----------------------------
 
