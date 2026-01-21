@@ -280,11 +280,11 @@ def ask(body: QueryWithConsigneeBody):
                 and len(fallback) > 0
                 and isinstance(fallback[0], dict)
             ):
-                # Transit analysis functions return [{"summary": {...}, "container_details": [...}}]
+                # Transit analysis functions return [{"summary": {...}, "container_number": [...}}]
                 item = fallback[0]
-                if "summary" in item and "container_details" in item:
+                if "summary" in item and "container_number" in item:
                     summary = item["summary"]
-                    containers = item["container_details"]
+                    containers = item["container_number"]
 
                     # Format summary message
                     if "ocean_bl_number" in summary:
@@ -449,11 +449,11 @@ def ask(body: QueryWithConsigneeBody):
                 and len(fallback) > 0
                 and isinstance(fallback[0], dict)
             ):
-                # Transit analysis functions return [{"summary": {...}, "container_details": [...}}]
+                # Transit analysis functions return [{"summary": {...}, "container_number": [...}}]
                 item = fallback[0]
-                if "summary" in item and "container_details" in item:
+                if "summary" in item and "container_number" in item:
                     summary = item["summary"]
-                    containers = item["container_details"]
+                    containers = item["container_number"]
 
                     # Format summary message
                     if "ocean_bl_number" in summary:

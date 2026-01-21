@@ -10241,29 +10241,14 @@ TOOLS = [
         func=get_container_milestones,
         return_direct=True,
         description=(
-            "PRIMARY TOOL FOR ALL CONTAINER AND PO STATUS/MILESTONE QUERIES.\n"
+            "Use this tool ONLY for tracking history, full milestone events, and detailed tracking timelines of a container or PO.\n"
             "\n"
-            "Use this tool FIRST for ANY query asking about:\n"
-            "- Container status: 'what is status of container ABCD1234567'\n"
-            "- PO status: 'what is status of PO 5300009636', 'status of the PO 5300009636'\n"
-            "- Container milestones: 'show milestones for container X'\n"
-            "- PO milestones: 'show milestones for PO Y', 'track PO 5300009636'\n"
-            "- Container tracking: 'track container Y'\n"
-            "- Container location: 'where is container Z'\n"
-            "- PO location: 'where is PO 5300009636'\n"
-            "- Container journey: 'event history for container'\n"
-            "- PO journey: 'journey for PO X'\n"
+            "Use this tool for:\n"
+            "- Full tracking history: 'show milestones for container X'\n"
+            "- Movement timeline: 'what are the milestones for PO 5300009636'\n"
+            "- Event history: 'track the timeline of container Y'\n"
             "\n"
-            "CRITICAL PO HANDLING:\n"
-            "- Input can be: 'PO 5300009636', '5300009636', 'PO5300009636', 'po 5300009636'\n"
-            "- Tool will find container(s) for the PO and return their milestones\n"
-            "- Searches po_number_multiple column (comma-separated values)\n"
-            "- Returns: 'The Container XXXX is associated with the PO YYYY. Status is...'\n"
-            "\n"
-            "Keywords: status, milestone, track, tracking, where, location, journey, event, history, progress\n"
-            "\n"
-            "DO NOT use 'Get Containers or PO or OBL By Supplier' for status queries.\n"
-            "DO NOT use 'Check Arrival Status' for milestone queries.\n"
+            "DO NOT use this tool for simple field lookups (like carrier, vendor, supplier, or ETA) unless the user specifically asks for 'milestones' or 'tracking history'.\n"
         ),
     ),
     Tool(
@@ -10368,8 +10353,8 @@ TOOLS = [
         name="Analyze Data with Pandas",
         func=analyze_data_with_pandas,
         description=(
-            "THE ULTIMATE ANALYTICS TOOL. Use this for ANY question regarding counts, averages, "
-            "trends, comparisons, or complex filtering. Examples: 'average transit time per carrier', "
+            "THE PRIMARY DATA TOOL. Use this for ANY question regarding specific field lookups (e.g., 'who is the supplier for container X', 'vendor name for PO Y'), "
+            "as well as all counts, averages, trends, comparisons, or complex filtering. Examples: 'average transit time per carrier', "
             "'how many containers to USLGB in Oct', 'which origin has most delays', 'percentage of hot containers'. "
             "It uses a dynamic code engine to answer almost any data-driven question."
         ),

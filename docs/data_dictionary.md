@@ -5,13 +5,13 @@ This document serves as the "Knowledge Base" for the AI Agent's Data Analyst Eng
 ## 1. Primary Identifiers
 | Column Name | Description | Examples |
 |-------------|-------------|----------|
-| `container_number` | Unique ID for a shipping container. | `MSBU4522691`, `TCLU4703170` |
+| `container_number` | Unique ID for a shipping container. | `MSBU4522691`, `TCLU4703170`, `00402844161` |
 | `po_number_multiple` | Comma-separated list of Purchase Orders in the shipment. | `5302997239`, `5302943326` |
 | `ocean_bl_no_multiple` | Bill of Lading identifiers. | `MOLWMNL2400017` |
 | `booking_number_multiple` | Booking references associated with the shipment. | `GT3000512`, `VN2084805` |
 
 ## 2. Temporal Fields (Dates)
-All dates are normalized to `YYYY-MM-DD`.
+All dates are normalized to `YYYY-MMM-DD`.
 
 ### Load Port (Origin)
 - `cargo_ready_date`: Date the cargo was ready at the factory/supplier.

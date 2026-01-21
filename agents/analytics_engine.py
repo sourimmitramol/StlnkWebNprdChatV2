@@ -37,14 +37,14 @@ BUSINESS RULES:
 - Use `pd.to_datetime` for any date comparisons not already handled in preprocessing.
 - For month-only queries (e.g., 'October'), assume year 2025.
 - ONLY if the user explicitly mentions 'hot', 'priority', 'urgent', or 'expedited' in the query, filter where `hot_container_flag` is True, 'Y', 'YES', or 1. Otherwise, ignore this flag.
-- ALWAYS use `pd.notna()` or `pd.to_datetime()` when needed, as `pd` is available.
+- ALWAYS use `pd.notna()` or `pd.to_datetime()` when needed; `pd` and `np` are already available.
 - If the user asks for a 'list' or 'show', ensure `result` contains a readable list or table of the relevant records.
 - Return ONLY the final answer as a string by assigning it to a variable named `result`.
 
 USER QUESTION: {question}
 
 CONSTRAINTS:
-- Do NOT import pandas (already imported as pd).
+- No need to import pandas or numpy (already available as `pd` and `np`).
 - Do NOT load any files (df is already in scope).
 - Ensure calculations are robust (handle NaNs).
 - Your code will be executed via `exec()`.
@@ -116,9 +116,22 @@ class ShipmentAnalyst:
             logger.info("=" * 40)
 
             # 2. Execute Code
-            # Use same dict for both globals and locals to fix closure issues (lambda scopes)
-            exec_context = {"df": df, "pd": pd, "result": None}
-            exec(code, exec_context, exec_context)
+            # Use a single dictionary for both globals and locals to ensure
+            # that functions/lambdas have access to all variables.
+            exec_context = {
+                "df": df,
+                "pd": pd,
+                "result": None,
+                "np": (
+                    pd.np if hasattr(pd, "np") else None
+                ),  # Optional: some older pandas have pd.np
+            }
+            # Adding standard imports to the context for robustness
+            import numpy as np
+
+            exec_context["np"] = np
+
+            exec(code, exec_context)
 
             result = exec_context.get(
                 "result", "Code executed but no 'result' variable found."
