@@ -3,30 +3,48 @@ import os
 from pathlib import Path
 from typing import Optional
 
-from pydantic_settings import BaseSettings
 from pydantic import Field, validator
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
     # ---------- Azure Blob ----------
-    AZURE_STORAGE_CONNECTION_STRING: str = Field(..., env="AZURE_STORAGE_CONNECTION_STRING")
+    AZURE_STORAGE_CONNECTION_STRING: str = Field(
+        ..., env="AZURE_STORAGE_CONNECTION_STRING"
+    )
     AZURE_CONTAINER_NAME: str = Field(..., env="AZURE_CONTAINER_NAME")
     AZURE_BLOB_NAME: str = Field(..., env="AZURE_BLOB_NAME")
-    AZURE_BLOB_API_VERSION: str = Field(default="2021-04-10", env="AZURE_BLOB_API_VERSION")
+    AZURE_BLOB_API_VERSION: str = Field(
+        default="2021-04-10", env="AZURE_BLOB_API_VERSION"
+    )
 
     # ---------- Azure OpenAI ----------
     AZURE_OPENAI_ENDPOINT: str = Field(..., env="AZURE_OPENAI_ENDPOINT")
     AZURE_OPENAI_API_KEY: str = Field(..., env="AZURE_OPENAI_API_KEY")
-    AZURE_OPENAI_API_VERSION: str = Field(default="2025-01-01-preview", env="AZURE_OPENAI_API_VERSION")
+    AZURE_OPENAI_API_VERSION: str = Field(
+        default="2025-01-01-preview", env="AZURE_OPENAI_API_VERSION"
+    )
     AZURE_OPENAI_DEPLOYMENT: str = Field(..., env="AZURE_OPENAI_DEPLOYMENT")
-    AZURE_OPENAI_EMBEDDING_MODEL: str = Field(default="text-embedding-ada-002", env="AZURE_OPENAI_EMBEDDING_MODEL")
+    AZURE_OPENAI_EMBEDDING_MODEL: str = Field(
+        default="text-embedding-ada-002", env="AZURE_OPENAI_EMBEDDING_MODEL"
+    )
 
     # ---------- Azure Search (optional) ----------
-    AZURE_SEARCH_ENDPOINT: Optional[str] = Field(default=None, env="AZURE_SEARCH_ENDPOINT")
-    AZURE_SEARCH_API_KEY: Optional[str] = Field(default=None, env="AZURE_SEARCH_API_KEY")
-    AZURE_SEARCH_INDEX_NAME: Optional[str] = Field(default=None, env="AZURE_SEARCH_INDEX_NAME")
-    AZURE_SEARCH_SEMANTIC_CONFIG: Optional[str] = Field(default=None, env="AZURE_SEARCH_SEMANTIC_CONFIG")
-    AZURE_SEARCH_API_VERSION: Optional[str] = Field(default="2021-04-30", env="AZURE_SEARCH_API_VERSION")
+    AZURE_SEARCH_ENDPOINT: Optional[str] = Field(
+        default=None, env="AZURE_SEARCH_ENDPOINT"
+    )
+    AZURE_SEARCH_API_KEY: Optional[str] = Field(
+        default=None, env="AZURE_SEARCH_API_KEY"
+    )
+    AZURE_SEARCH_INDEX_NAME: Optional[str] = Field(
+        default=None, env="AZURE_SEARCH_INDEX_NAME"
+    )
+    AZURE_SEARCH_SEMANTIC_CONFIG: Optional[str] = Field(
+        default=None, env="AZURE_SEARCH_SEMANTIC_CONFIG"
+    )
+    AZURE_SEARCH_API_VERSION: Optional[str] = Field(
+        default="2021-04-30", env="AZURE_SEARCH_API_VERSION"
+    )
 
     # ---------- Logging ----------
     LOG_LEVEL: str = Field(default="INFO", env="LOG_LEVEL")

@@ -1,4 +1,5 @@
 from typing import Optional
+
 ROBUST_COLUMN_MAPPING_PROMPT = """
 You are MCS AI, a helpful assistant.
 
@@ -15,11 +16,11 @@ Port/location normalization (high priority)
 - If a token matches a known code below, use that code as the authoritative location.
 - If both a name and a code are present (e.g., "NEW YORK, NY(USNYC)"), prefer the code.
 - When the user gives only a name, match to the closest known location and/or dataset values.
-- Apply location filters against these columns (in order): discharge_port, vehicle_arrival_lcn; if both absent, use final_destination/place_of_delivery as fallback.
+- Apply location filters against these columns (in order): discharge_port; if both absent, use final_destination/place_of_delivery as fallback.
 - Accept phrasing variants: "at X", "in X", "to X", or bare "X".
 - Always keep consignee authorization filters in effect.
 STRICT location filter policy (must follow)
-- If a port CODE is detected (e.g., NLRTM), include ONLY rows whose discharge_port OR vehicle_arrival_lcn contains "(NLRTM)" (case-insensitive) and exclude all other ports (e.g., DEHAM).
+- If a port CODE is detected (e.g., NLRTM), include ONLY rows whose discharge_port contains "(NLRTM)" (case-insensitive) and exclude all other ports (e.g., DEHAM).
 - If only a port NAME is given, resolve to a single code when possible (using the known mapping or dataset values). Filter strictly to that resolved code or exact normalized name; do not mix multiple ports.
 - Do not include multiple locations in one answer unless the user asks for multiple ports explicitly.
  
@@ -54,6 +55,7 @@ Tool selection (must use exact tool names)
 - PO month-end feasibility: call "Check PO Month Arrival".
 - Supplier in transit: call "Get Containers By Supplier" (which dispatches to in-transit logic).
 - Carrier for PO/BL/container: call "Get Carrier For PO" / "Get Containers For BL" / "Get Container Carrier" as appropriate.
+- Shipped quantity / cargo quantity (e.g., "shipped quantity for PO#X", "cargo quantity for container Y", "how many units shipped"): call tool "Get Shipped Quantity" with the full question including the identifier (PO/container/OBL/booking number).
 - If a tool returns empty but the user intent is clear, try the SQL tool "SQL Query Tool" as a last resort.
 Known port/location codes (partial list; case-insensitive)
 - USNYC → NEW YORK, NY
@@ -308,12 +310,11 @@ If a user asks for "vessel no and ETA at destination port for container ABCD1234
  
 Always use this mapping logic for every query.
 """
- 
+
 COLUMN_SYNONYMS = {
     "carr_eqp_uid": "carr_eqp_uid",
     "carrier equipment uid": "carr_eqp_uid",
     "equipment id": "carr_eqp_uid",
- 
     "container number": "container_number",
     "con number": "container_number",
     "container no": "container_number",
@@ -324,140 +325,107 @@ COLUMN_SYNONYMS = {
     "cntr no": "container_number",
     "cntr#": "container_number",
     "vessel no": "container_number",  # context-dependent
-    "vessel": "container_number",     # context-dependent
- 
+    "vessel": "container_number",  # context-dependent
     "container type": "container_type",
     "type": "container_type",
     "ctype": "container_type",
- 
     "destination service": "destination_service",
     "dest service": "destination_service",
- 
     "consignee code": "consignee_code_multiple",
     "consignee": "consignee_code_multiple",
     "customer code": "consignee_code_multiple",
     "client code": "consignee_code_multiple",
     "receiver code": "consignee_code_multiple",
- 
     "po number": "po_number_multiple",
     "purchase order": "po_number_multiple",
     "po": "po_number_multiple",
     "po#": "po_number_multiple",
     "order number": "po_number_multiple",
- 
     "booking number": "booking_number_multiple",
     "booking no": "booking_number_multiple",
     "booking#": "booking_number_multiple",
     "bkg no": "booking_number_multiple",
- 
     "fcr number": "fcr_number_multiple",
     "fcr no": "fcr_number_multiple",
     "fcr#": "fcr_number_multiple",
     "forwarder cargo receipt": "fcr_number_multiple",
- 
     "ocean bl no": "ocean_bl_no_multiple",
     "bill of lading": "ocean_bl_no_multiple",
     "bl no": "ocean_bl_no_multiple",
     "bl#": "ocean_bl_no_multiple",
     "ocean bl": "ocean_bl_no_multiple",
- 
     "load port": "load_port",
     "lp": "load_port",
     "LP": "load_port",
     "Load_port": "load_port",
     "origin port": "load_port",
     "port of loading": "load_port",
- 
     "final load port": "final_load_port",
     "final lp": "final_load_port",
     "final origin port": "final_load_port",
- 
     "discharge port": "discharge_port",
     "dp": "discharge_port",
     "DP": "discharge_port",
     "Discharge_port": "discharge_port",
     "destination port": "discharge_port",
     "port of discharge": "discharge_port",
- 
     "last cy location": "last_cy_location",
     "last container yard": "last_cy_location",
     "cy location": "last_cy_location",
- 
     "place of receipt": "place_of_receipt",
     "receipt place": "place_of_receipt",
- 
     "place of delivery": "place_of_delivery",
     "delivery place": "place_of_delivery",
- 
     "final destination": "final_destination",
     "destination": "final_destination",
     "fd": "final_destination",
     "distribution center": "final_destination",
     "dc": "final_destination",
- 
     "first vessel code": "first_vessel_code",
     "first vessel": "first_vessel_code",
     "initial vessel code": "first_vessel_code",
- 
     "first vessel name": "first_vessel_name",
     "initial vessel name": "first_vessel_name",
- 
     "first voyage code": "first_voyage_code",
     "initial voyage code": "first_voyage_code",
- 
     "final carrier code": "final_carrier_code",
     "final carrier": "final_carrier_code",
- 
     "final carrier scac code": "final_carrier_scac_code",
     "final scac": "final_carrier_scac_code",
- 
     "final carrier name": "final_carrier_name",
- 
     "final vessel code": "final_vessel_code",
     "final vessel": "final_vessel_code",
- 
     "final vessel name": "final_vessel_name",
- 
     "final voyage code": "final_voyage_code",
     "final voyage": "final_voyage_code",
- 
     "true carrier code": "true_carrier_code",
     "actual carrier code": "true_carrier_code",
- 
     "true carrier scac code": "true_carrier_scac_code",
     "actual scac code": "true_carrier_scac_code",
- 
     "true carrier scac code1": "true_carrier_scac_code1",
     "actual scac code1": "true_carrier_scac_code1",
- 
     "etd lp": "etd_lp",
     "ETD": "etd_lp",
     "etd": "etd_lp",
     "estimated time of departure from load port": "etd_lp",
     "departure date": "etd_lp",
- 
     "etd flp": "etd_flp",
     "ETD FLP": "etd_flp",
     "estimated time of departure final load port": "etd_flp",
- 
     "eta dp": "eta_dp",
     "ETA": "eta_dp",
     "eta": "eta_dp",
     "estimated time of arrival at discharge port": "eta_dp",
     "arrival date": "eta_dp",
- 
     "eta fd": "eta_fd",
     "ETA FD": "eta_fd",
     "estimated time of arrival final destination": "eta_fd",
- 
     "revised eta": "revised_eta",
     "revised estimated time arrival": "revised_eta",
     "updated eta": "revised_eta",
- 
     "predictive eta": "predictive_eta",
     "predicted eta": "predictive_eta",
     "predictive estimated time of arrival": "predictive_eta",
- 
     "atd lp": "atd_lp",
     "ATD": "atd_lp",
     "atd": "atd_lp",
@@ -465,139 +433,101 @@ COLUMN_SYNONYMS = {
     "actual time of departure at load port": "atd_lp",
     "discharge at load port": "atd_lp",
     "departure at load port": "atd_lp",
- 
     "ata flp": "ata_flp",
     "ATA FLP": "ata_flp",
     "actual time of arrival final load port": "ata_flp",
- 
     "atd flp": "atd_flp",
     "ATD FLP": "atd_flp",
     "actual time of departure final load port": "atd_flp",
- 
     "ata dp": "ata_dp",
     "ATA": "ata_dp",
     "ata": "ata_dp",
     "actual time of arrival": "ata_dp",
- 
     "revised eta fd": "revised_eta_fd",
     "updated eta final destination": "revised_eta_fd",
- 
     "predictive eta fd": "predictive_eta_fd",
     "predicted eta final destination": "predictive_eta_fd",
- 
     "cargo received date": "cargo_received_date_multiple",
     "received date": "cargo_received_date_multiple",
     "cargo received": "cargo_received_date_multiple",
- 
     "detention free days": "detention_free_days",
     "free detention days": "detention_free_days",
- 
     "demurrage free days": "demurrage_free_days",
     "free demurrage days": "demurrage_free_days",
- 
     "hot container flag": "hot_container_flag",
     "hot container": "hot_container_flag",
     "priority container": "hot_container_flag",
- 
     "supplier name": "supplier_vendor_name",
     "vendor name": "supplier_vendor_name",
     "supplier/vendor": "supplier_vendor_name",
- 
     "manufacturer name": "manufacturer_name",
     "maker name": "manufacturer_name",
- 
     "ship to party name": "ship_to_party_name",
     "ship to": "ship_to_party_name",
     "recipient": "ship_to_party_name",
- 
     "booking approval status": "booking_approval_status",
     "booking status": "booking_approval_status",
- 
     "service contract number": "service_contract_number",
     "contract number": "service_contract_number",
- 
     "carrier vehicle load date": "carrier_vehicle_load_date",
     "vehicle load date": "carrier_vehicle_load_date",
- 
     "carrier vehicle load lcn": "carrier_vehicle_load_lcn",
     "vehicle load location": "carrier_vehicle_load_lcn",
- 
     "vehicle departure date": "vehicle_departure_date",
     "departure date": "vehicle_departure_date",
- 
     "vehicle departure lcn": "vehicle_departure_lcn",
     "departure location": "vehicle_departure_lcn",
- 
     "vehicle arrival date": "vehicle_arrival_date",
     "arrival date": "vehicle_arrival_date",
- 
     "vehicle arrival lcn": "vehicle_arrival_lcn",
     "arrival location": "vehicle_arrival_lcn",
- 
     "carrier vehicle unload date": "carrier_vehicle_unload_date",
     "vehicle unload date": "carrier_vehicle_unload_date",
- 
     "carrier vehicle unload lcn": "carrier_vehicle_unload_lcn",
     "vehicle unload location": "carrier_vehicle_unload_lcn",
- 
     "out gate date from dp": "out_gate_date_from_dp",
     "out gate date": "out_gate_date_from_dp",
- 
     "out gate location": "out_gate_location",
     "gate location": "out_gate_location",
- 
     "equipment arrived at last cy": "equipment_arrived_at_last_cy",
     "equipment arrival cy": "equipment_arrived_at_last_cy",
- 
     "equipment arrival at last lcn": "equipment_arrival_at_last_lcn",
     "equipment arrival location": "equipment_arrival_at_last_lcn",
- 
     "out gate at last cy": "out_gate_at_last_cy",
     "gate out cy": "out_gate_at_last_cy",
- 
     "out gate at last cy lcn": "out_gate_at_last_cy_lcn",
     "gate out location cy": "out_gate_at_last_cy_lcn",
- 
     "delivery date to consignee": "delivery_date_to_consignee",
     "delivery date": "delivery_date_to_consignee",
- 
     "delivery location to consignee": "delivery_location_to_consignee",
     "delivery location": "delivery_location_to_consignee",
- 
     "empty container return date": "empty_container_return_date",
     "container return date": "empty_container_return_date",
- 
     "empty container return lcn": "empty_container_return_lcn",
     "container return location": "empty_container_return_lcn",
- 
     "late booking status": "late_booking_status",
     "booking late status": "late_booking_status",
- 
     "current departure status": "current_departure_status",
     "departure status": "current_departure_status",
- 
     "current arrival status": "current_arrival_status",
     "arrival status": "current_arrival_status",
- 
     "late arrival status": "late_arrival_status",
     "arrival late status": "late_arrival_status",
- 
     "late container return status": "late_container_return_status",
     "container return late status": "late_container_return_status",
- 
     "co2 emission for tank on wheel": "co2_emission_for_tank_on_wheel",
     "co2 tank emission": "co2_emission_for_tank_on_wheel",
- 
     "co2 emission for well to wheel": "co2_emission_for_well_to_wheel",
     "co2 well emission": "co2_emission_for_well_to_wheel",
 }
- 
- 
+
+
 def map_synonym_to_column(term: str) -> str:
     term = term.lower().replace("_", " ").strip()
- 
+
     return COLUMN_SYNONYMS.get(term, term)
- 
+
+
 INTENT_SYNONYMS = {
     # ==========================================
     # DELAY FAMILY - All variations of "delayed/late"
@@ -624,7 +554,6 @@ INTENT_SYNONYMS = {
     "hasn't arrived": "delay",
     "still waiting": "delay",
     "taking too long": "delay",
-    
     # ==========================================
     # UPCOMING/FUTURE ARRIVALS - Containers not yet arrived
     # ==========================================
@@ -651,7 +580,6 @@ INTENT_SYNONYMS = {
     "estimated arrival": "upcoming_arrivals",
     "early arrival": "upcoming_arrivals",
     "advance notice": "upcoming_arrivals",
-    
     # ==========================================
     # ARRIVED - Containers that have reached destination
     # ==========================================
@@ -673,7 +601,6 @@ INTENT_SYNONYMS = {
     "actual arrival": "arrived",
     "has arrived": "arrived",
     "already arrived": "arrived",
-    
     # ==========================================
     # DEPARTED - Containers that have left origin
     # ==========================================
@@ -694,7 +621,6 @@ INTENT_SYNONYMS = {
     "already departed": "departed",
     "on board": "departed",
     "vessel departed": "departed",
-    
     # ==========================================
     # HOT CONTAINERS - Priority/urgent shipments
     # ==========================================
@@ -716,7 +642,6 @@ INTENT_SYNONYMS = {
     "immediate": "hot",
     "vip": "hot",
     "top priority": "hot",
-    
     # ==========================================
     # LATE BOOKING - Booking delays
     # ==========================================
@@ -727,7 +652,6 @@ INTENT_SYNONYMS = {
     "booking not confirmed": "late_booking",
     "booking pending": "late_booking",
     "booking overdue": "late_booking",
-    
     # ==========================================
     # LATE CONTAINER RETURN - Return delays
     # ==========================================
@@ -745,7 +669,7 @@ INTENT_SYNONYMS = {
 def map_intent_phrase(text: str) -> Optional[str]:
     """
     Map a free-text phrase to a canonical intent using longest-match-first strategy.
-    
+
     Supported intents:
     - delay: delayed, late, overdue, behind schedule, etc.
     - upcoming_arrivals: arriving, next, upcoming, expected, etc.
@@ -754,43 +678,43 @@ def map_intent_phrase(text: str) -> Optional[str]:
     - hot: priority, urgent, rush, expedited, etc.
     - late_booking: booking delays
     - late_container_return: container return delays
-    
+
     Args:
         text: User query string
-    
+
     Returns:
         Canonical intent string or None if no match
-    
+
     Examples:
         >>> map_intent_phrase("Show me delayed containers")
         'delay'
-        
+
         >>> map_intent_phrase("Which containers are arriving next week?")
         'upcoming_arrivals'
-        
+
         >>> map_intent_phrase("Hot containers at USNYC")
         'hot'
     """
     if not text:
         return None
-    
+
     text_lower = text.lower()
-    
+
     # Sort keys by length (longest first) to match multi-word phrases before single words
     # E.g., "behind schedule" should match before "behind"
     sorted_keys = sorted(INTENT_SYNONYMS.keys(), key=len, reverse=True)
-    
+
     for key in sorted_keys:
         # Use word boundary matching for better accuracy
         # This prevents "notified" from matching "not" in "not arrived"
         if len(key.split()) == 1:  # Single word
-            pattern = r'\b' + re.escape(key.lower()) + r'\b'
+            pattern = r"\b" + re.escape(key.lower()) + r"\b"
         else:  # Multi-word phrase
             pattern = re.escape(key.lower())
-        
+
         if re.search(pattern, text_lower):
             return INTENT_SYNONYMS[key]
-    
+
     return None
 
 
@@ -809,358 +733,575 @@ for synonym, intent in INTENT_SYNONYMS.items():
 # }
 
 import re
-import pandas as pd
 from datetime import datetime
-from typing import Tuple, Optional
+from typing import Optional, Tuple
+
+import pandas as pd
 
 # ...existing code...
+
 
 def parse_time_period(query: str) -> tuple[pd.Timestamp, pd.Timestamp, str]:
     """
     Parse natural language time expressions into (start_date, end_date, description).
-    
-    **CRITICAL FIX**: Properly handles month names (both with and without year):
-    - "December" → Full current/next December (Dec 1 to Dec 31)
-    - "December 2025" → Full December 2025 (Dec 1 to Dec 31)
-    - "in dec" → Full December month
-    
+
+    **CRITICAL FIX FOR YEAR DETECTION (January 21, 2026)**:
+    - When only month names are provided (e.g., "Jun-Sep", "June to September"):
+      * If we're in Jan-Mar 2026 and user asks for Apr-Dec months → use 2025 (those months haven't occurred in 2026 yet)
+      * If user asks for Jan-Mar months while we're in those months → use current year 2026
+      * Never default to 2024 unless explicitly stated
+
+    **Examples (assuming current date is January 21, 2026)**:
+    - "Jun-Sep" → June 1, 2025 to September 30, 2025 (these months haven't occurred in 2026 yet)
+    - "Jan-Feb" → January 1, 2026 to February 28, 2026 (we're currently in Jan 2026)
+    - "December" → December 1, 2025 to December 31, 2025 (December 2025 has passed)
+    - "December 2025" → December 1, 2025 to December 31, 2025 (explicit year preserved)
+    - "next 7 days" → today to today+6
+    - "this week" → Monday to Sunday of current week
+    - "between 2024-06-01 and 2024-09-30" → explicit dates as given
+
     Supported patterns:
+    - Month ranges: "Jun-Sep", "June to September", "from June to September"
+    - Months with year: "December 2025", "in dec 2025"
+    - Single months: "December", "in dec"
     - Relative: "today", "tomorrow", "yesterday", "next week", "last month"
     - Ranges: "next 7 days", "last 30 days", "in next 5 days"
-    - Months: "December", "dec", "December 2025", "in December"
     - Explicit: "from 2025-01-15 to 2025-01-20", "between dates"
-    
+
     Returns: (start_date, end_date, period_description)
     """
-    
+    import re
+
+    import pandas as pd
+
     query = (query or "").strip().lower()
     today = pd.Timestamp.today().normalize()
-    
+    current_year = today.year  # 2026
+    current_month = today.month  # 1 (January)
+
     # Month name to number mapping
     month_map = {
-        'jan': 1, 'january': 1,
-        'feb': 2, 'february': 2,
-        'mar': 3, 'march': 3,
-        'apr': 4, 'april': 4,
-        'may': 5,
-        'jun': 6, 'june': 6,
-        'jul': 7, 'july': 7,
-        'aug': 8, 'august': 8,
-        'sep': 9, 'sept': 9, 'september': 9,
-        'oct': 10, 'october': 10,
-        'nov': 11, 'november': 11,
-        'dec': 12, 'december': 12
+        "jan": 1,
+        "january": 1,
+        "feb": 2,
+        "february": 2,
+        "mar": 3,
+        "march": 3,
+        "apr": 4,
+        "april": 4,
+        "may": 5,
+        "jun": 6,
+        "june": 6,
+        "jul": 7,
+        "july": 7,
+        "aug": 8,
+        "august": 8,
+        "sep": 9,
+        "sept": 9,
+        "september": 9,
+        "oct": 10,
+        "october": 10,
+        "nov": 11,
+        "november": 11,
+        "dec": 12,
+        "december": 12,
     }
-    
-    # **CRITICAL FIX**: Pattern 1 - Month with year (e.g., "December 2025", "in dec 2025")
+
+    # **PRIORITY 1**: Month ranges without year (e.g., "Jun-Sep", "June to September")
+    month_range_patterns = [
+        r"\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s*[-–—]\s*(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b",
+        r"\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+to\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b",
+        r"\bfrom\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+to\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b",
+    ]
+
+    for pattern in month_range_patterns:
+        m = re.search(pattern, query, re.IGNORECASE)
+        if m:
+            start_month_str = m.group(1).lower()
+            end_month_str = m.group(2).lower()
+
+            # Normalize to shortest key
+            start_month_key = (
+                start_month_str[:3]
+                if start_month_str[:3] in month_map
+                else start_month_str
+            )
+            end_month_key = (
+                end_month_str[:3] if end_month_str[:3] in month_map else end_month_str
+            )
+
+            start_month_num = month_map.get(start_month_key)
+            end_month_num = month_map.get(end_month_key)
+
+            if start_month_num and end_month_num:
+                # **CRITICAL YEAR DETECTION LOGIC**
+                # Current: January 2026 (current_month=1, current_year=2026)
+
+                # Rule 1: If start_month > current_month, it refers to LAST YEAR (2025)
+                #         Example: In Jan 2026, "Jun-Sep" means June-September 2025
+                if start_month_num > current_month:
+                    year = current_year - 1  # Use previous year (2025)
+                    try:
+                        import logging
+
+                        logger = logging.getLogger(__name__)
+                        logger.info(
+                            f"[parse_time_period] Month range {start_month_str}-{end_month_str}: "
+                            f"start_month ({start_month_num}) > current_month ({current_month}), "
+                            f"using previous year {year}"
+                        )
+                    except:
+                        pass
+
+                # Rule 2: If start_month <= current_month, check if it's current month or past
+                elif start_month_num == current_month:
+                    # Same month as current → use current year
+                    year = current_year
+                    try:
+                        import logging
+
+                        logger = logging.getLogger(__name__)
+                        logger.info(
+                            f"[parse_time_period] Month range {start_month_str}-{end_month_str}: "
+                            f"start_month ({start_month_num}) == current_month, using current year {year}"
+                        )
+                    except:
+                        pass
+
+                else:  # start_month_num < current_month
+                    # Past month in current year → use LAST YEAR for historical data
+                    # Example: In Jan 2026, asking for "Nov-Dec" likely means Nov-Dec 2025
+                    year = current_year - 1
+                    try:
+                        import logging
+
+                        logger = logging.getLogger(__name__)
+                        logger.info(
+                            f"[parse_time_period] Month range {start_month_str}-{end_month_str}: "
+                            f"start_month ({start_month_num}) < current_month ({current_month}), "
+                            f"using previous year {year} (assuming last year's data)"
+                        )
+                    except:
+                        pass
+
+                # Create start and end dates
+                start_date = pd.Timestamp(
+                    year=year, month=start_month_num, day=1
+                ).normalize()
+
+                # Handle end month (could be in next year if Dec->Jan range)
+                if end_month_num < start_month_num:
+                    # Range crosses year boundary (e.g., "Nov-Feb")
+                    end_year = year + 1
+                else:
+                    end_year = year
+
+                # Last day of end month
+                if end_month_num == 12:
+                    end_date = pd.Timestamp(
+                        year=end_year + 1, month=1, day=1
+                    ).normalize() - pd.Timedelta(days=1)
+                else:
+                    end_date = pd.Timestamp(
+                        year=end_year, month=end_month_num + 1, day=1
+                    ).normalize() - pd.Timedelta(days=1)
+
+                # Format period description
+                start_month_name = start_month_str.capitalize()
+                end_month_name = end_month_str.capitalize()
+                period_desc = (
+                    f"{start_month_name} to {end_month_name} {year}"
+                    if year == end_year
+                    else f"{start_month_name} {year} to {end_month_name} {end_year}"
+                )
+
+                try:
+                    import logging
+
+                    logger = logging.getLogger(__name__)
+                    logger.info(
+                        f"[parse_time_period] Final period: {period_desc} "
+                        f"({start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')})"
+                    )
+                except:
+                    pass
+
+                return start_date, end_date, period_desc
+
+    # **PRIORITY 2**: Month with year (e.g., "December 2025", "in dec 2025")
     m_month_year = re.search(
-        r'\b(?:in\s+)?(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|'
-        r'jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{4})\b',
-        query
+        r"\b(?:in\s+)?(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|"
+        r"jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{4})\b",
+        query,
     )
     if m_month_year:
         month_name = m_month_year.group(1)
         year = int(m_month_year.group(2))
         month = month_map.get(month_name)
-        
+
         if month:
             start_date = pd.Timestamp(year=year, month=month, day=1).normalize()
             # Get last day of the month
             if month == 12:
                 end_date = pd.Timestamp(year=year, month=12, day=31).normalize()
             else:
-                end_date = (pd.Timestamp(year=year, month=month+1, day=1) - pd.Timedelta(days=1)).normalize()
-            
+                end_date = (
+                    pd.Timestamp(year=year, month=month + 1, day=1)
+                    - pd.Timedelta(days=1)
+                ).normalize()
+
             return start_date, end_date, f"{month_name.capitalize()} {year}"
-    
-    # **CRITICAL FIX**: Pattern 2 - Month without year (e.g., "December", "in dec")
+
+    # **PRIORITY 3**: Single month without year (e.g., "December", "in dec")
     m_month = re.search(
-        r'\b(?:in\s+)?(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|'
-        r'jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b',
-        query
+        r"\b(?:in\s+)?(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|"
+        r"jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b",
+        query,
     )
     if m_month:
         month_name = m_month.group(1)
         month = month_map.get(month_name)
-        
+
         if month:
-            # Determine if it's current year or next year
-            current_month = today.month
-            current_year = today.year
-            
-            # If the month has passed this year, use next year
-            if month < current_month:
-                year = current_year + 1
+            # **SMART YEAR DETECTION**: Same logic as month ranges
+            # If month > current_month, use previous year
+            # If month <= current_month, use current year
+            if month > current_month:
+                year = current_year - 1
             else:
                 year = current_year
-            
+
             start_date = pd.Timestamp(year=year, month=month, day=1).normalize()
             # Get last day of the month
             if month == 12:
                 end_date = pd.Timestamp(year=year, month=12, day=31).normalize()
             else:
-                end_date = (pd.Timestamp(year=year, month=month+1, day=1) - pd.Timedelta(days=1)).normalize()
-            
+                end_date = (
+                    pd.Timestamp(year=year, month=month + 1, day=1)
+                    - pd.Timedelta(days=1)
+                ).normalize()
+
             return start_date, end_date, f"{month_name.capitalize()} {year}"
-    
-    # Pattern 3: "today"
-    if re.search(r'\btoday\b', query):
+
+    # Pattern 4: "today"
+    if re.search(r"\btoday\b", query):
         return today, today, "today"
-    
-    # Pattern 4: "tomorrow"
-    if re.search(r'\btomorrow\b', query):
+
+    # Pattern 5: "tomorrow"
+    if re.search(r"\btomorrow\b", query):
         tomorrow = today + pd.Timedelta(days=1)
         return tomorrow, tomorrow, "tomorrow"
-    
-    # Pattern 5: "yesterday"
-    if re.search(r'\byesterday\b', query):
+
+    # Pattern 6: "yesterday"
+    if re.search(r"\byesterday\b", query):
         yesterday = today - pd.Timedelta(days=1)
         return yesterday, yesterday, "yesterday"
-    
-    # Pattern 6: "next X days" or "in next X days"
-    m = re.search(r'(?:next|in\s+next|in)\s+(\d{1,3})\s+days?', query)
+
+    # Pattern 7: "next X days" or "in next X days"
+    m = re.search(r"(?:next|in\s+next|in)\s+(\d{1,3})\s+days?", query)
     if m:
         n = int(m.group(1))
-        end_date = today + pd.Timedelta(days=n)
+        end_date = today + pd.Timedelta(days=n - 1)
         return today, end_date, f"next {n} days"
-    
-    # Pattern 7: "last X days" or "past X days"
-    m = re.search(r'(?:last|past|previous)\s+(\d{1,3})\s+days?', query)
+
+    # Pattern 8: "last X days" or "past X days"
+    m = re.search(r"(?:last|past|previous)\s+(\d{1,3})\s+days?", query)
     if m:
         n = int(m.group(1))
-        start_date = today - pd.Timedelta(days=n)
+        start_date = today - pd.Timedelta(days=n - 1)
         return start_date, today, f"last {n} days"
-    
-    # Pattern 8: "this week" (Monday to Sunday)
-    if re.search(r'\bthis\s+week\b', query):
+
+    # Pattern 9: "this week" (Monday to Sunday)
+    if re.search(r"\bthis\s+week\b", query):
         start_of_week = today - pd.Timedelta(days=today.weekday())
         end_of_week = start_of_week + pd.Timedelta(days=6)
         return start_of_week, end_of_week, "this week"
-    
-    # Pattern 9: "next week"
-    if re.search(r'\bnext\s+week\b', query):
-        start_of_next_week = today + pd.Timedelta(days=7-today.weekday())
+
+    # Pattern 10: "next week"
+    if re.search(r"\bnext\s+week\b", query):
+        start_of_next_week = today + pd.Timedelta(days=7 - today.weekday())
         end_of_next_week = start_of_next_week + pd.Timedelta(days=6)
         return start_of_next_week, end_of_next_week, "next week"
-    
-    # Pattern 10: "last week"
-    if re.search(r'\blast\s+week\b', query):
-        start_of_last_week = today - pd.Timedelta(days=today.weekday()+7)
+
+    # Pattern 11: "last week"
+    if re.search(r"\blast\s+week\b", query):
+        start_of_last_week = today - pd.Timedelta(days=today.weekday() + 7)
         end_of_last_week = start_of_last_week + pd.Timedelta(days=6)
         return start_of_last_week, end_of_last_week, "last week"
-    
-    # Pattern 11: "this month"
-    if re.search(r'\bthis\s+month\b', query):
-        start_of_month = pd.Timestamp(year=today.year, month=today.month, day=1).normalize()
+
+    # Pattern 12: "this month"
+    if re.search(r"\bthis\s+month\b", query):
+        start_of_month = pd.Timestamp(
+            year=today.year, month=today.month, day=1
+        ).normalize()
         if today.month == 12:
             end_of_month = pd.Timestamp(year=today.year, month=12, day=31).normalize()
         else:
-            end_of_month = (pd.Timestamp(year=today.year, month=today.month+1, day=1) - pd.Timedelta(days=1)).normalize()
+            end_of_month = (
+                pd.Timestamp(year=today.year, month=today.month + 1, day=1)
+                - pd.Timedelta(days=1)
+            ).normalize()
         return start_of_month, end_of_month, "this month"
-    
-    # Pattern 12: "next month"
-    if re.search(r'\bnext\s+month\b', query):
+
+    # Pattern 13: "next month"
+    if re.search(r"\bnext\s+month\b", query):
         if today.month == 12:
-            start_of_next_month = pd.Timestamp(year=today.year+1, month=1, day=1).normalize()
-            end_of_next_month = pd.Timestamp(year=today.year+1, month=1, day=31).normalize()
+            start_of_next_month = pd.Timestamp(
+                year=today.year + 1, month=1, day=1
+            ).normalize()
+            end_of_next_month = pd.Timestamp(
+                year=today.year + 1, month=1, day=31
+            ).normalize()
         else:
-            start_of_next_month = pd.Timestamp(year=today.year, month=today.month+1, day=1).normalize()
+            start_of_next_month = pd.Timestamp(
+                year=today.year, month=today.month + 1, day=1
+            ).normalize()
             if today.month == 11:
-                end_of_next_month = pd.Timestamp(year=today.year, month=12, day=31).normalize()
+                end_of_next_month = pd.Timestamp(
+                    year=today.year, month=12, day=31
+                ).normalize()
             else:
-                end_of_next_month = (pd.Timestamp(year=today.year, month=today.month+2, day=1) - pd.Timedelta(days=1)).normalize()
+                end_of_next_month = (
+                    pd.Timestamp(year=today.year, month=today.month + 2, day=1)
+                    - pd.Timedelta(days=1)
+                ).normalize()
         return start_of_next_month, end_of_next_month, "next month"
-    
-    # Pattern 13: "last month"
-    if re.search(r'\blast\s+month\b', query):
+
+    # Pattern 14: "last month"
+    if re.search(r"\blast\s+month\b", query):
         if today.month == 1:
-            start_of_last_month = pd.Timestamp(year=today.year-1, month=12, day=1).normalize()
-            end_of_last_month = pd.Timestamp(year=today.year-1, month=12, day=31).normalize()
+            start_of_last_month = pd.Timestamp(
+                year=today.year - 1, month=12, day=1
+            ).normalize()
+            end_of_last_month = pd.Timestamp(
+                year=today.year - 1, month=12, day=31
+            ).normalize()
         else:
-            start_of_last_month = pd.Timestamp(year=today.year, month=today.month-1, day=1).normalize()
-            end_of_last_month = (pd.Timestamp(year=today.year, month=today.month, day=1) - pd.Timedelta(days=1)).normalize()
+            start_of_last_month = pd.Timestamp(
+                year=today.year, month=today.month - 1, day=1
+            ).normalize()
+            end_of_last_month = (
+                pd.Timestamp(year=today.year, month=today.month, day=1)
+                - pd.Timedelta(days=1)
+            ).normalize()
         return start_of_last_month, end_of_last_month, "last month"
-    
-    # Pattern 14: Explicit date ranges "from YYYY-MM-DD to YYYY-MM-DD"
-    m = re.search(r'from\s+(\d{4}[-/]\d{1,2}[-/]\d{1,2})\s+to\s+(\d{4}[-/]\d{1,2}[-/]\d{1,2})', query)
+
+    # Pattern 15: Explicit date ranges "from YYYY-MM-DD to YYYY-MM-DD"
+    m = re.search(
+        r"from\s+(\d{4}[-/]\d{1,2}[-/]\d{1,2})\s+to\s+(\d{4}[-/]\d{1,2}[-/]\d{1,2})",
+        query,
+    )
     if m:
-        start_date = pd.to_datetime(m.group(1), errors='coerce').normalize()
-        end_date = pd.to_datetime(m.group(2), errors='coerce').normalize()
-        return start_date, end_date, f"from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}"
-    
-    # Pattern 15: "between DATE1 and DATE2"
-    m = re.search(r'between\s+(\d{4}[-/]\d{1,2}[-/]\d{1,2})\s+and\s+(\d{4}[-/]\d{1,2}[-/]\d{1,2})', query)
+        start_date = pd.to_datetime(m.group(1), errors="coerce").normalize()
+        end_date = pd.to_datetime(m.group(2), errors="coerce").normalize()
+        return (
+            start_date,
+            end_date,
+            f"from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}",
+        )
+
+    # Pattern 16: "between DATE1 and DATE2"
+    m = re.search(
+        r"between\s+(\d{4}[-/]\d{1,2}[-/]\d{1,2})\s+and\s+(\d{4}[-/]\d{1,2}[-/]\d{1,2})",
+        query,
+    )
     if m:
-        start_date = pd.to_datetime(m.group(1), errors='coerce').normalize()
-        end_date = pd.to_datetime(m.group(2), errors='coerce').normalize()
-        return start_date, end_date, f"between {start_date.strftime('%Y-%m-%d')} and {end_date.strftime('%Y-%m-%d')}"
-    
+        start_date = pd.to_datetime(m.group(1), errors="coerce").normalize()
+        end_date = pd.to_datetime(m.group(2), errors="coerce").normalize()
+        return (
+            start_date,
+            end_date,
+            f"between {start_date.strftime('%Y-%m-%d')} and {end_date.strftime('%Y-%m-%d')}",
+        )
+
     # Default: next 7 days
-    end_date = today + pd.Timedelta(days=7)
+    end_date = today + pd.Timedelta(days=6)
     return today, end_date, "next 7 days (default)"
-# def parse_time_period(query: str) -> Tuple[pd.Timestamp, pd.Timestamp, str]:
-#     """
-#     Centralized time period parser for all tools.
 
-#     Calendar rules:
-#     - Weeks are Monday–Sunday
-#       * this week: current Monday to current Sunday
-#       * next week: next Monday to next Sunday
-#       * last week: previous Monday to previous Sunday
-#     - Months are calendar months
-#       * this month: 1st of current month to last day of current month
-#       * next month: 1st of next month to last day of next month
-#       * last month: 1st of previous month to last day of previous month
 
-#     Also handles:
-#     - Relative days: today, tomorrow, yesterday, etc.
-#     - Numeric windows: next N days, last N days
-#     - Absolute dates: DD/MM/YYYY, YYYY-MM-DD, Month DD YYYY
-#     - Ranges: from DD/MM/YYYY to DD/MM/YYYY, between ... and ...
+# def parse_time_period(query: str) -> tuple[pd.Timestamp, pd.Timestamp, str]:
 #     """
-#     query = (query or "").strip()
+#     Parse natural language time expressions into (start_date, end_date, description).
+
+#     **CRITICAL FIX**: Properly handles month names (both with and without year):
+#     - "December" → Full current/next December (Dec 1 to Dec 31)
+#     - "December 2025" → Full December 2025 (Dec 1 to Dec 31)
+#     - "in dec" → Full December month
+
+#     Supported patterns:
+#     - Relative: "today", "tomorrow", "yesterday", "next week", "last month"
+#     - Ranges: "next 7 days", "last 30 days", "in next 5 days"
+#     - Months: "December", "dec", "December 2025", "in December"
+#     - Explicit: "from 2025-01-15 to 2025-01-20", "between dates"
+
+#     Returns: (start_date, end_date, period_description)
+#     """
+
+#     query = (query or "").strip().lower()
 #     today = pd.Timestamp.today().normalize()
 
-#     # Helpers
-#     def month_start(ts: pd.Timestamp) -> pd.Timestamp:
-#         return ts.replace(day=1)
+#     # Month name to number mapping
+#     month_map = {
+#         'jan': 1, 'january': 1,
+#         'feb': 2, 'february': 2,
+#         'mar': 3, 'march': 3,
+#         'apr': 4, 'april': 4,
+#         'may': 5,
+#         'jun': 6, 'june': 6,
+#         'jul': 7, 'july': 7,
+#         'aug': 8, 'august': 8,
+#         'sep': 9, 'sept': 9, 'september': 9,
+#         'oct': 10, 'october': 10,
+#         'nov': 11, 'november': 11,
+#         'dec': 12, 'december': 12
+#     }
 
-#     def next_month_start(ts: pd.Timestamp) -> pd.Timestamp:
-#         y = ts.year + (1 if ts.month == 12 else 0)
-#         m = 1 if ts.month == 12 else ts.month + 1
-#         return pd.Timestamp(year=y, month=m, day=1)
-
-#     def prev_month_start(ts: pd.Timestamp) -> pd.Timestamp:
-#         y = ts.year - (1 if ts.month == 1 else 0)
-#         m = 12 if ts.month == 1 else ts.month - 1
-#         return pd.Timestamp(year=y, month=m, day=1)
-
-#     # Specific day keywords
-#     if re.search(r'\btoday\b', query, re.IGNORECASE):
-#         return today, today, "today"
-#     if re.search(r'\btomorrow\b', query, re.IGNORECASE):
-#         t = today + pd.Timedelta(days=1)
-#         return t, t, "tomorrow"
-#     if re.search(r'\byesterday\b', query, re.IGNORECASE):
-#         y = today - pd.Timedelta(days=1)
-#         return y, y, "yesterday"
-#     if re.search(r'\bday\s+before\s+yesterday\b', query, re.IGNORECASE):
-#         dby = today - pd.Timedelta(days=2)
-#         return dby, dby, "day before yesterday"
-#     if re.search(r'\bday\s+after\s+tomorrow\b', query, re.IGNORECASE):
-#         dat = today + pd.Timedelta(days=2)
-#         return dat, dat, "day after tomorrow"
-
-#     # Weeks (Monday–Sunday)
-#     this_week_start = today - pd.Timedelta(days=today.weekday())       # Monday
-#     this_week_end = this_week_start + pd.Timedelta(days=6)             # Sunday
-#     next_week_start = this_week_start + pd.Timedelta(days=7)
-#     next_week_end = next_week_start + pd.Timedelta(days=6)
-#     last_week_start = this_week_start - pd.Timedelta(days=7)
-#     last_week_end = last_week_start + pd.Timedelta(days=6)
-
-#     if re.search(r'\b(this|current)\s+week\b', query, re.IGNORECASE):
-#         return this_week_start, this_week_end, f"this week ({this_week_start.strftime('%Y-%m-%d')} to {this_week_end.strftime('%Y-%m-%d')})"
-#     if re.search(r'\bnext\s+week\b', query, re.IGNORECASE):
-#         return next_week_start, next_week_end, f"next week ({next_week_start.strftime('%Y-%m-%d')} to {next_week_end.strftime('%Y-%m-%d')})"
-#     if re.search(r'\b(last|previous)\s+week\b', query, re.IGNORECASE):
-#         return last_week_start, last_week_end, f"last week ({last_week_start.strftime('%Y-%m-%d')} to {last_week_end.strftime('%Y-%m-%d')})"
-
-#     # Months (calendar)
-#     if re.search(r'\bthis\s+month\b', query, re.IGNORECASE):
-#         start = month_start(today)
-#         end = next_month_start(today) - pd.Timedelta(days=1)
-#         return start, end, f"this month ({start.strftime('%Y-%m-%d')} to {end.strftime('%Y-%m-%d')})"
-#     if re.search(r'\bnext\s+month\b', query, re.IGNORECASE):
-#         nm_start = next_month_start(today)
-#         nm_end = next_month_start(nm_start) - pd.Timedelta(days=1)
-#         return nm_start, nm_end, f"next month ({nm_start.strftime('%Y-%m-%d')} to {nm_end.strftime('%Y-%m-%d')})"
-#     if re.search(r'\blast\s+month\b', query, re.IGNORECASE):
-#         pm_start = prev_month_start(today)
-#         pm_end = month_start(today) - pd.Timedelta(days=1)
-#         return pm_start, pm_end, f"last month ({pm_start.strftime('%Y-%m-%d')} to {pm_end.strftime('%Y-%m-%d')})"
-
-#     # Numeric windows
-#     m = re.search(r'(?:next|upcoming|within|in\s+next|in\s+the\s+next|in)\s+(\d{1,3})\s+days?', query, re.IGNORECASE)
-#     if m:
-#         days = int(m.group(1))
-#         return today, today + pd.Timedelta(days=days), f"next {days} days"
-
-#     m = re.search(r'(?:last|past|previous|in\s+last|in\s+the\s+last)\s+(\d{1,3})\s+days?', query, re.IGNORECASE)
-#     if m:
-#         days = int(m.group(1))
-#         return today - pd.Timedelta(days=days), today - pd.Timedelta(days=1), f"last {days} days"
-
-#     # Absolute dates
-#     m = re.search(r'\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\b', query)
-#     if m:
-#         d, mo, y = int(m.group(1)), int(m.group(2)), int(m.group(3))
-#         try:
-#             dt = pd.Timestamp(year=y, month=mo, day=d)
-#             return dt.normalize(), dt.normalize(), f"{d}/{mo}/{y}"
-#         except ValueError:
-#             pass
-
-#     m = re.search(r'\b(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})\b', query)
-#     if m:
-#         y, mo, d = int(m.group(1)), int(m.group(2)), int(m.group(3))
-#         try:
-#             dt = pd.Timestamp(year=y, month=mo, day=d)
-#             return dt.normalize(), dt.normalize(), f"{y}-{mo:02d}-{d:02d}"
-#         except ValueError:
-#             pass
-
-#     m = re.search(
-#         r'\b(?:(\d{1,2})\s+)?'
-#         r'(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|'
-#         r'jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)'
-#         r'\s+(?:(\d{1,2})\s+)?(\d{4})\b',
-#         query, re.IGNORECASE
+#     # **CRITICAL FIX**: Pattern 1 - Month with year (e.g., "December 2025", "in dec 2025")
+#     m_month_year = re.search(
+#         r'\b(?:in\s+)?(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|'
+#         r'jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{4})\b',
+#         query
 #     )
-#     if m:
-#         day_before = m.group(1)
-#         month_name = m.group(2)
-#         day_after = m.group(3)
-#         year = int(m.group(4))
-#         day = int(day_before) if day_before else (int(day_after) if day_after else 1)
-#         month_map = {
-#             'jan': 1, 'january': 1, 'feb': 2, 'february': 2, 'mar': 3, 'march': 3,
-#             'apr': 4, 'april': 4, 'may': 5, 'jun': 6, 'june': 6,
-#             'jul': 7, 'july': 7, 'aug': 8, 'august': 8, 'sep': 9, 'september': 9,
-#             'oct': 10, 'october': 10, 'nov': 11, 'november': 11, 'dec': 12, 'december': 12
-#         }
-#         month = month_map.get(month_name.lower())
+#     if m_month_year:
+#         month_name = m_month_year.group(1)
+#         year = int(m_month_year.group(2))
+#         month = month_map.get(month_name)
+
 #         if month:
-#             try:
-#                 dt = pd.Timestamp(year=year, month=month, day=day)
-#                 return dt.normalize(), dt.normalize(), f"{month_name.capitalize()} {day}, {year}"
-#             except ValueError:
-#                 pass
+#             start_date = pd.Timestamp(year=year, month=month, day=1).normalize()
+#             # Get last day of the month
+#             if month == 12:
+#                 end_date = pd.Timestamp(year=year, month=12, day=31).normalize()
+#             else:
+#                 end_date = (pd.Timestamp(year=year, month=month+1, day=1) - pd.Timedelta(days=1)).normalize()
 
-#     # Ranges
-#     m = re.search(r'\bfrom\s+(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\s+to\s+(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\b', query, re.IGNORECASE)
+#             return start_date, end_date, f"{month_name.capitalize()} {year}"
+
+#     # **CRITICAL FIX**: Pattern 2 - Month without year (e.g., "December", "in dec")
+#     m_month = re.search(
+#         r'\b(?:in\s+)?(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|'
+#         r'jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b',
+#         query
+#     )
+#     if m_month:
+#         month_name = m_month.group(1)
+#         month = month_map.get(month_name)
+
+#         if month:
+#             # Determine if it's current year or next year
+#             current_month = today.month
+#             current_year = today.year
+
+#             # If the month has passed this year, use next year
+#             if month < current_month:
+#                 year = current_year + 1
+#             else:
+#                 year = current_year
+
+#             start_date = pd.Timestamp(year=year, month=month, day=1).normalize()
+#             # Get last day of the month
+#             if month == 12:
+#                 end_date = pd.Timestamp(year=year, month=12, day=31).normalize()
+#             else:
+#                 end_date = (pd.Timestamp(year=year, month=month+1, day=1) - pd.Timedelta(days=1)).normalize()
+
+#             return start_date, end_date, f"{month_name.capitalize()} {year}"
+
+#     # Pattern 3: "today"
+#     if re.search(r'\btoday\b', query):
+#         return today, today, "today"
+
+#     # Pattern 4: "tomorrow"
+#     if re.search(r'\btomorrow\b', query):
+#         tomorrow = today + pd.Timedelta(days=1)
+#         return tomorrow, tomorrow, "tomorrow"
+
+#     # Pattern 5: "yesterday"
+#     if re.search(r'\byesterday\b', query):
+#         yesterday = today - pd.Timedelta(days=1)
+#         return yesterday, yesterday, "yesterday"
+
+#     # Pattern 6: "next X days" or "in next X days"
+#     m = re.search(r'(?:next|in\s+next|in)\s+(\d{1,3})\s+days?', query)
 #     if m:
-#         d1, m1, y1, d2, m2, y2 = map(int, m.groups())
-#         try:
-#             start = pd.Timestamp(year=y1, month=m1, day=d1).normalize()
-#             end = pd.Timestamp(year=y2, month=m2, day=d2).normalize()
-#             return start, end, f"from {d1}/{m1}/{y1} to {d2}/{m2}/{y2}"
-#         except ValueError:
-#             pass
+#         n = int(m.group(1))
+#         end_date = today + pd.Timedelta(days=n)
+#         return today, end_date, f"next {n} days"
 
-#     m = re.search(r'\bbetween\s+(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\s+and\s+(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\b', query, re.IGNORECASE)
+#     # Pattern 7: "last X days" or "past X days"
+#     m = re.search(r'(?:last|past|previous)\s+(\d{1,3})\s+days?', query)
 #     if m:
-#         d1, m1, y1, d2, m2, y2 = map(int, m.groups())
-#         try:
-#             start = pd.Timestamp(year=y1, month=m1, day=d1).normalize()
-#             end = pd.Timestamp(year=y2, month=m2, day=d2).normalize()
-#             return start, end, f"between {d1}/{m1}/{y1} and {d2}/{m2}/{y2}"
-#         except ValueError:
-#             pass
+#         n = int(m.group(1))
+#         start_date = today - pd.Timedelta(days=n)
+#         return start_date, today, f"last {n} days"
 
-#     # Default
-#     return today, today + pd.Timedelta(days=7), "next 7 days (default)"
-# # ...existing code...
+#     # Pattern 8: "this week" (Monday to Sunday)
+#     if re.search(r'\bthis\s+week\b', query):
+#         start_of_week = today - pd.Timedelta(days=today.weekday())
+#         end_of_week = start_of_week + pd.Timedelta(days=6)
+#         return start_of_week, end_of_week, "this week"
+
+#     # Pattern 9: "next week"
+#     if re.search(r'\bnext\s+week\b', query):
+#         start_of_next_week = today + pd.Timedelta(days=7-today.weekday())
+#         end_of_next_week = start_of_next_week + pd.Timedelta(days=6)
+#         return start_of_next_week, end_of_next_week, "next week"
+
+#     # Pattern 10: "last week"
+#     if re.search(r'\blast\s+week\b', query):
+#         start_of_last_week = today - pd.Timedelta(days=today.weekday()+7)
+#         end_of_last_week = start_of_last_week + pd.Timedelta(days=6)
+#         return start_of_last_week, end_of_last_week, "last week"
+
+#     # Pattern 11: "this month"
+#     if re.search(r'\bthis\s+month\b', query):
+#         start_of_month = pd.Timestamp(year=today.year, month=today.month, day=1).normalize()
+#         if today.month == 12:
+#             end_of_month = pd.Timestamp(year=today.year, month=12, day=31).normalize()
+#         else:
+#             end_of_month = (pd.Timestamp(year=today.year, month=today.month+1, day=1) - pd.Timedelta(days=1)).normalize()
+#         return start_of_month, end_of_month, "this month"
+
+#     # Pattern 12: "next month"
+#     if re.search(r'\bnext\s+month\b', query):
+#         if today.month == 12:
+#             start_of_next_month = pd.Timestamp(year=today.year+1, month=1, day=1).normalize()
+#             end_of_next_month = pd.Timestamp(year=today.year+1, month=1, day=31).normalize()
+#         else:
+#             start_of_next_month = pd.Timestamp(year=today.year, month=today.month+1, day=1).normalize()
+#             if today.month == 11:
+#                 end_of_next_month = pd.Timestamp(year=today.year, month=12, day=31).normalize()
+#             else:
+#                 end_of_next_month = (pd.Timestamp(year=today.year, month=today.month+2, day=1) - pd.Timedelta(days=1)).normalize()
+#         return start_of_next_month, end_of_next_month, "next month"
+
+#     # Pattern 13: "last month"
+#     if re.search(r'\blast\s+month\b', query):
+#         if today.month == 1:
+#             start_of_last_month = pd.Timestamp(year=today.year-1, month=12, day=1).normalize()
+#             end_of_last_month = pd.Timestamp(year=today.year-1, month=12, day=31).normalize()
+#         else:
+#             start_of_last_month = pd.Timestamp(year=today.year, month=today.month-1, day=1).normalize()
+#             end_of_last_month = (pd.Timestamp(year=today.year, month=today.month, day=1) - pd.Timedelta(days=1)).normalize()
+#         return start_of_last_month, end_of_last_month, "last month"
+
+#     # Pattern 14: Explicit date ranges "from YYYY-MM-DD to YYYY-MM-DD"
+#     m = re.search(r'from\s+(\d{4}[-/]\d{1,2}[-/]\d{1,2})\s+to\s+(\d{4}[-/]\d{1,2}[-/]\d{1,2})', query)
+#     if m:
+#         start_date = pd.to_datetime(m.group(1), errors='coerce').normalize()
+#         end_date = pd.to_datetime(m.group(2), errors='coerce').normalize()
+#         return start_date, end_date, f"from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}"
+
+#     # Pattern 15: "between DATE1 and DATE2"
+#     m = re.search(r'between\s+(\d{4}[-/]\d{1,2}[-/]\d{1,2})\s+and\s+(\d{4}[-/]\d{1,2}[-/]\d{1,2})', query)
+#     if m:
+#         start_date = pd.to_datetime(m.group(1), errors='coerce').normalize()
+#         end_date = pd.to_datetime(m.group(2), errors='coerce').normalize()
+#         return start_date, end_date, f"between {start_date.strftime('%Y-%m-%d')} and {end_date.strftime('%Y-%m-%d')}"
+
+#     # Default: next 7 days
+#     end_date = today + pd.Timedelta(days=7)
+#     return today, end_date, "next 7 days (default)"
 
 
 def format_date_for_display(dt: pd.Timestamp) -> str:
@@ -1170,21 +1311,15 @@ def format_date_for_display(dt: pd.Timestamp) -> str:
     """
     if pd.isna(dt):
         return None
-    return dt.strftime('%Y-%m-%d')
+    return dt.strftime("%Y-%m-%d")
 
 
-def is_date_in_range(date: pd.Timestamp, start: pd.Timestamp, end: pd.Timestamp) -> bool:
+def is_date_in_range(
+    date: pd.Timestamp, start: pd.Timestamp, end: pd.Timestamp
+) -> bool:
     """
     Check if a date falls within a date range (inclusive).
     """
     if pd.isna(date):
         return False
     return start <= date <= end
-
-
-
-
-
-
-
-

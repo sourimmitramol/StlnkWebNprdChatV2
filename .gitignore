@@ -4,6 +4,6 @@ __pycache__/
 .env
 venv/
 cache/
-app.log/
+app.log
 shipment_blob.db
 run_app.ps1/

@@ -7,7 +7,8 @@ Thin compatibility layer – the original notebook imported
 the implementations that live in `services.vectorstore` and `agents.azure_agent`.
 """
 
-from .vectorstore import get_vectorstore as setup_azure_vectorstore
-from .vectorstore import get_vectorstore as setup_azure_vectorstore_with_batching
+from agents.azure_agent import get_azure_embeddings, initialize_azure_agent
 
-from agents.azure_agent import initialize_azure_agent, get_azure_embeddings
+from .vectorstore import get_vectorstore as setup_azure_vectorstore
+from .vectorstore import \
+    get_vectorstore as setup_azure_vectorstore_with_batching
