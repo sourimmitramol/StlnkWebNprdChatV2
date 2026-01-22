@@ -2498,3 +2498,262 @@ UnboundLocalError: cannot access local variable 'candidate_tokens' where it is n
 2026-01-22 11:42:28,684 - shipping_chatbot - INFO - [get_hot_upcoming_arrivals] After hot_container_flag filter: 346 rows
 2026-01-22 11:42:28,687 - shipping_chatbot - INFO - [get_hot_upcoming_arrivals] After date/upcoming filter (start=2026-01-22 00:00:00, end=2026-01-28 00:00:00): 9 rows
 2026-01-22 11:42:28,689 - shipping_chatbot - INFO - [get_hot_upcoming_arrivals] Returning 9 hot container records
+2026-01-22 11:55:55,545 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-22 11:55:55,547 - shipping_chatbot - INFO - Agent created with 54 tools
+2026-01-22 11:55:55,548 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-22 13:59:14,781 - shipping_chatbot - INFO - User_Query: Which containers are going to ENFIELD, CT in Oct, c_codes: ['0042485']
+2026-01-22 13:59:14,781 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers are going to ENFIELD, CT in Oct', length: 48
+2026-01-22 13:59:14,781 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers are going to enfield, ct in oct'
+2026-01-22 13:59:14,781 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-22 14:02:44,783 - shipping_chatbot - INFO - Fetched 19114 rows
+2026-01-22 14:02:44,791 - shipping_chatbot - INFO - Starting preprocessing on 19114 rows
+2026-01-22 14:02:44,953 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-22 14:02:45,979 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-22 14:02:46,246 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-22 14:02:47,218 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-22 14:02:47,218 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-22 14:02:47,218 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-22 14:02:47,275 - shipping_chatbot - INFO - Pre-processing finished - 19114 rows remain
+2026-01-22 14:02:50,801 - shipping_chatbot - INFO - [get_containers_by_final_destination] Processing query: containers going to ENFIELD, CT in October 2025
+2026-01-22 14:02:50,813 - shipping_chatbot - INFO - [get_containers_by_final_destination] Time window: 2025-10-01 00:00:00 to 2025-10-31 00:00:00 (October 2025)
+2026-01-22 14:02:50,930 - shipping_chatbot - INFO - [get_containers_by_final_destination] Initial dataset: 650 rows
+2026-01-22 14:02:50,932 - shipping_chatbot - INFO - [get_containers_by_final_destination] Using eta_fd column only
+2026-01-22 14:02:50,934 - shipping_chatbot - INFO - [get_containers_by_final_destination] Extracted FD location: 'ENFIELD', code: 'None'
+2026-01-22 14:02:50,947 - shipping_chatbot - INFO - [get_containers_by_final_destination] Exact name match: 0 matches
+2026-01-22 14:02:50,958 - shipping_chatbot - INFO - [get_containers_by_final_destination] Word-based match: 546 matches
+2026-01-22 14:02:50,966 - shipping_chatbot - INFO - [get_containers_by_final_destination] Found 546 containers after FD filter
+2026-01-22 14:02:50,974 - shipping_chatbot - INFO - [get_containers_by_final_destination] Found 38 containers after date filter (using eta_fd only)
+2026-01-22 14:02:50,979 - shipping_chatbot - INFO - [get_containers_by_final_destination] Returning 38 containers
+2026-01-22 14:16:26,085 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-22 14:16:26,085 - shipping_chatbot - INFO - Agent created with 54 tools
+2026-01-22 14:16:26,085 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-22 14:16:58,963 - shipping_chatbot - INFO - User_Query: Which containers are going to ENFIELD, CT in Oct, c_codes: ['0042485']
+2026-01-22 14:16:58,966 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers are going to ENFIELD, CT in Oct', length: 48
+2026-01-22 14:16:58,966 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers are going to enfield, ct in oct'
+2026-01-22 14:16:58,966 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-22 14:21:26,170 - shipping_chatbot - INFO - Fetched 19114 rows
+2026-01-22 14:21:26,170 - shipping_chatbot - INFO - Starting preprocessing on 19114 rows
+2026-01-22 14:21:26,289 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-22 14:21:26,967 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-22 14:21:27,203 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-22 14:21:28,021 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-22 14:21:28,023 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-22 14:21:28,025 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-22 14:21:28,069 - shipping_chatbot - INFO - Pre-processing finished - 19114 rows remain
+2026-01-22 14:21:31,701 - shipping_chatbot - INFO - [get_containers_by_final_destination] Processing query: containers going to ENFIELD, CT in October 2025
+2026-01-22 14:21:31,703 - shipping_chatbot - INFO - [get_containers_by_final_destination] Time window: 2025-10-01 00:00:00 to 2025-10-31 00:00:00 (October 2025)
+2026-01-22 14:21:31,818 - shipping_chatbot - INFO - [get_containers_by_final_destination] Initial dataset: 650 rows
+2026-01-22 14:21:31,818 - shipping_chatbot - INFO - [get_containers_by_final_destination] Using eta_fd column only
+2026-01-22 14:21:31,833 - shipping_chatbot - INFO - [get_containers_by_final_destination] Extracted FD location: 'ENFIELD', code: 'None'
+2026-01-22 14:21:31,835 - shipping_chatbot - INFO - [get_containers_by_final_destination] Exact name match: 0 matches
+2026-01-22 14:21:31,844 - shipping_chatbot - INFO - [get_containers_by_final_destination] Word-based match: 546 matches
+2026-01-22 14:21:31,852 - shipping_chatbot - INFO - [get_containers_by_final_destination] Found 546 containers after FD filter
+2026-01-22 14:21:31,859 - shipping_chatbot - INFO - [get_containers_by_final_destination] Found 38 containers after date filter (using eta_fd only)
+2026-01-22 14:21:31,862 - shipping_chatbot - INFO - [get_containers_by_final_destination] Returning 38 containers
+2026-01-22 14:22:01,175 - shipping_chatbot - INFO - User_Query: Which containers are going to ENFIELD, CT in Oct, c_codes: ['0042485']
+2026-01-22 14:22:01,175 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers are going to ENFIELD, CT in Oct', length: 48
+2026-01-22 14:22:01,177 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers are going to enfield, ct in oct'
+2026-01-22 14:22:04,572 - shipping_chatbot - INFO - [get_containers_by_final_destination] Processing query: containers arriving at ENFIELD, CT in October 2025
+2026-01-22 14:22:04,574 - shipping_chatbot - INFO - [get_containers_by_final_destination] Time window: 2025-10-01 00:00:00 to 2025-10-31 00:00:00 (October 2025)
+2026-01-22 14:22:04,709 - shipping_chatbot - INFO - [get_containers_by_final_destination] Initial dataset: 650 rows
+2026-01-22 14:22:04,709 - shipping_chatbot - INFO - [get_containers_by_final_destination] Using eta_fd column only
+2026-01-22 14:22:04,709 - shipping_chatbot - INFO - [get_containers_by_final_destination] Extracted FD location: 'ENFIELD', code: 'None'
+2026-01-22 14:22:04,726 - shipping_chatbot - INFO - [get_containers_by_final_destination] Exact name match: 0 matches
+2026-01-22 14:22:04,736 - shipping_chatbot - INFO - [get_containers_by_final_destination] Word-based match: 546 matches
+2026-01-22 14:22:04,743 - shipping_chatbot - INFO - [get_containers_by_final_destination] Found 546 containers after FD filter
+2026-01-22 14:22:04,749 - shipping_chatbot - INFO - [get_containers_by_final_destination] Found 38 containers after date filter (using eta_fd only)
+2026-01-22 14:22:04,751 - shipping_chatbot - INFO - [get_containers_by_final_destination] Returning 38 containers
+2026-01-22 14:29:21,446 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-22 14:29:21,446 - shipping_chatbot - INFO - Agent created with 54 tools
+2026-01-22 14:29:21,446 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-22 14:29:26,696 - shipping_chatbot - INFO - User_Query: Which containers are going to ENFIELD, CT in Oct, c_codes: ['0042485']
+2026-01-22 14:29:26,700 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers are going to ENFIELD, CT in Oct', length: 48
+2026-01-22 14:29:26,700 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers are going to enfield, ct in oct'
+2026-01-22 14:29:26,700 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-22 14:33:25,498 - shipping_chatbot - INFO - Fetched 19114 rows
+2026-01-22 14:33:25,502 - shipping_chatbot - INFO - Starting preprocessing on 19114 rows
+2026-01-22 14:33:25,718 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-22 14:33:27,002 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-22 14:33:27,387 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-22 14:33:28,115 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-22 14:33:28,131 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-22 14:33:28,132 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-22 14:33:28,163 - shipping_chatbot - INFO - Pre-processing finished - 19114 rows remain
+2026-01-22 14:33:31,102 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: Oct 2026, Dates: 2026-10-01 to 2026-10-31, is_past=False
+2026-01-22 14:33:31,248 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found city location: ENFIELD (normalized: ENFIELD)
+2026-01-22 14:33:31,250 - shipping_chatbot - INFO - [get_upcoming_arrivals] Applying location filter for 'ENFIELD'. Rows before filter: 650, Matching rows: 546
+2026-01-22 14:33:31,250 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample ports after filter: ['NEW YORK, NY(USNYC)', 'NEWARK, NJ(USEWR)']
+2026-01-22 14:43:29,785 - shipping_chatbot - INFO - User_Query: Which containers arrived to ENFIELD, CT in Oct, c_codes: ['0042485']
+2026-01-22 14:43:29,785 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers arrived to ENFIELD, CT in Oct', length: 46
+2026-01-22 14:43:29,785 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers arrived to enfield, ct in oct'
+2026-01-22 14:43:33,393 - shipping_chatbot - INFO - [get_arrivals_by_port] Period: Oct 2025, Dates: 2025-10-01 to 2025-10-31
+2026-01-22 14:44:00,313 - shipping_chatbot - INFO - User_Query: Which containers arrived to ENFIELD, CT in Oct, c_codes: ['0042485']
+2026-01-22 14:44:00,313 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers arrived to ENFIELD, CT in Oct', length: 46
+2026-01-22 14:44:00,313 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers arrived to enfield, ct in oct'
+2026-01-22 14:44:03,012 - shipping_chatbot - INFO - [get_arrivals_by_port] Period: Oct 2025, Dates: 2025-10-01 to 2025-10-31
+2026-01-22 14:44:32,812 - shipping_chatbot - INFO - User_Query: Which containers arrived to ENFIELD, CT in Oct, c_codes: ['0042485']
+2026-01-22 14:44:32,812 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers arrived to ENFIELD, CT in Oct', length: 46
+2026-01-22 14:44:32,813 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers arrived to enfield, ct in oct'
+2026-01-22 14:44:35,788 - shipping_chatbot - INFO - [get_arrivals_by_port] Period: Oct 2025, Dates: 2025-10-01 to 2025-10-31
+2026-01-22 14:46:37,330 - shipping_chatbot - INFO - User_Query: Which containers have ETD in next 7 days, c_codes: ['0000866']
+2026-01-22 14:46:37,332 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers have ETD in next 7 days', length: 40
+2026-01-22 14:46:37,332 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers have etd in next 7 days'
+2026-01-22 14:46:40,261 - shipping_chatbot - INFO - [get_containers_by_etd_window] Processing query: containers with ETD in next 7 days
+2026-01-22 14:46:40,263 - shipping_chatbot - INFO - [get_containers_by_etd_window] Parsed time window: 2026-01-22 00:00:00 to 2026-01-28 00:00:00 (next 7 days)
+2026-01-22 14:46:40,378 - shipping_chatbot - INFO - [get_containers_by_etd_window] Initial dataset size: 2095 rows
+2026-01-22 14:46:40,387 - shipping_chatbot - INFO - [get_containers_by_etd_window] Port extraction: code=None, name=None
+2026-01-22 15:06:27,772 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-22 15:06:27,773 - shipping_chatbot - INFO - Agent created with 54 tools
+2026-01-22 15:06:27,773 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-22 15:10:36,742 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-22 15:10:36,742 - shipping_chatbot - INFO - Agent created with 54 tools
+2026-01-22 15:10:36,742 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-22 15:15:52,858 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-22 15:15:52,859 - shipping_chatbot - INFO - Agent created with 54 tools
+2026-01-22 15:15:52,859 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-22 15:20:39,171 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-22 15:20:39,171 - shipping_chatbot - INFO - Agent created with 54 tools
+2026-01-22 15:20:39,171 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-22 15:45:10,005 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-22 15:45:10,005 - shipping_chatbot - INFO - Agent created with 54 tools
+2026-01-22 15:45:10,005 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-22 15:47:17,214 - shipping_chatbot - INFO - User_Query: Which containers have ETD in the next 7 days?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-22 15:47:17,214 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers have ETD in the next 7 days?', length: 45
+2026-01-22 15:47:17,214 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers have etd in the next 7 days?'
+2026-01-22 15:47:17,214 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-22 15:48:07,794 - shipping_chatbot - INFO - Fetched 19183 rows
+2026-01-22 15:48:07,797 - shipping_chatbot - INFO - Starting preprocessing on 19183 rows
+2026-01-22 15:48:07,898 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-22 15:48:08,413 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-22 15:48:08,587 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-22 15:48:09,134 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-22 15:48:09,134 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-22 15:48:09,134 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-22 15:48:09,167 - shipping_chatbot - INFO - Pre-processing finished - 19183 rows remain
+2026-01-22 15:48:12,045 - shipping_chatbot - INFO - [get_containers_by_etd_window] Processing query: containers with ETD in the next 7 days
+2026-01-22 15:48:12,045 - shipping_chatbot - INFO - [get_containers_by_etd_window] Parsed time window: 2026-01-22 00:00:00 to 2026-01-28 00:00:00 (next 7 days)
+2026-01-22 15:48:12,115 - shipping_chatbot - INFO - [get_containers_by_etd_window] Initial dataset size: 12699 rows
+2026-01-22 15:48:12,115 - shipping_chatbot - INFO - [get_containers_by_etd_window] Port extraction: code=None, name=THE
+2026-01-22 15:48:12,157 - shipping_chatbot - INFO - [get_containers_by_etd_window] After port filter: 0 rows matched
+2026-01-22 15:48:13,127 - shipping_chatbot - INFO - [get_containers_by_etd_window] Processing query: containers with ETD in the next 7 days
+2026-01-22 15:48:13,128 - shipping_chatbot - INFO - [get_containers_by_etd_window] Parsed time window: 2026-01-22 00:00:00 to 2026-01-28 00:00:00 (next 7 days)
+2026-01-22 15:48:13,196 - shipping_chatbot - INFO - [get_containers_by_etd_window] Initial dataset size: 12699 rows
+2026-01-22 15:48:13,196 - shipping_chatbot - INFO - [get_containers_by_etd_window] Port extraction: code=None, name=THE
+2026-01-22 15:48:13,234 - shipping_chatbot - INFO - [get_containers_by_etd_window] After port filter: 0 rows matched
+2026-01-22 15:48:14,195 - shipping_chatbot - INFO - [get_containers_by_etd_window] Processing query: containers with ETD in the next 7 days
+2026-01-22 15:48:14,195 - shipping_chatbot - INFO - [get_containers_by_etd_window] Parsed time window: 2026-01-22 00:00:00 to 2026-01-28 00:00:00 (next 7 days)
+2026-01-22 15:48:14,265 - shipping_chatbot - INFO - [get_containers_by_etd_window] Initial dataset size: 12699 rows
+2026-01-22 15:48:14,265 - shipping_chatbot - INFO - [get_containers_by_etd_window] Port extraction: code=None, name=THE
+2026-01-22 15:48:14,305 - shipping_chatbot - INFO - [get_containers_by_etd_window] After port filter: 0 rows matched
+2026-01-22 15:48:38,464 - shipping_chatbot - INFO - User_Query: Which containers have ETD in next 7 days?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-22 15:48:38,464 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers have ETD in next 7 days?', length: 41
+2026-01-22 15:48:38,464 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers have etd in next 7 days?'
+2026-01-22 15:48:41,062 - shipping_chatbot - INFO - [get_containers_by_etd_window] Processing query: containers with ETD in next 7 days
+2026-01-22 15:48:41,062 - shipping_chatbot - INFO - [get_containers_by_etd_window] Parsed time window: 2026-01-22 00:00:00 to 2026-01-28 00:00:00 (next 7 days)
+2026-01-22 15:48:41,136 - shipping_chatbot - INFO - [get_containers_by_etd_window] Initial dataset size: 12699 rows
+2026-01-22 15:48:41,153 - shipping_chatbot - INFO - [get_containers_by_etd_window] Port extraction: code=None, name=None
+2026-01-22 15:53:10,525 - shipping_chatbot - INFO - User_Query: how many containers departed from CNSHA day before yesterday?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-22 15:53:10,525 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'how many containers departed from CNSHA day before yesterday?', length: 61
+2026-01-22 15:53:10,525 - shipping_chatbot - INFO - [DEBUG] q_lower: 'how many containers departed from cnsha day before yesterday?'
+2026-01-22 15:53:13,193 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted: container=None, po=None, obl=None
+2026-01-22 15:53:13,194 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted load_port: 'CNSHA'
+2026-01-22 15:53:13,195 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Time window: 2026-01-20 00:00:00 to 2026-01-20 00:00:00 (day before yesterday)
+2026-01-22 15:53:13,299 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Port variants to match: {'CNSHA', 'SHANGHAI'}
+2026-01-22 15:53:13,353 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] After port filter: 783 rows matched
+2026-01-22 15:53:13,353 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Sample matched ports: ['SHANGHAI(CNSHA)', 'SHANGHAI(CNSHA)', 'SHANGHAI(CNSHA)', 'SHANGHAI(CNSHA)', 'SHANGHAI(CNSHA)']
+2026-01-22 15:53:13,353 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] After date filter: 5 rows matched
+2026-01-22 15:53:13,364 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Sample filtered results:
+      container_number dep_for_filter departure_source
+17988      KOCU5257132     2026-01-20              ATD
+18545      CSNU2536395     2026-01-20              ATD
+18548      CSLU2226113     2026-01-20              ATD
+18634      HAMU1559889     2026-01-20              ATD
+18635      FCIU7615671     2026-01-20              ATD
+2026-01-22 15:53:13,366 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Returning 5 records
+2026-01-22 15:55:07,901 - shipping_chatbot - INFO - User_Query: Which containers have ETD in the next 7 days?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-22 15:55:07,902 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers have ETD in the next 7 days?', length: 45
+2026-01-22 15:55:07,902 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers have etd in the next 7 days?'
+2026-01-22 15:55:10,430 - shipping_chatbot - INFO - [get_containers_by_etd_window] Processing query: containers with ETD in the next 7 days
+2026-01-22 15:55:10,430 - shipping_chatbot - INFO - [get_containers_by_etd_window] Parsed time window: 2026-01-22 00:00:00 to 2026-01-28 00:00:00 (next 7 days)
+2026-01-22 15:55:10,507 - shipping_chatbot - INFO - [get_containers_by_etd_window] Initial dataset size: 12699 rows
+2026-01-22 15:55:10,507 - shipping_chatbot - INFO - [get_containers_by_etd_window] Port extraction: code=None, name=THE
+2026-01-22 15:55:10,556 - shipping_chatbot - INFO - [get_containers_by_etd_window] After port filter: 0 rows matched
+2026-01-22 15:56:19,536 - shipping_chatbot - INFO - User_Query: Which containers have ETD in next 7 days?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-22 15:56:19,536 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers have ETD in next 7 days?', length: 41
+2026-01-22 15:56:19,536 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers have etd in next 7 days?'
+2026-01-22 15:56:22,342 - shipping_chatbot - INFO - [get_containers_by_etd_window] Processing query: containers with ETD in next 7 days
+2026-01-22 15:56:22,346 - shipping_chatbot - INFO - [get_containers_by_etd_window] Parsed time window: 2026-01-22 00:00:00 to 2026-01-28 00:00:00 (next 7 days)
+2026-01-22 15:56:22,438 - shipping_chatbot - INFO - [get_containers_by_etd_window] Initial dataset size: 12699 rows
+2026-01-22 15:56:22,441 - shipping_chatbot - INFO - [get_containers_by_etd_window] Port extraction: code=None, name=None
+2026-01-22 15:58:49,518 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-22 15:58:49,518 - shipping_chatbot - INFO - Agent created with 54 tools
+2026-01-22 15:58:49,518 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-22 15:58:54,843 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-22 15:58:54,843 - shipping_chatbot - INFO - Agent created with 54 tools
+2026-01-22 15:58:54,843 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-22 15:59:05,616 - shipping_chatbot - INFO - User_Query: Which containers have ETD in next 7 days?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-22 15:59:05,616 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers have ETD in next 7 days?', length: 41
+2026-01-22 15:59:05,616 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers have etd in next 7 days?'
+2026-01-22 15:59:05,616 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-22 15:59:21,786 - shipping_chatbot - INFO - Fetched 19183 rows
+2026-01-22 15:59:21,786 - shipping_chatbot - INFO - Starting preprocessing on 19183 rows
+2026-01-22 15:59:21,908 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-22 15:59:22,579 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-22 15:59:22,788 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-22 15:59:23,452 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-22 15:59:23,452 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-22 15:59:23,452 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-22 15:59:23,494 - shipping_chatbot - INFO - Pre-processing finished - 19183 rows remain
+2026-01-22 15:59:26,167 - shipping_chatbot - INFO - [get_containers_by_etd_window] Processing query: containers with ETD in next 7 days
+2026-01-22 15:59:26,169 - shipping_chatbot - INFO - [get_containers_by_etd_window] Parsed time window: 2026-01-22 00:00:00 to 2026-01-28 00:00:00 (next 7 days)
+2026-01-22 15:59:26,235 - shipping_chatbot - INFO - [get_containers_by_etd_window] Initial dataset size: 12699 rows
+2026-01-22 15:59:26,235 - shipping_chatbot - INFO - [get_containers_by_etd_window] Port extraction: code=None, name=None
+2026-01-22 15:59:52,523 - shipping_chatbot - INFO - User_Query: Which containers have ETD in the next 7 days?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-22 15:59:52,524 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers have ETD in the next 7 days?', length: 45
+2026-01-22 15:59:52,524 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers have etd in the next 7 days?'
+2026-01-22 15:59:55,542 - shipping_chatbot - INFO - [get_containers_by_etd_window] Processing query: containers with ETD in next 7 days
+2026-01-22 15:59:55,542 - shipping_chatbot - INFO - [get_containers_by_etd_window] Parsed time window: 2026-01-22 00:00:00 to 2026-01-28 00:00:00 (next 7 days)
+2026-01-22 15:59:55,612 - shipping_chatbot - INFO - [get_containers_by_etd_window] Initial dataset size: 12699 rows
+2026-01-22 15:59:55,612 - shipping_chatbot - INFO - [get_containers_by_etd_window] Port extraction: code=None, name=None
+2026-01-22 16:08:27,054 - shipping_chatbot - INFO - User_Query: What shipments are scheduled for this week?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-22 16:08:27,054 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'What shipments are scheduled for this week?', length: 43
+2026-01-22 16:08:27,054 - shipping_chatbot - INFO - [DEBUG] q_lower: 'what shipments are scheduled for this week?'
+2026-01-22 16:08:29,787 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: next 7 days, Dates: 2026-01-22 to 2026-01-28, is_past=False
+2026-01-22 16:08:29,905 - shipping_chatbot - INFO - [get_upcoming_arrivals] Extracted 171 known port codes from dataset
+2026-01-22 16:08:29,905 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample known codes: ['JPOSA', 'CHZRH', 'SEGOT', 'IDJKT', 'USIAH', 'CNBJS', 'USLGB', 'DKCPH', 'DELGG', 'JPSTM', 'NLRTM', 'FRLEH', 'USLUI', 'USOAK', 'GBLGP', 'BEANR', 'DEWVN', 'CZPRG', 'THBKK', 'USMJB']
+2026-01-22 16:08:29,905 - shipping_chatbot - INFO - [get_upcoming_arrivals] Checking for port code after preposition in query: 'CONTAINERS ARRIVING IN NEXT 7 DAYS'
+2026-01-22 16:08:29,905 - shipping_chatbot - INFO - [get_upcoming_arrivals] prep_code_match found: False
+2026-01-22 16:24:47,610 - shipping_chatbot - INFO - User_Query: What shipments are scheduled for this week?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-22 16:24:47,611 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'What shipments are scheduled for this week?', length: 43
+2026-01-22 16:24:47,611 - shipping_chatbot - INFO - [DEBUG] q_lower: 'what shipments are scheduled for this week?'
+2026-01-22 16:24:52,409 - shipping_chatbot - INFO - [get_containers_departing_from_load_port] Extracted: container=None, po=None, obl=None, is_booking_query=False
+2026-01-22 16:24:52,409 - shipping_chatbot - INFO - [get_containers_departing_from_load_port] Extracted load_port: 'None'
+2026-01-22 16:24:52,409 - shipping_chatbot - INFO - [get_containers_departing_from_load_port] Time window: 2026-01-22 00:00:00 to 2026-01-28 00:00:00 (next 7 days), is_booking_query=False
+2026-01-22 16:24:52,489 - shipping_chatbot - INFO - [get_containers_departing_from_load_port] After _df() consignee filter: 12699 rows
+2026-01-22 16:24:52,490 - shipping_chatbot - INFO - [get_containers_departing_from_load_port] Thread consignee codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-22 16:24:52,510 - shipping_chatbot - INFO - [get_containers_departing_from_load_port] Returning 177 records (is_booking_query=False)
+2026-01-22 16:31:28,826 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-22 16:31:28,826 - shipping_chatbot - INFO - Agent created with 54 tools
+2026-01-22 16:31:28,826 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-22 16:32:38,874 - shipping_chatbot - INFO - User_Query: What shipments are scheduled for this week?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-22 16:32:38,874 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'What shipments are scheduled for this week?', length: 43
+2026-01-22 16:32:38,874 - shipping_chatbot - INFO - [DEBUG] q_lower: 'what shipments are scheduled for this week?'
+2026-01-22 16:32:38,874 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-22 16:33:06,059 - shipping_chatbot - INFO - Fetched 19183 rows
+2026-01-22 16:33:06,069 - shipping_chatbot - INFO - Starting preprocessing on 19183 rows
+2026-01-22 16:33:06,236 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-22 16:33:06,885 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-22 16:33:07,185 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-22 16:33:08,118 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-22 16:33:08,124 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-22 16:33:08,124 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-22 16:33:08,178 - shipping_chatbot - INFO - Pre-processing finished - 19183 rows remain
+2026-01-22 16:33:11,468 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: this week, Dates: 2026-01-19 to 2026-01-25, is_past=False
+2026-01-22 16:33:11,613 - shipping_chatbot - INFO - [get_upcoming_arrivals] Extracted 171 known port codes from dataset
+2026-01-22 16:33:11,613 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample known codes: ['USCHI', 'USTCN', 'CNXMG', 'USMSY', 'CNNGB', 'KRPUS', 'SEMMA', 'GBSOU', 'CAYYZ', 'CNLFZ', 'JPNRT', 'KRICN', 'USWOS', 'SEGOT', 'VNSGN', 'CNXAM', 'GBGRG', 'CAVAN', 'USCMH', 'GBFXT']
+2026-01-22 16:33:11,613 - shipping_chatbot - INFO - [get_upcoming_arrivals] Checking for port code after preposition in query: 'CONTAINERS SCHEDULED FOR THIS WEEK'
+2026-01-22 16:33:11,615 - shipping_chatbot - INFO - [get_upcoming_arrivals] prep_code_match found: False
+2026-01-22 16:34:16,902 - shipping_chatbot - INFO - User_Query: What containers are delayed by 4 days?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-22 16:34:16,902 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'What containers are delayed by 4 days?', length: 38
+2026-01-22 16:34:16,903 - shipping_chatbot - INFO - [DEBUG] q_lower: 'what containers are delayed by 4 days?'
+2026-01-22 16:34:19,539 - shipping_chatbot - INFO - [get_delayed_containers] Query: 'delayed by 4 days', consignee_code: None

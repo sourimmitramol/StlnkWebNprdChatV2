@@ -13,12 +13,22 @@ Do not write summaries like "the user now has a detailed guide".
 **CRITICAL: Date Handling Policy (Must Follow)**
 When calling tools with date-related queries:
 - NEVER calculate or convert relative dates yourself (e.g., "yesterday", "day before yesterday", "N days ago")
-- ALWAYS pass the user's ORIGINAL relative date phrase to the tool AS-IS
-- The tools have built-in date parsing that correctly handles current date context
+- NEVER add year information (2025, 2026, etc.) when user hasn't specified it
+- NEVER convert "this week" to "next 7 days" or "this month" to "next 30 days" - these have different meanings
+- ALWAYS pass the user's ORIGINAL date phrase to the tool AS-IS, preserving verb tense
+- The tools have built-in date parsing that correctly handles current date context AND VERB TENSE
+- ✓ CORRECT: action_input = "containers going to ENFIELD in Oct" (preserves future tense "going to")
 - ✓ CORRECT: action_input = "containers departed from QINGDAO day before yesterday"
+- ✓ CORRECT: action_input = "containers scheduled for this week" (preserves "this week" = current calendar week)
+- ✓ CORRECT: action_input = "delayed containers this month" (preserves "this month" = current calendar month)
+- ✗ WRONG: action_input = "containers arriving at ENFIELD, CT in October 2025" (NEVER insert years)
 - ✗ WRONG: action_input = "containers departed from QINGDAO on 2025-10-23" (never insert explicit dates)
+- ✗ WRONG: action_input = "containers scheduled to depart in next 7 days" when user said "this week"
+- If user says "going to in Oct" (future tense), the tool interprets it as October 2026
+- If user says "reached in Oct" (past tense), the tool interprets it as October 2025
 - If user says "yesterday" and today is 2026-01-22, the tool will correctly interpret it as 2026-01-21
-- If user says "day before yesterday", the tool will correctly interpret it as 2026-01-20
+- If user says "this week" on 2026-01-22, the tool interprets it as Jan 19-25, 2026 (Monday-Sunday)
+- If user says "this month" on 2026-01-22, the tool interprets it as Jan 1-31, 2026 (full month)
 
 You are an expert shipping data assistant. The dataset contains many columns, each of which may be referred to by multiple names, abbreviations, or synonyms. Always map user terms to the correct column using the mappings below. Recognize both full forms and short forms, and treat them as equivalent.
 Port/location normalization (high priority)
@@ -755,25 +765,31 @@ def parse_time_period(query: str) -> tuple[pd.Timestamp, pd.Timestamp, str]:
     """
     Parse natural language time expressions into (start_date, end_date, description).
 
-    **CRITICAL FIX FOR YEAR DETECTION (January 21, 2026)**:
-    - When only month names are provided (e.g., "Jun-Sep", "June to September"):
-      * If we're in Jan-Mar 2026 and user asks for Apr-Dec months → use 2025 (those months haven't occurred in 2026 yet)
-      * If user asks for Jan-Mar months while we're in those months → use current year 2026
-      * Never default to 2024 unless explicitly stated
+    **CRITICAL FIX FOR YEAR DETECTION WITH VERB TENSE (January 22, 2026)**:
+    - **VERB TENSE TAKES PRIORITY** over month-based heuristics:
+      * Future tense ("going to", "will", "shall", "arriving") → use current year (2026)
+      * Past tense ("reached", "arrived", "departed", "came") → use previous year (2025)
+      * No clear tense → use month-based logic below
 
-    **Examples (assuming current date is January 21, 2026)**:
-    - "Jun-Sep" → June 1, 2025 to September 30, 2025 (these months haven't occurred in 2026 yet)
-    - "Jan-Feb" → January 1, 2026 to February 28, 2026 (we're currently in Jan 2026)
-    - "December" → December 1, 2025 to December 31, 2025 (December 2025 has passed)
-    - "December 2025" → December 1, 2025 to December 31, 2025 (explicit year preserved)
+    - When only month names are provided without year:
+      * Future tense: "going to ENFIELD in Oct" → October 2026 (not 2025)
+      * Past tense: "reached ENFIELD in Oct" → October 2025
+      * Neutral: "Oct" without verb → October 2025 (month hasn't occurred in 2026 yet)
+
+    **Examples (assuming current date is January 22, 2026)**:
+    - "going to ENFIELD in Oct" → October 1-31, 2026 (future tense overrides)
+    - "containers arriving in Oct" → October 1-31, 2026 (future tense)
+    - "reached in Oct" → October 1-31, 2025 (past tense)
+    - "departed in Oct" → October 1-31, 2025 (past tense)
+    - "Oct" (no verb) → October 1-31, 2025 (default: month hasn't occurred this year)
+    - "December 2025" → December 1-31, 2025 (explicit year preserved)
     - "next 7 days" → today to today+6
-    - "this week" → Monday to Sunday of current week
-    - "between 2024-06-01 and 2024-09-30" → explicit dates as given
+    - "yesterday" → January 21, 2026
 
     Supported patterns:
     - Month ranges: "Jun-Sep", "June to September", "from June to September"
     - Months with year: "December 2025", "in dec 2025"
-    - Single months: "December", "in dec"
+    - Single months: "December", "in dec", "in Oct"
     - Relative: "today", "tomorrow", "yesterday", "next week", "last month"
     - Ranges: "next 7 days", "last 30 days", "in next 5 days"
     - Explicit: "from 2025-01-15 to 2025-01-20", "between dates"
@@ -905,6 +921,29 @@ def parse_time_period(query: str) -> tuple[pd.Timestamp, pd.Timestamp, str]:
         "december": 12,
     }
 
+    # ========================================================================
+    # VERB TENSE DETECTION: Determine if query refers to future or past
+    # ========================================================================
+    # Future indicators: going to, will, shall, arriving, scheduled, expected, upcoming, next
+    future_patterns = r"\b(going\s+to|will|shall|arriving|scheduled|expected|upcoming|are\s+going|is\s+going)\b"
+    is_future_tense = bool(re.search(future_patterns, query, re.IGNORECASE))
+
+    # Past indicators: reached, arrived, departed, came, have/has + past participle, was, were
+    past_patterns = (
+        r"\b(reached|arrived|departed|came|have\s+\w+ed|has\s+\w+ed|was|were|had)\b"
+    )
+    is_past_tense = bool(re.search(past_patterns, query, re.IGNORECASE))
+
+    try:
+        import logging
+
+        logger = logging.getLogger(__name__)
+        logger.info(
+            f"[parse_time_period] Verb tense detection - Future: {is_future_tense}, Past: {is_past_tense}"
+        )
+    except:
+        pass
+
     # **PRIORITY 1**: Month ranges without year (e.g., "Jun-Sep", "June to September")
     month_range_patterns = [
         r"\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s*[-–—]\s*(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b",
@@ -932,13 +971,51 @@ def parse_time_period(query: str) -> tuple[pd.Timestamp, pd.Timestamp, str]:
             end_month_num = month_map.get(end_month_key)
 
             if start_month_num and end_month_num:
-                # **CRITICAL YEAR DETECTION LOGIC**
+                # **CRITICAL YEAR DETECTION LOGIC WITH VERB TENSE**
                 # Current: January 2026 (current_month=1, current_year=2026)
 
-                # Rule 1: If start_month > current_month, it refers to LAST YEAR (2025)
-                #         Example: In Jan 2026, "Jun-Sep" means June-September 2025
-                if start_month_num > current_month:
-                    year = current_year - 1  # Use previous year (2025)
+                # VERB TENSE OVERRIDES MONTH-BASED LOGIC:
+                # - Future tense ("going to", "will") → use current year or next year
+                # - Past tense ("reached", "arrived") → use previous year
+                # - No clear tense → use month-based heuristic
+
+                if is_future_tense and not is_past_tense:
+                    # Future tense: always use current year or future
+                    # Example: In Jan 2026, "going to in Oct" means October 2026
+                    year = current_year
+                    try:
+                        import logging
+
+                        logger = logging.getLogger(__name__)
+                        logger.info(
+                            f"[parse_time_period] Month range {start_month_str}-{end_month_str}: "
+                            f"FUTURE TENSE detected, using current year {year}"
+                        )
+                    except:
+                        pass
+
+                elif is_past_tense and not is_future_tense:
+                    # Past tense: use previous year if month >= current_month
+                    # Example: In Jan 2026, "reached in Oct" means October 2025
+                    if start_month_num >= current_month:
+                        year = current_year - 1
+                    else:
+                        year = current_year - 1  # Past months in past year
+                    try:
+                        import logging
+
+                        logger = logging.getLogger(__name__)
+                        logger.info(
+                            f"[parse_time_period] Month range {start_month_str}-{end_month_str}: "
+                            f"PAST TENSE detected, using previous year {year}"
+                        )
+                    except:
+                        pass
+
+                # No clear verb tense - use month-based heuristic (original logic)
+                elif start_month_num > current_month:
+                    # Month hasn't occurred this year yet
+                    year = current_year - 1  # Assume last year
                     try:
                         import logging
 
@@ -951,7 +1028,6 @@ def parse_time_period(query: str) -> tuple[pd.Timestamp, pd.Timestamp, str]:
                     except:
                         pass
 
-                # Rule 2: If start_month <= current_month, check if it's current month or past
                 elif start_month_num == current_month:
                     # Same month as current → use current year
                     year = current_year
@@ -968,7 +1044,6 @@ def parse_time_period(query: str) -> tuple[pd.Timestamp, pd.Timestamp, str]:
 
                 else:  # start_month_num < current_month
                     # Past month in current year → use LAST YEAR for historical data
-                    # Example: In Jan 2026, asking for "Nov-Dec" likely means Nov-Dec 2025
                     year = current_year - 1
                     try:
                         import logging
@@ -977,7 +1052,7 @@ def parse_time_period(query: str) -> tuple[pd.Timestamp, pd.Timestamp, str]:
                         logger.info(
                             f"[parse_time_period] Month range {start_month_str}-{end_month_str}: "
                             f"start_month ({start_month_num}) < current_month ({current_month}), "
-                            f"using previous year {year} (assuming last year's data)"
+                            f"using previous year {year}"
                         )
                     except:
                         pass
@@ -1061,13 +1136,69 @@ def parse_time_period(query: str) -> tuple[pd.Timestamp, pd.Timestamp, str]:
         month = month_map.get(month_name)
 
         if month:
-            # **SMART YEAR DETECTION**: Same logic as month ranges
-            # If month > current_month, use previous year
-            # If month <= current_month, use current year
-            if month > current_month:
+            # **SMART YEAR DETECTION WITH VERB TENSE**
+            # Future tense → use current year (2026)
+            # Past tense → use previous year (2025) if month >= current_month
+            # No clear tense → month-based heuristic
+
+            if is_future_tense and not is_past_tense:
+                # Future tense: use current year
+                # Example: In Jan 2026, "going to in Oct" means October 2026
+                year = current_year
+                try:
+                    import logging
+
+                    logger = logging.getLogger(__name__)
+                    logger.info(
+                        f"[parse_time_period] Single month '{month_name}': "
+                        f"FUTURE TENSE detected, using current year {year}"
+                    )
+                except:
+                    pass
+
+            elif is_past_tense and not is_future_tense:
+                # Past tense: use previous year
+                # Example: In Jan 2026, "reached in Oct" means October 2025
+                if month >= current_month:
+                    year = current_year - 1
+                else:
+                    year = current_year - 1
+                try:
+                    import logging
+
+                    logger = logging.getLogger(__name__)
+                    logger.info(
+                        f"[parse_time_period] Single month '{month_name}': "
+                        f"PAST TENSE detected, using previous year {year}"
+                    )
+                except:
+                    pass
+
+            # No clear verb tense - use month-based heuristic
+            elif month > current_month:
                 year = current_year - 1
+                try:
+                    import logging
+
+                    logger = logging.getLogger(__name__)
+                    logger.info(
+                        f"[parse_time_period] Single month '{month_name}': "
+                        f"month ({month}) > current_month ({current_month}), using previous year {year}"
+                    )
+                except:
+                    pass
             else:
                 year = current_year
+                try:
+                    import logging
+
+                    logger = logging.getLogger(__name__)
+                    logger.info(
+                        f"[parse_time_period] Single month '{month_name}': "
+                        f"month ({month}) <= current_month ({current_month}), using current year {year}"
+                    )
+                except:
+                    pass
 
             start_date = pd.Timestamp(year=year, month=month, day=1).normalize()
             # Get last day of the month
@@ -1081,15 +1212,20 @@ def parse_time_period(query: str) -> tuple[pd.Timestamp, pd.Timestamp, str]:
 
             return start_date, end_date, f"{month_name.capitalize()} {year}"
 
-    # Pattern 7: "next X days" or "in next X days"
-    m = re.search(r"(?:next|in\s+next|in)\s+(\d{1,3})\s+days?", query)
+    # Pattern 7: "next X days" or "in next X days" or "coming X days"
+    m = re.search(
+        r"(?:next|in\s+next|in|coming|in\s+coming)\s+(\d{1,3})\s+days?", query
+    )
     if m:
         n = int(m.group(1))
         end_date = today + pd.Timedelta(days=n - 1)
         return today, end_date, f"next {n} days"
 
-    # Pattern 8: "last X days" or "past X days"
-    m = re.search(r"(?:last|past|previous)\s+(\d{1,3})\s+days?", query)
+    # Pattern 8: "last X days" or "past X days" or "in last X days" (with or without space before "days")
+    m = re.search(
+        r"(?:in\s+)?(?:last|past|previous|the\s+last|the\s+past)\s+(\d{1,3})\s*days?",
+        query,
+    )
     if m:
         n = int(m.group(1))
         start_date = today - pd.Timedelta(days=n - 1)
