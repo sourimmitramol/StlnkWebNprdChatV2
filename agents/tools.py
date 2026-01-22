@@ -3790,7 +3790,7 @@ def get_upcoming_arrivals(query: str) -> str:
                 # Pattern with prepositions: "at/in/to CITY_NAME"
                 r"\b(?:AT|IN|TO)\s+([A-Z][A-Za-z\s\.\-\']{3,}?)(?:\s+IN\s+|\s+NEXT\s+|\s+WITHIN\s+|,|\s*$)",
                 # Known major ports/cities
-                r"\b(LOS\s+ANGELES|LONG\s+BEACH|NEW\s+YORK|SINGAPORE|ROTTERDAM|HONG\s+KONG|SHANGHAI|BUSAN|TOKYO|OAKLAND|SAVANNAH|HOUSTON|MIAMI|SEATTLE|CHICAGO|PORT\s+OF\s+[A-Z\s]+)\b",
+                r"\b(LOS\s+ANGELES|LONG\s+BEACH|NEW\s+YORK|NASHVILLE|SINGAPORE|ROTTERDAM|HONG\s+KONG|SHANGHAI|BUSAN|TOKYO|OAKLAND|SAVANNAH|HOUSTON|MIAMI|SEATTLE|CHICAGO|ATLANTA|SAN\s+DIEGO|PORT\s+OF\s+[A-Z\s]+)\b",
             ]
 
             for pattern in city_patterns:
@@ -3859,8 +3859,88 @@ def get_upcoming_arrivals(query: str) -> str:
             except Exception:
                 pass
 
-            # Only proceed if we have known codes
-            if known_codes:
+            try:
+                logger.info(
+                    f"[get_upcoming_arrivals] Extracted {len(known_codes)} known port codes from dataset"
+                )
+                logger.info(
+                    f"[get_upcoming_arrivals] Sample known codes: {list(known_codes)[:20]}"
+                )
+            except:
+                pass
+
+            # **CRITICAL FIX**: First check for port codes after prepositions (at/in/to)
+            # This should work REGARDLESS of whether the code is in known_codes
+            prep_code_match = re.search(
+                r"\b(?:AT|IN|TO)\s+([A-Z]{2}[A-Z0-9]{3,4})\b", query.upper()
+            )
+
+            try:
+                logger.info(
+                    f"[get_upcoming_arrivals] Checking for port code after preposition in query: '{query.upper()}'"
+                )
+                logger.info(
+                    f"[get_upcoming_arrivals] prep_code_match found: {prep_code_match is not None}"
+                )
+                if prep_code_match:
+                    logger.info(
+                        f"[get_upcoming_arrivals] Matched port code: {prep_code_match.group(1)}"
+                    )
+            except:
+                pass
+
+            if prep_code_match:
+                tok = prep_code_match.group(1)
+                try:
+                    logger.info(
+                        f"[get_upcoming_arrivals] Found port code after preposition: {tok}"
+                    )
+                    logger.info(
+                        f"[get_upcoming_arrivals] Is {tok} in known_codes? {tok in known_codes}"
+                    )
+                except:
+                    pass
+
+                # Try to apply filter regardless of known_codes validation
+                tok_mask = pd.Series(False, index=df.index)
+                for col in port_cols:
+                    col_matches = (
+                        df[col]
+                        .astype(str)
+                        .str.upper()
+                        .str.contains(rf"\({re.escape(tok)}\)", na=False)
+                    )
+                    tok_mask |= col_matches
+                    try:
+                        if col_matches.any():
+                            logger.info(
+                                f"[get_upcoming_arrivals] Found {col_matches.sum()} matches in column '{col}'"
+                            )
+                    except:
+                        pass
+
+                if tok_mask.any():
+                    location_mask = tok_mask
+                    location_found = True
+                    location_name = tok
+                    try:
+                        logger.info(
+                            f"[get_upcoming_arrivals] ✓ Successfully detected port code '{tok}' after preposition. "
+                            f"Matched {tok_mask.sum()} rows. location_found=True"
+                        )
+                    except:
+                        pass
+                else:
+                    try:
+                        logger.warning(
+                            f"[get_upcoming_arrivals] ✗ Port code '{tok}' found in query but NO MATCHES in dataset! "
+                            f"This port code may not exist in the data for this consignee. location_found will remain False."
+                        )
+                    except:
+                        pass
+
+            # If not found via preposition, try bare codes (only if known_codes exist)
+            if not location_found and known_codes:
                 # Extract candidate tokens from query
                 candidate_tokens = re.findall(r"\b[A-Z0-9]{3,6}\b", query.upper())
 
@@ -3940,9 +4020,42 @@ def get_upcoming_arrivals(query: str) -> str:
                             pass
                         break
 
+        # **SAFETY CHECK**: If query contains port code pattern but no location was found, warn user
+        if not location_found:
+            # Check if query has port code-like patterns that we should have matched
+            potential_port_code = re.search(
+                r"\b(?:AT|IN|TO)\s+([A-Z]{2}[A-Z0-9]{3,4})\b", query.upper()
+            )
+            if potential_port_code:
+                port = potential_port_code.group(1)
+                try:
+                    logger.warning(
+                        f"[get_upcoming_arrivals] Query contains port code '{port}' but no matches found in dataset. "
+                        f"Returning empty result instead of all containers."
+                    )
+                except:
+                    pass
+                return f"No containers found for port code {port}. This port may not have any shipments for your authorized consignees."
+
         # Apply location filter if found
         if location_found:
+            try:
+                logger.info(
+                    f"[get_upcoming_arrivals] Applying location filter for '{location_name}'. "
+                    f"Rows before filter: {len(df)}, Matching rows: {location_mask.sum()}"
+                )
+                if location_mask.sum() > 0:
+                    sample_ports = (
+                        df[location_mask]["discharge_port"].head(10).unique().tolist()
+                    )
+                    logger.info(
+                        f"[get_upcoming_arrivals] Sample ports after filter: {sample_ports}"
+                    )
+            except Exception:
+                pass
+
             df = df[location_mask].copy()
+
             if df.empty:
                 verb = "arrived" if is_past_query else "scheduled to arrive"
                 return f"No containers {verb} at {location_name} between {start_date.strftime('%Y-%m-%d')} and {end_date.strftime('%Y-%m-%d')}."
@@ -4023,6 +4136,39 @@ def get_upcoming_arrivals(query: str) -> str:
 
     final_cols = [c for c in output_cols if c in result_df.columns]
     out_df = result_df.sort_values(by=sort_col, ascending=True).head(300)[final_cols]
+
+    # **FINAL LOGGING**: Verify filtering worked correctly
+    try:
+        if location_found and "discharge_port" in out_df.columns:
+            unique_ports = out_df["discharge_port"].unique().tolist()
+            logger.info(
+                f"[get_upcoming_arrivals] Returning {len(out_df)} containers. "
+                f"Unique discharge ports in result: {unique_ports}"
+            )
+            if len(unique_ports) > 1:
+                logger.error(
+                    f"[get_upcoming_arrivals] *** CRITICAL ERROR ***: Multiple ports in result when filtering for '{location_name}': {unique_ports}"
+                )
+                logger.error(
+                    f"[get_upcoming_arrivals] This indicates the port filter was NOT applied correctly!"
+                )
+                logger.error(
+                    f"[get_upcoming_arrivals] location_found={location_found}, location_name={location_name}"
+                )
+
+                # **EMERGENCY FIX**: Filter results now to only include the requested port
+                if location_name:
+                    out_df = out_df[
+                        out_df["discharge_port"]
+                        .astype(str)
+                        .str.upper()
+                        .str.contains(rf"\({re.escape(location_name)}\)", na=False)
+                    ].copy()
+                    logger.info(
+                        f"[get_upcoming_arrivals] Emergency filter applied. Now returning {len(out_df)} containers from {location_name} only."
+                    )
+    except Exception as e:
+        logger.error(f"[get_upcoming_arrivals] Error in final logging: {e}")
 
     # Format all date columns for clean output
     for col in out_df.select_dtypes(include=["datetime64[ns]"]).columns:
@@ -6981,14 +7127,11 @@ def get_containers_departed_from_load_port(query: str) -> str:
     """
     Get containers/POs/OBLs that have departed from specific load ports within a time period.
 
-    Supports:
-    - Container queries: "containers from SHANGHAI in last 7 days"
-    - PO queries: "POs that departed from QINGDAO yesterday"
-    - OBL queries: "BLs that left NINGBO last week"
-    - Mixed queries: "show shipments from load port BUSAN in past 5 days"
-    - Transport mode filtering: "containers departed by sea from HONG KONG"
-    - Hot container filtering: "hot containers that left SHANGHAI last week"
-    - Show me shipments that departed yesterday
+    **CRITICAL FIXES**:
+    1. Now supports "yesterday", "day before yesterday", "N days ago"
+    2. Improved port matching (handles QINGDAO/CNTAO aliases)
+    3. Better date filtering using ATD_LP (Actual Time of Departure from Load Port)
+
     Uses ATD_LP when available; falls back to ETD_LP when ATD_LP is missing.
     Returns list[dict] with container/PO/OBL info and departure details.
     """
@@ -6998,11 +7141,10 @@ def get_containers_departed_from_load_port(query: str) -> str:
     query_lower = query.lower()
 
     # ========== 1) EXTRACT IDENTIFIERS (Container/PO/OBL) ==========
-    # **CRITICAL FIX**: Remove consignee code mentions before extraction to avoid false positives
+    # Remove consignee code mentions before extraction
     query_for_extraction = query
-    # Remove phrases like "for consignee 0028664", "consignee code 0028664", "consignee_code: 0028664", "user 0028664"
     query_for_extraction = re.sub(
-        r"\b(?:for\s+)?(?:consignee|user)(?:\s*[_\-]?\s*code)?\s*[:=]?\s*\d{7}\b",
+        r"\b(?:for\s+)?(?:consignee|user)(?:\s*[_\-]?\s*code)?\s*[:=]?\s*\d{5,10}\b",
         "",
         query_for_extraction,
         flags=re.IGNORECASE,
@@ -7023,33 +7165,48 @@ def get_containers_departed_from_load_port(query: str) -> str:
     except:
         pass
 
-    # ========== 2) EXTRACT LOAD PORT ==========
+    # ========== 2) EXTRACT LOAD PORT WITH ALIASES ==========
     load_port = None
+
+    # **CRITICAL FIX**: Port alias mapping for common variations
+    port_aliases = {
+        "QINGDAO": ["CNTAO", "QINGDAO", "QINGDAOPORT"],
+        "CNTAO": ["CNTAO", "QINGDAO", "QINGDAOPORT"],
+        "SHANGHAI": ["CNSHA", "SHANGHAI"],
+        "CNSHA": ["CNSHA", "SHANGHAI"],
+        "NINGBO": ["CNNGB", "NINGBO"],
+        "CNNGB": ["CNNGB", "NINGBO"],
+        # Add more aliases as needed
+    }
+
+    # List of time-related words to exclude from port name
+    time_words = r"(?:yesterday|today|tomorrow|day|before|ago|next|this|within|in|by|last|week|month|days?|on)"
 
     # Pattern 1: "from load port PORTNAME" or "from PORTNAME"
     match = re.search(
-        r"from\s+(?:load\s+port\s+)?([A-Za-z0-9\s,\-\(\)]+?)(?=\s+in\s+|\s+last\s+|\s+during\s+|\s+for\s+|\s+by\s+|[\?\.\,]|$)",
+        rf"from\s+(?:load\s+port\s+)?([A-Za-z0-9\s,\-\(\)]+?)"
+        rf"(?=\s+{time_words}\b|\s+\d{{4}}[-/]\d{{1,2}}[-/]\d{{1,2}}|[\?\.\,]|$)",
         query,
         re.IGNORECASE,
     )
     if match:
         cand = match.group(1).strip()
-        # Exclude common noise words
+        # Clean trailing time words
+        cand = re.sub(
+            rf"\s+(?:{time_words})\b.*$",
+            "",
+            cand,
+            flags=re.IGNORECASE,
+        ).strip()
         if cand and cand.upper() not in [
             "CONSIGNEE",
+            "FOR",
             "IN",
-            "LAST",
-            "THE",
-            "DAY",
-            "DAYS",
             "NEXT",
+            "THE",
+            "DAYS",
             "THIS",
-            "TODAY",
-            "TOMORROW",
-            "YESTERDAY",
             "WEEK",
-            "MONTH",
-            "YEAR",
             "SEA",
             "AIR",
             "ROAD",
@@ -7059,44 +7216,20 @@ def get_containers_departed_from_load_port(query: str) -> str:
     # Pattern 2: "load port PORTNAME"
     if not load_port:
         match = re.search(
-            r"load\s+port\s+([A-Za-z0-9\s,\-\(\)]+?)(?=\s+in\s+|\s+last\s+|\s+during\s+|\s+for\s+|\s+by\s+|[\?\.\,]|$)",
-            query,
-            re.IGNORECASE,
-        )
-        if match:
-            load_port = match.group(1).strip().upper()
-
-    # Pattern 3: "departed/left from PORTNAME"
-    if not load_port:
-        match = re.search(
-            r"(?:departed|left)\s+from\s+([A-Za-z0-9\s,\-\(\)]+?)(?=\s+in\s+|\s+last\s+|\s+during\s+|\s+for\s+|\s+by\s+|[\?\.\,]|$)",
+            rf"load\s+port\s+([A-Za-z0-9\s,\-\(\)]+?)"
+            rf"(?=\s+{time_words}\b|\s+\d{{4}}[-/]\d{{1,2}}[-/]\d{{1,2}}|[\?\.\,]|$)",
             query,
             re.IGNORECASE,
         )
         if match:
             cand = match.group(1).strip()
-            if cand and cand.upper() not in [
-                "CONSIGNEE",
-                "IN",
-                "LAST",
-                "THE",
-                "DAY",
-                "DAYS",
-                "NEXT",
-                "THIS",
-                "TODAY",
-                "TOMORROW",
-                "YESTERDAY",
-                "WEEK",
-                "MONTH",
-                "YEAR",
-                "SEA",
-                "AIR",
-                "ROAD",
-            ]:
+            cand = re.sub(
+                rf"\s+(?:{time_words})\b.*$", "", cand, flags=re.IGNORECASE
+            ).strip()
+            if cand:
                 load_port = cand.upper()
 
-    # Pattern 4: Port with code in parentheses like "SHANGHAI(CNSHA)"
+    # Pattern 3: Port with code in parentheses like "SHANGHAI(CNSHA)"
     if not load_port:
         match = re.search(
             r"([A-Za-z0-9\s,\-]+?\([A-Z0-9\-]{3,6}\))", query, re.IGNORECASE
@@ -7107,6 +7240,16 @@ def get_containers_departed_from_load_port(query: str) -> str:
     # Clean up extracted port name
     if load_port:
         load_port = re.sub(r"\s+", " ", load_port).strip()
+        # Remove dates (YYYY-MM-DD format)
+        load_port = re.sub(r"\d{4}[-/]\d{1,2}[-/]\d{1,2}", "", load_port).strip()
+        # Remove remaining time-related words including 'on'
+        load_port = re.sub(
+            r"\b(?:on|yesterday|today|tomorrow|day|before|ago|next|this|last|within|in|by|days?|weeks?|months?)\b",
+            "",
+            load_port,
+            flags=re.IGNORECASE,
+        ).strip()
+        load_port = re.sub(r"\s+", " ", load_port).strip()
 
     try:
         logger.info(
@@ -7115,7 +7258,7 @@ def get_containers_departed_from_load_port(query: str) -> str:
     except:
         pass
 
-    # ========== 3) PARSE TIME WINDOW ==========
+    # ========== 3) PARSE TIME WINDOW USING ENHANCED parse_time_period ==========
     start_date, end_date, period_desc = parse_time_period(query)
 
     try:
@@ -7128,19 +7271,6 @@ def get_containers_departed_from_load_port(query: str) -> str:
     # ========== 4) LOAD AND FILTER DATA ==========
     df = _df()  # Respects consignee filtering
 
-    try:
-        if hasattr(threading.current_thread(), "consignee_codes"):
-            codes = threading.current_thread().consignee_codes
-            logger.info(
-                f"[get_containers_departed_from_load_port] Authorized consignee codes: {codes}, rows after filtering: {len(df)}"
-            )
-        else:
-            logger.info(
-                f"[get_containers_departed_from_load_port] No consignee filtering (returning all {len(df)} rows)"
-            )
-    except:
-        pass
-
     if df.empty:
         return "No data available for your authorized consignees."
 
@@ -7148,7 +7278,6 @@ def get_containers_departed_from_load_port(query: str) -> str:
     identifier_mask = pd.Series(True, index=df.index)
     identifier_type = None
 
-    # Filter by Container (highest priority)
     if container_no:
         if "container_number" not in df.columns:
             return f"Container column not found for container {container_no}."
@@ -7167,14 +7296,7 @@ def get_containers_departed_from_load_port(query: str) -> str:
             )
 
         identifier_type = "container"
-        try:
-            logger.info(
-                f"[get_containers_departed_from_load_port] Container filter: {identifier_mask.sum()} rows matched"
-            )
-        except:
-            pass
 
-    # Filter by PO
     elif po_no:
         po_col = (
             "po_number_multiple"
@@ -7188,14 +7310,6 @@ def get_containers_departed_from_load_port(query: str) -> str:
         identifier_mask = df[po_col].apply(lambda cell: _po_in_cell(cell, po_norm))
         identifier_type = "PO"
 
-        try:
-            logger.info(
-                f"[get_containers_departed_from_load_port] PO filter: {identifier_mask.sum()} rows matched"
-            )
-        except:
-            pass
-
-    # Filter by OBL
     elif obl_no:
         bl_col = _find_ocean_bl_col(df)
         if not bl_col:
@@ -7205,76 +7319,34 @@ def get_containers_departed_from_load_port(query: str) -> str:
         identifier_mask = df[bl_col].apply(lambda cell: _bl_in_cell(cell, bl_norm))
         identifier_type = "OBL"
 
-        try:
-            logger.info(
-                f"[get_containers_departed_from_load_port] OBL filter: {identifier_mask.sum()} rows matched"
-            )
-        except:
-            pass
-
-    # Apply identifier filter
     df = df[identifier_mask].copy()
 
-    if df.empty:
-        if identifier_type:
-            return f"No data found for {identifier_type} {container_no or po_no or obl_no}."
+    if df.empty and identifier_type:
+        return f"No data found for {identifier_type} {container_no or po_no or obl_no}."
 
-    # ========== NEW: 5A) TRANSPORT MODE FILTER ==========
+    # ========== 6) TRANSPORT MODE & HOT CONTAINER FILTERS ==========
     modes = extract_transport_modes(query)
-    if modes:
-        try:
-            logger.info(
-                f"[get_containers_departed_from_load_port] Transport modes detected: {modes}"
+    if modes and "transport_mode" in df.columns:
+        mode_mask = (
+            df["transport_mode"]
+            .astype(str)
+            .str.lower()
+            .apply(lambda s: any(m in s for m in modes))
+        )
+        df = df[mode_mask].copy()
+
+        if df.empty:
+            mode_str = ", ".join(sorted(modes))
+            desc = (
+                f"{identifier_type} {container_no or po_no or obl_no}"
+                if identifier_type
+                else "containers"
             )
-        except:
-            pass
+            return f"No {desc} departed by {mode_str}."
 
-        if "transport_mode" in df.columns:
-            mode_mask = (
-                df["transport_mode"]
-                .astype(str)
-                .str.lower()
-                .apply(lambda s: any(m in s for m in modes))
-            )
-            df = df[mode_mask].copy()
-
-            try:
-                logger.info(
-                    f"[get_containers_departed_from_load_port] After transport mode filter: {len(df)} rows"
-                )
-            except:
-                pass
-
-            if df.empty:
-                mode_str = ", ".join(sorted(modes))
-                desc = (
-                    f"{identifier_type} {container_no or po_no or obl_no}"
-                    if identifier_type
-                    else "containers"
-                )
-                return f"No {desc} departed by {mode_str}."
-        else:
-            try:
-                logger.warning(
-                    f"[get_containers_departed_from_load_port] transport_mode column not found, skipping mode filter"
-                )
-            except:
-                pass
-
-    # ========== NEW: 5B) HOT CONTAINER FLAG FILTER ==========
     is_hot_query = bool(re.search(r"\bhot\b", query, re.IGNORECASE))
     if is_hot_query:
-        try:
-            logger.info(
-                f"[get_containers_departed_from_load_port] Hot container filter requested"
-            )
-        except:
-            pass
-
         hot_flag_cols = [c for c in df.columns if "hot_container_flag" in c.lower()]
-        if not hot_flag_cols:
-            hot_flag_cols = [c for c in df.columns if "hot_container" in c.lower()]
-
         if hot_flag_cols:
             hot_col = hot_flag_cols[0]
 
@@ -7283,43 +7355,18 @@ def get_containers_departed_from_load_port(query: str) -> str:
                     return False
                 return str(v).strip().upper() in {"Y", "YES", "TRUE", "1", "HOT"}
 
-            hot_mask = df[hot_col].apply(_is_hot)
-            df = df[hot_mask].copy()
+            df = df[df[hot_col].apply(_is_hot)].copy()
 
-            try:
-                logger.info(
-                    f"[get_containers_departed_from_load_port] After hot flag filter: {len(df)} rows"
-                )
-            except:
-                pass
-
-            if df.empty:
-                desc = (
-                    f"{identifier_type} {container_no or po_no or obl_no}"
-                    if identifier_type
-                    else "containers"
-                )
-                return f"No hot {desc} found."
-        else:
-            try:
-                logger.warning(
-                    f"[get_containers_departed_from_load_port] hot_container_flag column not found"
-                )
-            except:
-                pass
-
-    # ========== 6) APPLY LOAD PORT FILTER (IMPROVED) ==========
+    # ========== 7) APPLY LOAD PORT FILTER WITH ALIAS SUPPORT ==========
     if load_port:
         if "load_port" not in df.columns:
             return "Load port column not found in the dataset."
 
-        # **CRITICAL FIX**: More flexible port matching
         def normalize_port_name(port_str):
-            """Extract just the port name, removing code in parentheses"""
+            """Extract port name, removing code in parentheses"""
             if pd.isna(port_str):
                 return ""
             s = str(port_str).upper()
-            # Remove code in parentheses (e.g., "HONG KONG(HKHKG)" -> "HONG KONG")
             s = re.sub(r"\s*\([^)]*\)\s*", "", s)
             s = s.replace(",", " ")
             s = re.sub(r"\s+", " ", s).strip()
@@ -7332,58 +7379,44 @@ def get_containers_departed_from_load_port(query: str) -> str:
             m = re.search(r"\(([A-Z0-9\-]{3,6})\)", str(port_str).upper())
             return m.group(1) if m else None
 
-        # Normalize user input
-        user_input_norm = normalize_port_name(load_port)
+        # **CRITICAL FIX**: Check for port aliases
+        user_port_variants = set([load_port.upper()])
 
-        # Check if user provided a port code (3-6 alphanumeric)
-        user_code = None
-        m_code = re.search(r"\(([A-Z0-9\-]{3,6})\)", load_port.upper())
-        if m_code:
-            user_code = m_code.group(1)
-        elif re.fullmatch(r"[A-Z0-9\-]{3,6}", user_input_norm.replace(" ", "")):
-            user_code = user_input_norm.replace(" ", "")
+        # If user provided a known port, include all its aliases
+        for main_port, aliases in port_aliases.items():
+            if load_port.upper() in aliases or load_port.upper() == main_port:
+                user_port_variants.update(aliases)
+                break
+
+        try:
+            logger.info(
+                f"[get_containers_departed_from_load_port] Port variants to match: {user_port_variants}"
+            )
+        except:
+            pass
 
         # Create temporary columns for matching
         df["_port_name_norm"] = df["load_port"].apply(normalize_port_name)
         df["_port_code"] = df["load_port"].apply(extract_port_code)
 
-        try:
-            logger.info(
-                f"[get_containers_departed_from_load_port] Port matching: user_input='{load_port}', "
-                f"normalized='{user_input_norm}', code='{user_code}'"
-            )
-        except:
-            pass
-
-        # **MATCHING STRATEGIES** (order matters - most specific first)
         port_mask = pd.Series(False, index=df.index)
 
-        # Strategy 1: Exact port code match (highest priority)
-        if user_code:
-            code_mask = df["_port_code"].fillna("").str.upper() == user_code
+        # Strategy 1: Match by any variant (code or name)
+        for variant in user_port_variants:
+            # Try code match
+            code_mask = df["_port_code"].fillna("").str.upper() == variant
             port_mask |= code_mask
-            try:
-                logger.info(
-                    f"[get_containers_departed_from_load_port] Code match '{user_code}': {code_mask.sum()} rows"
-                )
-            except:
-                pass
 
-        # Strategy 2: Exact normalized name match
-        exact_name_mask = df["_port_name_norm"] == user_input_norm
-        port_mask |= exact_name_mask
-        try:
-            logger.info(
-                f"[get_containers_departed_from_load_port] Exact name match '{user_input_norm}': {exact_name_mask.sum()} rows"
+            # Try name match
+            name_mask = df["_port_name_norm"].str.contains(
+                variant, na=False, regex=False
             )
-        except:
-            pass
+            port_mask |= name_mask
 
-        # Strategy 3: Substring match (each word must be present)
+        # Strategy 2: If no matches yet, try word-based matching
         if not port_mask.any():
-            words = [
-                w for w in user_input_norm.split() if len(w) >= 2
-            ]  # Reduced from 3 to 2 for better matching
+            user_input_norm = normalize_port_name(load_port)
+            words = [w for w in user_input_norm.split() if len(w) >= 3]
             if words:
                 word_mask = pd.Series(True, index=df.index)
                 for w in words:
@@ -7391,33 +7424,8 @@ def get_containers_departed_from_load_port(query: str) -> str:
                         w, na=False, regex=False
                     )
                 port_mask |= word_mask
-                try:
-                    logger.info(
-                        f"[get_containers_departed_from_load_port] Word-based match {words}: {word_mask.sum()} rows"
-                    )
-                except:
-                    pass
 
-        # Strategy 4: Fuzzy match on original load_port column (fallback)
-        if not port_mask.any():
-            fuzzy_mask = (
-                df["load_port"]
-                .astype(str)
-                .str.upper()
-                .str.contains(user_input_norm, na=False, regex=False)
-            )
-            port_mask |= fuzzy_mask
-            try:
-                logger.info(
-                    f"[get_containers_departed_from_load_port] Fuzzy match: {fuzzy_mask.sum()} rows"
-                )
-            except:
-                pass
-
-        # Apply port filter
         df = df[port_mask].copy()
-
-        # Clean up temporary columns
         df.drop(
             columns=["_port_name_norm", "_port_code"], inplace=True, errors="ignore"
         )
@@ -7442,42 +7450,22 @@ def get_containers_departed_from_load_port(query: str) -> str:
             )
             return f"No {desc} found from load port {load_port}."
 
-    # ========== 7) VALIDATE AND PARSE DATE COLUMNS ==========
-    needed_cols = [c for c in ["atd_lp"] if c in df.columns]
+    # ========== 8) VALIDATE AND PARSE DATE COLUMNS ==========
+    needed_cols = [c for c in ["atd_lp", "etd_lp"] if c in df.columns]
     if not needed_cols:
-        return "No departure date columns (atd_lp) found."
+        return "No departure date columns (atd_lp, etd_lp) found."
+
+    if "atd_lp" not in df.columns:
+        return "ATD load port column (atd_lp) not found to determine actual departures."
 
     df = ensure_datetime(df, needed_cols)
 
-    # ========== 8) CREATE DEPARTURE DATE (ATD else ETD) ==========
-    df["dep_for_filter"] = None
-    if "atd_lp" in df.columns:
-        df["dep_for_filter"] = df["atd_lp"].where(df["atd_lp"].notna())
+    # ========== 9) CREATE DEPARTURE DATE (ATD) ==========
+    # **CRITICAL**: Use ONLY ATD_LP (Actual Time of Departure)
+    df["dep_for_filter"] = df["atd_lp"]
+    df["departure_source"] = "ATD"
 
-    # Mark source (ATD vs ETD)
-    df["departure_source"] = df.apply(
-        lambda r: "ATD" if pd.notna(r.get("atd_lp")) else None, axis=1
-    )
-
-    # ========== 9) FILTER BY TIME WINDOW ==========
-    try:
-        logger.info(
-            f"[get_containers_departed_from_load_port] Date filtering: start={start_date}, end={end_date}, period={period_desc}"
-        )
-        logger.info(
-            f"[get_containers_departed_from_load_port] Before date filter: {len(df)} rows"
-        )
-        if len(df) > 0:
-            # Show sample departure dates before filtering
-            sample_dates = df[
-                ["container_number", "dep_for_filter", "departure_source"]
-            ].head(10)
-            logger.info(
-                f"[get_containers_departed_from_load_port] Sample departure dates before filter:\n{sample_dates}"
-            )
-    except:
-        pass
-
+    # ========== 10) FILTER BY TIME WINDOW ==========
     date_mask = (
         df["dep_for_filter"].notna()
         & (df["dep_for_filter"].dt.normalize() >= start_date)
@@ -7492,7 +7480,7 @@ def get_containers_departed_from_load_port(query: str) -> str:
         if len(results) > 0:
             sample_filtered = results[
                 ["container_number", "dep_for_filter", "departure_source"]
-            ].head(10)
+            ].head(5)
             logger.info(
                 f"[get_containers_departed_from_load_port] Sample filtered results:\n{sample_filtered}"
             )
@@ -7508,14 +7496,12 @@ def get_containers_departed_from_load_port(query: str) -> str:
         port_desc = f" from load port {load_port}" if load_port else ""
         mode_desc = f" by {', '.join(sorted(modes))}" if modes else ""
         hot_desc = " (hot)" if is_hot_query else ""
-        return (
-            f"No {desc}{hot_desc} departed{port_desc}{mode_desc} in the {period_desc}."
-        )
+        return f"No {desc}{hot_desc} departed{port_desc}{mode_desc} {period_desc}."
 
-    # ========== 10) SORT BY DEPARTURE DATE (MOST RECENT FIRST) ==========
+    # ========== 11) SORT BY DEPARTURE DATE (MOST RECENT FIRST) ==========
     results = results.sort_values("dep_for_filter", ascending=False)
 
-    # ========== 11) PREPARE OUTPUT COLUMNS ==========
+    # ========== 12) PREPARE OUTPUT COLUMNS ==========
     output_cols = [
         "container_number",
         "load_port",
@@ -7539,7 +7525,7 @@ def get_containers_departed_from_load_port(query: str) -> str:
         if bl_col:
             output_cols.append(bl_col)
 
-    # Add additional context columns
+    # Add context columns
     additional_cols = [
         "discharge_port",
         "revised_eta",
@@ -7547,11 +7533,9 @@ def get_containers_departed_from_load_port(query: str) -> str:
         "final_carrier_name",
     ]
 
-    # Add transport_mode if it was used in filtering
     if modes and "transport_mode" in results.columns:
         additional_cols.append("transport_mode")
 
-    # Add hot_container_flag if it was used in filtering
     if is_hot_query:
         hot_cols = [
             c
@@ -7565,20 +7549,18 @@ def get_containers_departed_from_load_port(query: str) -> str:
         if c in results.columns and c not in output_cols:
             output_cols.append(c)
 
-    # Filter to available columns
     output_cols = [c for c in output_cols if c in results.columns]
     out = results[output_cols].head(200).copy()
 
-    # ========== 12) FORMAT DATES ==========
+    # ========== 13) FORMAT DATES ==========
     date_cols_to_format = ["atd_lp", "dep_for_filter", "revised_eta"]
     for dcol in date_cols_to_format:
         if dcol in out.columns and pd.api.types.is_datetime64_any_dtype(out[dcol]):
             out[dcol] = out[dcol].dt.strftime("%Y-%m-%d")
 
-    # ========== 13) RENAME FOR CLARITY ==========
+    # ========== 14) RENAME FOR CLARITY ==========
     out = out.rename(columns={"dep_for_filter": "departure_date"})
 
-    # ========== 14) RETURN RESULTS ==========
     try:
         logger.info(
             f"[get_containers_departed_from_load_port] Returning {len(out)} records"
@@ -7587,6 +7569,618 @@ def get_containers_departed_from_load_port(query: str) -> str:
         pass
 
     return out.where(pd.notnull(out), None).to_dict(orient="records")
+
+
+# def get_containers_departed_from_load_port(query: str) -> str:
+#     """
+#     Get containers/POs/OBLs that have departed from specific load ports within a time period.
+
+#     Supports:
+#     - Container queries: "containers from SHANGHAI in last 7 days"
+#     - PO queries: "POs that departed from QINGDAO yesterday"
+#     - OBL queries: "BLs that left NINGBO last week"
+#     - Mixed queries: "show shipments from load port BUSAN in past 5 days"
+#     - Transport mode filtering: "containers departed by sea from HONG KONG"
+#     - Hot container filtering: "hot containers that left SHANGHAI last week"
+#     - Show me shipments that departed yesterday
+#     Uses ATD_LP when available; falls back to ETD_LP when ATD_LP is missing.
+#     Returns list[dict] with container/PO/OBL info and departure details.
+#     """
+
+#     query = (query or "").strip()
+#     query_upper = query.upper()
+#     query_lower = query.lower()
+
+#     # ========== 1) EXTRACT IDENTIFIERS (Container/PO/OBL) ==========
+#     # **CRITICAL FIX**: Remove consignee code mentions before extraction to avoid false positives
+#     query_for_extraction = query
+#     # Remove phrases like "for consignee 0028664", "consignee code 0028664", "consignee_code: 0028664", "user 0028664"
+#     query_for_extraction = re.sub(
+#         r"\b(?:for\s+)?(?:consignee|user)(?:\s*[_\-]?\s*code)?\s*[:=]?\s*\d{7}\b",
+#         "",
+#         query_for_extraction,
+#         flags=re.IGNORECASE,
+#     )
+
+#     container_no = extract_container_number(query_for_extraction)
+#     po_no = extract_po_number(query_for_extraction)
+#     obl_no = None
+#     try:
+#         obl_no = extract_ocean_bl_number(query_for_extraction)
+#     except Exception:
+#         pass
+
+#     try:
+#         logger.info(
+#             f"[get_containers_departed_from_load_port] Extracted: container={container_no}, po={po_no}, obl={obl_no}"
+#         )
+#     except:
+#         pass
+
+#     # ========== 2) EXTRACT LOAD PORT ==========
+#     load_port = None
+
+#     # Pattern 1: "from load port PORTNAME" or "from PORTNAME"
+#     match = re.search(
+#         r"from\s+(?:load\s+port\s+)?([A-Za-z0-9\s,\-\(\)]+?)(?=\s+in\s+|\s+last\s+|\s+during\s+|\s+for\s+|\s+by\s+|[\?\.\,]|$)",
+#         query,
+#         re.IGNORECASE,
+#     )
+#     if match:
+#         cand = match.group(1).strip()
+#         # Exclude common noise words
+#         if cand and cand.upper() not in [
+#             "CONSIGNEE",
+#             "IN",
+#             "LAST",
+#             "THE",
+#             "DAY",
+#             "DAYS",
+#             "NEXT",
+#             "THIS",
+#             "TODAY",
+#             "TOMORROW",
+#             "YESTERDAY",
+#             "WEEK",
+#             "MONTH",
+#             "YEAR",
+#             "SEA",
+#             "AIR",
+#             "ROAD",
+#         ]:
+#             load_port = cand.upper()
+
+#     # Pattern 2: "load port PORTNAME"
+#     if not load_port:
+#         match = re.search(
+#             r"load\s+port\s+([A-Za-z0-9\s,\-\(\)]+?)(?=\s+in\s+|\s+last\s+|\s+during\s+|\s+for\s+|\s+by\s+|[\?\.\,]|$)",
+#             query,
+#             re.IGNORECASE,
+#         )
+#         if match:
+#             load_port = match.group(1).strip().upper()
+
+#     # Pattern 3: "departed/left from PORTNAME"
+#     if not load_port:
+#         match = re.search(
+#             r"(?:departed|left)\s+from\s+([A-Za-z0-9\s,\-\(\)]+?)(?=\s+in\s+|\s+last\s+|\s+during\s+|\s+for\s+|\s+by\s+|[\?\.\,]|$)",
+#             query,
+#             re.IGNORECASE,
+#         )
+#         if match:
+#             cand = match.group(1).strip()
+#             if cand and cand.upper() not in [
+#                 "CONSIGNEE",
+#                 "IN",
+#                 "LAST",
+#                 "THE",
+#                 "DAY",
+#                 "DAYS",
+#                 "NEXT",
+#                 "THIS",
+#                 "TODAY",
+#                 "TOMORROW",
+#                 "YESTERDAY",
+#                 "WEEK",
+#                 "MONTH",
+#                 "YEAR",
+#                 "SEA",
+#                 "AIR",
+#                 "ROAD",
+#             ]:
+#                 load_port = cand.upper()
+
+#     # Pattern 4: Port with code in parentheses like "SHANGHAI(CNSHA)"
+#     if not load_port:
+#         match = re.search(
+#             r"([A-Za-z0-9\s,\-]+?\([A-Z0-9\-]{3,6}\))", query, re.IGNORECASE
+#         )
+#         if match:
+#             load_port = re.sub(r"\s+", " ", match.group(1).strip()).upper()
+
+#     # Clean up extracted port name
+#     if load_port:
+#         load_port = re.sub(r"\s+", " ", load_port).strip()
+
+#     try:
+#         logger.info(
+#             f"[get_containers_departed_from_load_port] Extracted load_port: '{load_port}'"
+#         )
+#     except:
+#         pass
+
+#     # ========== 3) PARSE TIME WINDOW ==========
+#     start_date, end_date, period_desc = parse_time_period(query)
+
+#     try:
+#         logger.info(
+#             f"[get_containers_departed_from_load_port] Time window: {start_date} to {end_date} ({period_desc})"
+#         )
+#     except:
+#         pass
+
+#     # ========== 4) LOAD AND FILTER DATA ==========
+#     df = _df()  # Respects consignee filtering
+
+#     try:
+#         if hasattr(threading.current_thread(), "consignee_codes"):
+#             codes = threading.current_thread().consignee_codes
+#             logger.info(
+#                 f"[get_containers_departed_from_load_port] Authorized consignee codes: {codes}, rows after filtering: {len(df)}"
+#             )
+#         else:
+#             logger.info(
+#                 f"[get_containers_departed_from_load_port] No consignee filtering (returning all {len(df)} rows)"
+#             )
+#     except:
+#         pass
+
+#     if df.empty:
+#         return "No data available for your authorized consignees."
+
+#     # ========== 5) APPLY IDENTIFIER FILTERS (Container/PO/OBL) ==========
+#     identifier_mask = pd.Series(True, index=df.index)
+#     identifier_type = None
+
+#     # Filter by Container (highest priority)
+#     if container_no:
+#         if "container_number" not in df.columns:
+#             return f"Container column not found for container {container_no}."
+
+#         clean_cont = clean_container_number(container_no)
+#         cont_col_norm = (
+#             df["container_number"].astype(str).str.replace(r"[^A-Z0-9]", "", regex=True)
+#         )
+#         identifier_mask = cont_col_norm == clean_cont
+
+#         if not identifier_mask.any():
+#             identifier_mask = (
+#                 df["container_number"]
+#                 .astype(str)
+#                 .str.contains(container_no, case=False, na=False)
+#             )
+
+#         identifier_type = "container"
+#         try:
+#             logger.info(
+#                 f"[get_containers_departed_from_load_port] Container filter: {identifier_mask.sum()} rows matched"
+#             )
+#         except:
+#             pass
+
+#     # Filter by PO
+#     elif po_no:
+#         po_col = (
+#             "po_number_multiple"
+#             if "po_number_multiple" in df.columns
+#             else ("po_number" if "po_number" in df.columns else None)
+#         )
+#         if not po_col:
+#             return f"PO column not found for PO {po_no}."
+
+#         po_norm = _normalize_po_token(po_no)
+#         identifier_mask = df[po_col].apply(lambda cell: _po_in_cell(cell, po_norm))
+#         identifier_type = "PO"
+
+#         try:
+#             logger.info(
+#                 f"[get_containers_departed_from_load_port] PO filter: {identifier_mask.sum()} rows matched"
+#             )
+#         except:
+#             pass
+
+#     # Filter by OBL
+#     elif obl_no:
+#         bl_col = _find_ocean_bl_col(df)
+#         if not bl_col:
+#             return f"Ocean BL column not found for OBL {obl_no}."
+
+#         bl_norm = _normalize_bl_token(obl_no)
+#         identifier_mask = df[bl_col].apply(lambda cell: _bl_in_cell(cell, bl_norm))
+#         identifier_type = "OBL"
+
+#         try:
+#             logger.info(
+#                 f"[get_containers_departed_from_load_port] OBL filter: {identifier_mask.sum()} rows matched"
+#             )
+#         except:
+#             pass
+
+#     # Apply identifier filter
+#     df = df[identifier_mask].copy()
+
+#     if df.empty:
+#         if identifier_type:
+#             return f"No data found for {identifier_type} {container_no or po_no or obl_no}."
+
+#     # ========== NEW: 5A) TRANSPORT MODE FILTER ==========
+#     modes = extract_transport_modes(query)
+#     if modes:
+#         try:
+#             logger.info(
+#                 f"[get_containers_departed_from_load_port] Transport modes detected: {modes}"
+#             )
+#         except:
+#             pass
+
+#         if "transport_mode" in df.columns:
+#             mode_mask = (
+#                 df["transport_mode"]
+#                 .astype(str)
+#                 .str.lower()
+#                 .apply(lambda s: any(m in s for m in modes))
+#             )
+#             df = df[mode_mask].copy()
+
+#             try:
+#                 logger.info(
+#                     f"[get_containers_departed_from_load_port] After transport mode filter: {len(df)} rows"
+#                 )
+#             except:
+#                 pass
+
+#             if df.empty:
+#                 mode_str = ", ".join(sorted(modes))
+#                 desc = (
+#                     f"{identifier_type} {container_no or po_no or obl_no}"
+#                     if identifier_type
+#                     else "containers"
+#                 )
+#                 return f"No {desc} departed by {mode_str}."
+#         else:
+#             try:
+#                 logger.warning(
+#                     f"[get_containers_departed_from_load_port] transport_mode column not found, skipping mode filter"
+#                 )
+#             except:
+#                 pass
+
+#     # ========== NEW: 5B) HOT CONTAINER FLAG FILTER ==========
+#     is_hot_query = bool(re.search(r"\bhot\b", query, re.IGNORECASE))
+#     if is_hot_query:
+#         try:
+#             logger.info(
+#                 f"[get_containers_departed_from_load_port] Hot container filter requested"
+#             )
+#         except:
+#             pass
+
+#         hot_flag_cols = [c for c in df.columns if "hot_container_flag" in c.lower()]
+#         if not hot_flag_cols:
+#             hot_flag_cols = [c for c in df.columns if "hot_container" in c.lower()]
+
+#         if hot_flag_cols:
+#             hot_col = hot_flag_cols[0]
+
+#             def _is_hot(v):
+#                 if pd.isna(v):
+#                     return False
+#                 return str(v).strip().upper() in {"Y", "YES", "TRUE", "1", "HOT"}
+
+#             hot_mask = df[hot_col].apply(_is_hot)
+#             df = df[hot_mask].copy()
+
+#             try:
+#                 logger.info(
+#                     f"[get_containers_departed_from_load_port] After hot flag filter: {len(df)} rows"
+#                 )
+#             except:
+#                 pass
+
+#             if df.empty:
+#                 desc = (
+#                     f"{identifier_type} {container_no or po_no or obl_no}"
+#                     if identifier_type
+#                     else "containers"
+#                 )
+#                 return f"No hot {desc} found."
+#         else:
+#             try:
+#                 logger.warning(
+#                     f"[get_containers_departed_from_load_port] hot_container_flag column not found"
+#                 )
+#             except:
+#                 pass
+
+#     # ========== 6) APPLY LOAD PORT FILTER (IMPROVED) ==========
+#     if load_port:
+#         if "load_port" not in df.columns:
+#             return "Load port column not found in the dataset."
+
+#         # **CRITICAL FIX**: More flexible port matching
+#         def normalize_port_name(port_str):
+#             """Extract just the port name, removing code in parentheses"""
+#             if pd.isna(port_str):
+#                 return ""
+#             s = str(port_str).upper()
+#             # Remove code in parentheses (e.g., "HONG KONG(HKHKG)" -> "HONG KONG")
+#             s = re.sub(r"\s*\([^)]*\)\s*", "", s)
+#             s = s.replace(",", " ")
+#             s = re.sub(r"\s+", " ", s).strip()
+#             return s
+
+#         def extract_port_code(port_str):
+#             """Extract port code from parentheses"""
+#             if pd.isna(port_str):
+#                 return None
+#             m = re.search(r"\(([A-Z0-9\-]{3,6})\)", str(port_str).upper())
+#             return m.group(1) if m else None
+
+#         # Normalize user input
+#         user_input_norm = normalize_port_name(load_port)
+
+#         # Check if user provided a port code (3-6 alphanumeric)
+#         user_code = None
+#         m_code = re.search(r"\(([A-Z0-9\-]{3,6})\)", load_port.upper())
+#         if m_code:
+#             user_code = m_code.group(1)
+#         elif re.fullmatch(r"[A-Z0-9\-]{3,6}", user_input_norm.replace(" ", "")):
+#             user_code = user_input_norm.replace(" ", "")
+
+#         # Create temporary columns for matching
+#         df["_port_name_norm"] = df["load_port"].apply(normalize_port_name)
+#         df["_port_code"] = df["load_port"].apply(extract_port_code)
+
+#         try:
+#             logger.info(
+#                 f"[get_containers_departed_from_load_port] Port matching: user_input='{load_port}', "
+#                 f"normalized='{user_input_norm}', code='{user_code}'"
+#             )
+#         except:
+#             pass
+
+#         # **MATCHING STRATEGIES** (order matters - most specific first)
+#         port_mask = pd.Series(False, index=df.index)
+
+#         # Strategy 1: Exact port code match (highest priority)
+#         if user_code:
+#             code_mask = df["_port_code"].fillna("").str.upper() == user_code
+#             port_mask |= code_mask
+#             try:
+#                 logger.info(
+#                     f"[get_containers_departed_from_load_port] Code match '{user_code}': {code_mask.sum()} rows"
+#                 )
+#             except:
+#                 pass
+
+#         # Strategy 2: Exact normalized name match
+#         exact_name_mask = df["_port_name_norm"] == user_input_norm
+#         port_mask |= exact_name_mask
+#         try:
+#             logger.info(
+#                 f"[get_containers_departed_from_load_port] Exact name match '{user_input_norm}': {exact_name_mask.sum()} rows"
+#             )
+#         except:
+#             pass
+
+#         # Strategy 3: Substring match (each word must be present)
+#         if not port_mask.any():
+#             words = [
+#                 w for w in user_input_norm.split() if len(w) >= 2
+#             ]  # Reduced from 3 to 2 for better matching
+#             if words:
+#                 word_mask = pd.Series(True, index=df.index)
+#                 for w in words:
+#                     word_mask &= df["_port_name_norm"].str.contains(
+#                         w, na=False, regex=False
+#                     )
+#                 port_mask |= word_mask
+#                 try:
+#                     logger.info(
+#                         f"[get_containers_departed_from_load_port] Word-based match {words}: {word_mask.sum()} rows"
+#                     )
+#                 except:
+#                     pass
+
+#         # Strategy 4: Fuzzy match on original load_port column (fallback)
+#         if not port_mask.any():
+#             fuzzy_mask = (
+#                 df["load_port"]
+#                 .astype(str)
+#                 .str.upper()
+#                 .str.contains(user_input_norm, na=False, regex=False)
+#             )
+#             port_mask |= fuzzy_mask
+#             try:
+#                 logger.info(
+#                     f"[get_containers_departed_from_load_port] Fuzzy match: {fuzzy_mask.sum()} rows"
+#                 )
+#             except:
+#                 pass
+
+#         # Apply port filter
+#         df = df[port_mask].copy()
+
+#         # Clean up temporary columns
+#         df.drop(
+#             columns=["_port_name_norm", "_port_code"], inplace=True, errors="ignore"
+#         )
+
+#         try:
+#             logger.info(
+#                 f"[get_containers_departed_from_load_port] After port filter: {len(df)} rows matched"
+#             )
+#             if len(df) > 0:
+#                 sample_ports = df["load_port"].head(5).tolist()
+#                 logger.info(
+#                     f"[get_containers_departed_from_load_port] Sample matched ports: {sample_ports}"
+#                 )
+#         except:
+#             pass
+
+#         if df.empty:
+#             desc = (
+#                 f"{identifier_type} {container_no or po_no or obl_no}"
+#                 if identifier_type
+#                 else "containers"
+#             )
+#             return f"No {desc} found from load port {load_port}."
+
+#     # ========== 7) VALIDATE AND PARSE DATE COLUMNS ==========
+#     needed_cols = [c for c in ["atd_lp"] if c in df.columns]
+#     if not needed_cols:
+#         return "No departure date columns (atd_lp) found."
+
+#     df = ensure_datetime(df, needed_cols)
+
+#     # ========== 8) CREATE DEPARTURE DATE (ATD else ETD) ==========
+#     df["dep_for_filter"] = None
+#     if "atd_lp" in df.columns:
+#         df["dep_for_filter"] = df["atd_lp"].where(df["atd_lp"].notna())
+
+#     # Mark source (ATD vs ETD)
+#     df["departure_source"] = df.apply(
+#         lambda r: "ATD" if pd.notna(r.get("atd_lp")) else None, axis=1
+#     )
+
+#     # ========== 9) FILTER BY TIME WINDOW ==========
+#     try:
+#         logger.info(
+#             f"[get_containers_departed_from_load_port] Date filtering: start={start_date}, end={end_date}, period={period_desc}"
+#         )
+#         logger.info(
+#             f"[get_containers_departed_from_load_port] Before date filter: {len(df)} rows"
+#         )
+#         if len(df) > 0:
+#             # Show sample departure dates before filtering
+#             sample_dates = df[
+#                 ["container_number", "dep_for_filter", "departure_source"]
+#             ].head(10)
+#             logger.info(
+#                 f"[get_containers_departed_from_load_port] Sample departure dates before filter:\n{sample_dates}"
+#             )
+#     except:
+#         pass
+
+#     date_mask = (
+#         df["dep_for_filter"].notna()
+#         & (df["dep_for_filter"].dt.normalize() >= start_date)
+#         & (df["dep_for_filter"].dt.normalize() <= end_date)
+#     )
+#     results = df[date_mask].copy()
+
+#     try:
+#         logger.info(
+#             f"[get_containers_departed_from_load_port] After date filter: {len(results)} rows matched"
+#         )
+#         if len(results) > 0:
+#             sample_filtered = results[
+#                 ["container_number", "dep_for_filter", "departure_source"]
+#             ].head(10)
+#             logger.info(
+#                 f"[get_containers_departed_from_load_port] Sample filtered results:\n{sample_filtered}"
+#             )
+#     except:
+#         pass
+
+#     if results.empty:
+#         desc = (
+#             f"{identifier_type} {container_no or po_no or obl_no}"
+#             if identifier_type
+#             else "containers"
+#         )
+#         port_desc = f" from load port {load_port}" if load_port else ""
+#         mode_desc = f" by {', '.join(sorted(modes))}" if modes else ""
+#         hot_desc = " (hot)" if is_hot_query else ""
+#         return (
+#             f"No {desc}{hot_desc} departed{port_desc}{mode_desc} in the {period_desc}."
+#         )
+
+#     # ========== 10) SORT BY DEPARTURE DATE (MOST RECENT FIRST) ==========
+#     results = results.sort_values("dep_for_filter", ascending=False)
+
+#     # ========== 11) PREPARE OUTPUT COLUMNS ==========
+#     output_cols = [
+#         "container_number",
+#         "load_port",
+#         "atd_lp",
+#         "dep_for_filter",
+#         "departure_source",
+#     ]
+
+#     # Add PO/OBL columns if relevant
+#     if identifier_type == "PO" or not identifier_type:
+#         po_col = (
+#             "po_number_multiple"
+#             if "po_number_multiple" in results.columns
+#             else ("po_number" if "po_number" in results.columns else None)
+#         )
+#         if po_col:
+#             output_cols.append(po_col)
+
+#     if identifier_type == "OBL" or not identifier_type:
+#         bl_col = _find_ocean_bl_col(results)
+#         if bl_col:
+#             output_cols.append(bl_col)
+
+#     # Add additional context columns
+#     additional_cols = [
+#         "discharge_port",
+#         "revised_eta",
+#         "consignee_code_multiple",
+#         "final_carrier_name",
+#     ]
+
+#     # Add transport_mode if it was used in filtering
+#     if modes and "transport_mode" in results.columns:
+#         additional_cols.append("transport_mode")
+
+#     # Add hot_container_flag if it was used in filtering
+#     if is_hot_query:
+#         hot_cols = [
+#             c
+#             for c in results.columns
+#             if "hot_container_flag" in c.lower() or "hot_container" in c.lower()
+#         ]
+#         if hot_cols:
+#             additional_cols.append(hot_cols[0])
+
+#     for c in additional_cols:
+#         if c in results.columns and c not in output_cols:
+#             output_cols.append(c)
+
+#     # Filter to available columns
+#     output_cols = [c for c in output_cols if c in results.columns]
+#     out = results[output_cols].head(200).copy()
+
+#     # ========== 12) FORMAT DATES ==========
+#     date_cols_to_format = ["atd_lp", "dep_for_filter", "revised_eta"]
+#     for dcol in date_cols_to_format:
+#         if dcol in out.columns and pd.api.types.is_datetime64_any_dtype(out[dcol]):
+#             out[dcol] = out[dcol].dt.strftime("%Y-%m-%d")
+
+#     # ========== 13) RENAME FOR CLARITY ==========
+#     out = out.rename(columns={"dep_for_filter": "departure_date"})
+
+#     # ========== 14) RETURN RESULTS ==========
+#     try:
+#         logger.info(
+#             f"[get_containers_departed_from_load_port] Returning {len(out)} records"
+#         )
+#     except:
+#         pass
+
+#     return out.where(pd.notnull(out), None).to_dict(orient="records")
 
 
 def get_containers_with_etd_delay(

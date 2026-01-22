@@ -1603,3 +1603,898 @@ db
 2026-01-21 16:49:44,882 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers will arrive in the next 10days at Nashville', length: 60
 2026-01-21 16:49:44,882 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers will arrive in the next 10days at nashville'
 2026-01-21 16:49:47,531 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: next 10 days, Dates: 2026-01-21 to 2026-01-30, is_past=False
+2026-01-21 17:18:05,533 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-21 17:18:05,533 - shipping_chatbot - INFO - Agent created with 54 tools
+2026-01-21 17:18:05,533 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-21 17:20:32,169 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-21 17:20:32,170 - shipping_chatbot - INFO - Agent created with 54 tools
+2026-01-21 17:20:32,170 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-21 17:22:41,719 - shipping_chatbot - INFO - User_Query: Which containers will arrive in the next 10days at Nashville, c_codes: ['0000866']
+2026-01-21 17:22:41,719 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers will arrive in the next 10days at Nashville', length: 60
+2026-01-21 17:22:41,719 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers will arrive in the next 10days at nashville'
+2026-01-21 17:22:41,719 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-21 17:22:58,795 - shipping_chatbot - INFO - Fetched 19032 rows
+2026-01-21 17:22:58,795 - shipping_chatbot - INFO - Starting preprocessing on 19032 rows
+2026-01-21 17:22:58,881 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-21 17:22:59,361 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-21 17:22:59,512 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-21 17:23:00,053 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-21 17:23:00,055 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-21 17:23:00,056 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-21 17:23:00,084 - shipping_chatbot - INFO - Pre-processing finished - 19032 rows remain
+2026-01-21 17:23:02,514 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: next 10 days, Dates: 2026-01-21 to 2026-01-30, is_past=False
+2026-01-21 17:26:05,099 - shipping_chatbot - INFO - User_Query: Which containers will arrive in the next 10days at HONG KONG, c_codes: ['0000866']
+2026-01-21 17:26:05,100 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers will arrive in the next 10days at HONG KONG', length: 60
+2026-01-21 17:26:05,100 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers will arrive in the next 10days at hong kong'
+2026-01-21 17:26:07,781 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: next 10 days, Dates: 2026-01-21 to 2026-01-30, is_past=False
+2026-01-21 17:26:07,858 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found bare port code: HKHKG (validated against known codes)
+2026-01-21 17:34:48,754 - shipping_chatbot - INFO - User_Query: Which containers will arrive in the next 10days at NASHVILLE, c_codes: ['0000866']
+2026-01-21 17:34:48,754 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers will arrive in the next 10days at NASHVILLE', length: 60
+2026-01-21 17:34:48,754 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers will arrive in the next 10days at nashville'
+2026-01-21 17:34:51,340 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: next 10 days, Dates: 2026-01-21 to 2026-01-30, is_past=False
+2026-01-21 17:36:18,183 - shipping_chatbot - INFO - User_Query: Can you please let me know the containers arriving at Nashville in next 5 days, c_codes: ['0000866']
+2026-01-21 17:36:18,183 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Can you please let me know the containers arriving at Nashville in next 5 days', length: 78
+2026-01-21 17:36:18,183 - shipping_chatbot - INFO - [DEBUG] q_lower: 'can you please let me know the containers arriving at nashville in next 5 days'
+2026-01-21 17:36:20,741 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: next 5 days, Dates: 2026-01-21 to 2026-01-25, is_past=False
+2026-01-22 08:45:31,496 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-22 08:45:31,498 - shipping_chatbot - INFO - Agent created with 54 tools
+2026-01-22 08:45:31,498 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-22 08:54:19,034 - shipping_chatbot - INFO - User_Query: how many containers departed from CNSHA day before yesterday, c_codes: ['0000866']
+2026-01-22 08:54:19,034 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'how many containers departed from CNSHA day before yesterday', length: 60
+2026-01-22 08:54:19,034 - shipping_chatbot - INFO - [DEBUG] q_lower: 'how many containers departed from cnsha day before yesterday'
+2026-01-22 08:54:19,034 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-22 08:58:28,257 - shipping_chatbot - INFO - Fetched 19114 rows
+2026-01-22 08:58:28,257 - shipping_chatbot - INFO - Starting preprocessing on 19114 rows
+2026-01-22 08:58:28,406 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-22 08:58:29,274 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-22 08:58:29,506 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-22 08:58:30,284 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-22 08:58:30,290 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-22 08:58:30,290 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-22 08:58:30,340 - shipping_chatbot - INFO - Pre-processing finished - 19114 rows remain
+2026-01-22 08:58:34,024 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted: container=None, po=None, obl=None
+2026-01-22 08:58:34,024 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted load_port: 'CNSHA ON 2025-06-04'
+2026-01-22 08:58:34,038 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Time window: 2026-01-22 00:00:00 to 2026-01-28 00:00:00 (next 7 days (default))
+2026-01-22 08:58:34,148 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Authorized consignee codes: ['0000866'], rows after filtering: 2095
+2026-01-22 08:58:34,177 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Port matching: user_input='CNSHA ON 2025-06-04', normalized='CNSHA ON 2025-06-04', code='None'
+2026-01-22 08:58:34,179 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Exact name match 'CNSHA ON 2025-06-04': 0 rows
+2026-01-22 08:58:34,181 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Word-based match ['CNSHA', 'ON', '2025-06-04']: 0 rows
+2026-01-22 08:58:34,192 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Fuzzy match: 0 rows
+2026-01-22 08:58:34,195 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] After port filter: 0 rows matched
+2026-01-22 09:02:17,210 - shipping_chatbot - INFO - User_Query: how many containers departed from CNSHA today, c_codes: ['0000866']
+2026-01-22 09:02:17,213 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'how many containers departed from CNSHA today', length: 45
+2026-01-22 09:02:17,213 - shipping_chatbot - INFO - [DEBUG] q_lower: 'how many containers departed from cnsha today'
+2026-01-22 09:02:20,008 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted: container=None, po=None, obl=None
+2026-01-22 09:02:20,008 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted load_port: 'CNSHA TODAY'
+2026-01-22 09:02:20,008 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Time window: 2026-01-22 00:00:00 to 2026-01-22 00:00:00 (today)
+2026-01-22 09:02:20,106 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Authorized consignee codes: ['0000866'], rows after filtering: 2095
+2026-01-22 09:02:20,135 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Port matching: user_input='CNSHA TODAY', normalized='CNSHA TODAY', code='None'
+2026-01-22 09:02:20,137 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Exact name match 'CNSHA TODAY': 0 rows
+2026-01-22 09:02:20,137 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Word-based match ['CNSHA', 'TODAY']: 0 rows
+2026-01-22 09:02:20,144 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Fuzzy match: 0 rows
+2026-01-22 09:02:20,152 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] After port filter: 0 rows matched
+2026-01-22 09:17:55,589 - shipping_chatbot - INFO - User_Query: how many containers departed from CNTAO yesterday, c_codes: ['0000866', '0040070', '0043881']
+2026-01-22 09:17:55,589 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'how many containers departed from CNTAO yesterday', length: 49
+2026-01-22 09:17:55,591 - shipping_chatbot - INFO - [DEBUG] q_lower: 'how many containers departed from cntao yesterday'
+2026-01-22 09:18:06,077 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted: container=None, po=None, obl=None
+2026-01-22 09:18:06,083 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted load_port: 'CNTAO YESTERDAY'
+2026-01-22 09:18:06,083 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Time window: 2026-01-21 00:00:00 to 2026-01-21 00:00:00 (yesterday)
+2026-01-22 09:18:06,198 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Authorized consignee codes: ['0000866', '0040070', '0043881'], rows after filtering: 4129
+2026-01-22 09:18:06,229 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Port matching: user_input='CNTAO YESTERDAY', normalized='CNTAO YESTERDAY', code='None'
+2026-01-22 09:18:06,243 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Exact name match 'CNTAO YESTERDAY': 0 rows
+2026-01-22 09:18:06,243 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Word-based match ['CNTAO', 'YESTERDAY']: 0 rows
+2026-01-22 09:18:06,243 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Fuzzy match: 0 rows
+2026-01-22 09:18:06,251 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] After port filter: 0 rows matched
+2026-01-22 09:19:20,296 - shipping_chatbot - INFO - User_Query: how many containers departed from QINGDAO yesterday, c_codes: ['0000866', '0040070', '0043881']
+2026-01-22 09:19:20,299 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'how many containers departed from QINGDAO yesterday', length: 51
+2026-01-22 09:19:20,300 - shipping_chatbot - INFO - [DEBUG] q_lower: 'how many containers departed from qingdao yesterday'
+2026-01-22 09:19:22,908 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted: container=None, po=None, obl=None
+2026-01-22 09:19:22,918 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted load_port: 'QINGDAO YESTERDAY'
+2026-01-22 09:19:22,918 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Time window: 2026-01-21 00:00:00 to 2026-01-21 00:00:00 (yesterday)
+2026-01-22 09:19:23,070 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Authorized consignee codes: ['0000866', '0040070', '0043881'], rows after filtering: 4129
+2026-01-22 09:19:23,140 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Port matching: user_input='QINGDAO YESTERDAY', normalized='QINGDAO YESTERDAY', code='None'
+2026-01-22 09:19:23,144 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Exact name match 'QINGDAO YESTERDAY': 0 rows
+2026-01-22 09:19:23,144 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Word-based match ['QINGDAO', 'YESTERDAY']: 0 rows
+2026-01-22 09:19:23,152 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Fuzzy match: 0 rows
+2026-01-22 09:19:23,161 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] After port filter: 0 rows matched
+2026-01-22 09:40:25,120 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-22 09:40:25,120 - shipping_chatbot - INFO - Agent created with 54 tools
+2026-01-22 09:40:25,120 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-22 09:40:37,881 - shipping_chatbot - INFO - User_Query: how many containers departed from QINGDAO yesterday, c_codes: ['0000866', '0040070', '0043881']
+2026-01-22 09:40:37,881 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'how many containers departed from QINGDAO yesterday', length: 51
+2026-01-22 09:40:37,881 - shipping_chatbot - INFO - [DEBUG] q_lower: 'how many containers departed from qingdao yesterday'
+2026-01-22 09:40:37,883 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-22 09:43:38,730 - shipping_chatbot - INFO - Fetched 19114 rows
+2026-01-22 09:43:38,730 - shipping_chatbot - INFO - Starting preprocessing on 19114 rows
+2026-01-22 09:43:38,808 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-22 09:43:39,309 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-22 09:43:39,491 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-22 09:43:40,058 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-22 09:43:40,058 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-22 09:43:40,058 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-22 09:43:40,097 - shipping_chatbot - INFO - Pre-processing finished - 19114 rows remain
+2026-01-22 09:43:42,949 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted: container=None, po=None, obl=None
+2026-01-22 09:43:42,951 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted load_port: 'QINGDAO'
+2026-01-22 09:43:42,953 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Time window: 2026-01-21 00:00:00 to 2026-01-21 00:00:00 (yesterday)
+2026-01-22 09:43:43,008 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Port variants to match: {'QINGDAOPORT', 'CNTAO', 'QINGDAO'}
+2026-01-22 09:43:43,030 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] After port filter: 134 rows matched
+2026-01-22 09:43:43,030 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Sample matched ports: ['QINGDAO, SHANDONG(CNTAO)', 'QINGDAO, SHANDONG(CNTAO)', 'QINGDAO, SHANDONG(CNTAO)', 'QINGDAO, SHANDONG(CNTAO)', 'QINGDAO, SHANDONG(CNTAO)']
+2026-01-22 09:43:43,030 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] After date filter: 2 rows matched
+2026-01-22 09:43:43,036 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Sample filtered results:
+      container_number dep_for_filter departure_source
+18450      MSMU3888268     2026-01-21              ATD
+18451      MSBU2773419     2026-01-21              ATD
+2026-01-22 09:43:43,043 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Returning 2 records
+2026-01-22 10:04:36,345 - shipping_chatbot - INFO - User_Query: how many containers departed from QINGDAO day before yesterday, c_codes: ['0000866', '0040070', '0043881']
+2026-01-22 10:04:36,345 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'how many containers departed from QINGDAO day before yesterday', length: 62
+2026-01-22 10:04:36,345 - shipping_chatbot - INFO - [DEBUG] q_lower: 'how many containers departed from qingdao day before yesterday'
+2026-01-22 10:04:39,093 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted: container=None, po=None, obl=None
+2026-01-22 10:04:39,093 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted load_port: 'QINGDAO ON 2025-10-22'
+2026-01-22 10:04:39,093 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Time window: 2026-01-22 00:00:00 to 2026-01-28 00:00:00 (next 7 days (default))
+2026-01-22 10:04:39,165 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Port variants to match: {'QINGDAO ON 2025-10-22'}
+2026-01-22 10:04:39,199 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] After port filter: 0 rows matched
+2026-01-22 10:08:01,552 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-22 10:08:01,552 - shipping_chatbot - INFO - Agent created with 54 tools
+2026-01-22 10:08:01,552 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-22 10:08:11,288 - shipping_chatbot - INFO - User_Query: how many containers departed from QINGDAO day before yesterday, c_codes: ['0000866', '0040070', '0043881']
+2026-01-22 10:08:11,288 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'how many containers departed from QINGDAO day before yesterday', length: 62
+2026-01-22 10:08:11,288 - shipping_chatbot - INFO - [DEBUG] q_lower: 'how many containers departed from qingdao day before yesterday'
+2026-01-22 10:08:11,288 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-22 10:08:26,620 - shipping_chatbot - INFO - Fetched 19114 rows
+2026-01-22 10:08:26,627 - shipping_chatbot - INFO - Starting preprocessing on 19114 rows
+2026-01-22 10:08:26,725 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-22 10:08:27,333 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-22 10:08:27,563 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-22 10:08:28,352 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-22 10:08:28,352 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-22 10:08:28,352 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-22 10:08:28,400 - shipping_chatbot - INFO - Pre-processing finished - 19114 rows remain
+2026-01-22 10:08:31,286 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted: container=None, po=None, obl=None
+2026-01-22 10:08:31,296 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted load_port: 'QINGDAO ON 2025-10-23'
+2026-01-22 10:08:31,303 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Time window: 2026-01-22 00:00:00 to 2026-01-28 00:00:00 (next 7 days (default))
+2026-01-22 10:08:31,382 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Port variants to match: {'QINGDAO ON 2025-10-23'}
+2026-01-22 10:08:31,401 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] After port filter: 0 rows matched
+2026-01-22 10:09:27,555 - shipping_chatbot - INFO - User_Query: how many containers departed from QINGDAO day before yesterday, c_codes: ['0000866', '0040070', '0043881']
+2026-01-22 10:09:27,555 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'how many containers departed from QINGDAO day before yesterday', length: 62
+2026-01-22 10:09:27,555 - shipping_chatbot - INFO - [DEBUG] q_lower: 'how many containers departed from qingdao day before yesterday'
+2026-01-22 10:09:30,570 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted: container=None, po=None, obl=None
+2026-01-22 10:09:30,570 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted load_port: 'QINGDAO ON 2025-10-22'
+2026-01-22 10:09:30,570 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Time window: 2026-01-22 00:00:00 to 2026-01-28 00:00:00 (next 7 days (default))
+2026-01-22 10:09:30,662 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Port variants to match: {'QINGDAO ON 2025-10-22'}
+2026-01-22 10:09:30,714 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] After port filter: 0 rows matched
+2026-01-22 10:10:42,904 - shipping_chatbot - INFO - User_Query: how many containers departed from QINGDAO day before yesterday, c_codes: ['0000866', '0040070', '0043881']
+2026-01-22 10:10:42,904 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'how many containers departed from QINGDAO day before yesterday', length: 62
+2026-01-22 10:10:42,904 - shipping_chatbot - INFO - [DEBUG] q_lower: 'how many containers departed from qingdao day before yesterday'
+2026-01-22 10:10:45,799 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted: container=None, po=None, obl=None
+2026-01-22 10:10:45,799 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted load_port: 'QINGDAO ON 2025-10-22'
+2026-01-22 10:10:45,799 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Time window: 2026-01-22 00:00:00 to 2026-01-28 00:00:00 (next 7 days (default))
+2026-01-22 10:10:45,889 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Port variants to match: {'QINGDAO ON 2025-10-22'}
+2026-01-22 10:10:45,918 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] After port filter: 0 rows matched
+2026-01-22 10:17:18,147 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-22 10:17:18,148 - shipping_chatbot - INFO - Agent created with 54 tools
+2026-01-22 10:17:18,148 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-22 10:18:02,595 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-22 10:18:02,595 - shipping_chatbot - INFO - Agent created with 54 tools
+2026-01-22 10:18:02,595 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-22 10:18:06,734 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-22 10:18:06,734 - shipping_chatbot - INFO - Agent created with 54 tools
+2026-01-22 10:18:06,734 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-22 10:18:10,684 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-22 10:18:10,685 - shipping_chatbot - INFO - Agent created with 54 tools
+2026-01-22 10:18:10,685 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-22 10:18:41,846 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-22 10:18:41,846 - shipping_chatbot - INFO - Agent created with 54 tools
+2026-01-22 10:18:41,846 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-22 10:19:42,197 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-22 10:19:42,197 - shipping_chatbot - INFO - Agent created with 54 tools
+2026-01-22 10:19:42,197 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-22 10:19:51,332 - shipping_chatbot - INFO - User_Query: how many containers departed from QINGDAO day before yesterday, c_codes: ['0000866', '0040070', '0043881']
+2026-01-22 10:19:51,337 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'how many containers departed from QINGDAO day before yesterday', length: 62
+2026-01-22 10:19:51,337 - shipping_chatbot - INFO - [DEBUG] q_lower: 'how many containers departed from qingdao day before yesterday'
+2026-01-22 10:19:51,337 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-22 10:20:21,619 - shipping_chatbot - INFO - Fetched 19114 rows
+2026-01-22 10:20:21,621 - shipping_chatbot - INFO - Starting preprocessing on 19114 rows
+2026-01-22 10:20:21,729 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-22 10:20:22,277 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-22 10:20:22,473 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-22 10:20:23,322 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-22 10:20:23,322 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-22 10:20:23,322 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-22 10:20:23,345 - shipping_chatbot - INFO - Pre-processing finished - 19114 rows remain
+2026-01-22 10:20:26,147 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted: container=None, po=None, obl=None
+2026-01-22 10:20:26,153 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted load_port: 'QINGDAO ON 2025-10-22'
+2026-01-22 10:20:26,156 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Time window: 2026-01-22 00:00:00 to 2026-01-28 00:00:00 (next 7 days (default))
+2026-01-22 10:20:26,228 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Port variants to match: {'QINGDAO ON 2025-10-22'}
+2026-01-22 10:20:26,253 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] After port filter: 0 rows matched
+2026-01-22 10:21:03,890 - shipping_chatbot - INFO - User_Query: how many containers departed from QINGDAO day before yesterday, c_codes: ['0000866', '0040070', '0043881']
+2026-01-22 10:21:03,890 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'how many containers departed from QINGDAO day before yesterday', length: 62
+2026-01-22 10:21:03,890 - shipping_chatbot - INFO - [DEBUG] q_lower: 'how many containers departed from qingdao day before yesterday'
+2026-01-22 10:21:06,756 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted: container=None, po=None, obl=None
+2026-01-22 10:21:06,756 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted load_port: 'QINGDAO ON 2025-10-23'
+2026-01-22 10:21:06,756 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Time window: 2026-01-22 00:00:00 to 2026-01-28 00:00:00 (next 7 days (default))
+2026-01-22 10:21:06,867 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Port variants to match: {'QINGDAO ON 2025-10-23'}
+2026-01-22 10:21:06,907 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] After port filter: 0 rows matched
+2026-01-22 10:24:43,478 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-22 10:24:43,478 - shipping_chatbot - INFO - Agent created with 54 tools
+2026-01-22 10:24:43,478 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-22 10:24:47,399 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-22 10:24:47,399 - shipping_chatbot - INFO - Agent created with 54 tools
+2026-01-22 10:24:47,399 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-22 10:24:51,956 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-22 10:24:51,956 - shipping_chatbot - INFO - Agent created with 54 tools
+2026-01-22 10:24:51,956 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-22 10:24:55,728 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-22 10:24:55,729 - shipping_chatbot - INFO - Agent created with 54 tools
+2026-01-22 10:24:55,729 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-22 10:26:06,258 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-22 10:26:06,258 - shipping_chatbot - INFO - Agent created with 54 tools
+2026-01-22 10:26:06,258 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-22 10:26:26,771 - shipping_chatbot - INFO - User_Query: how many containers departed from QINGDAO day before yesterday, c_codes: ['0000866', '0040070', '0043881']
+2026-01-22 10:26:26,783 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'how many containers departed from QINGDAO day before yesterday', length: 62
+2026-01-22 10:26:26,783 - shipping_chatbot - INFO - [DEBUG] q_lower: 'how many containers departed from qingdao day before yesterday'
+2026-01-22 10:26:26,783 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-22 10:26:52,411 - shipping_chatbot - INFO - Fetched 19114 rows
+2026-01-22 10:26:52,424 - shipping_chatbot - INFO - Starting preprocessing on 19114 rows
+2026-01-22 10:26:52,557 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-22 10:26:53,696 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-22 10:26:54,033 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-22 10:26:55,353 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-22 10:26:55,358 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-22 10:26:55,360 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-22 10:26:55,422 - shipping_chatbot - INFO - Pre-processing finished - 19114 rows remain
+2026-01-22 10:26:58,275 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted: container=None, po=None, obl=None
+2026-01-22 10:26:58,277 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted load_port: 'QINGDAO'
+2026-01-22 10:26:58,279 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Time window: 2026-01-20 00:00:00 to 2026-01-20 00:00:00 (day before yesterday)
+2026-01-22 10:26:58,357 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Port variants to match: {'CNTAO', 'QINGDAO', 'QINGDAOPORT'}
+2026-01-22 10:26:58,386 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] After port filter: 134 rows matched
+2026-01-22 10:26:58,386 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Sample matched ports: ['QINGDAO, SHANDONG(CNTAO)', 'QINGDAO, SHANDONG(CNTAO)', 'QINGDAO, SHANDONG(CNTAO)', 'QINGDAO, SHANDONG(CNTAO)', 'QINGDAO, SHANDONG(CNTAO)']
+2026-01-22 10:26:58,393 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] After date filter: 3 rows matched
+2026-01-22 10:26:58,410 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Sample filtered results:
+      container_number dep_for_filter departure_source
+17721      MSKU4393154     2026-01-20              ATD
+18281      OOCU8354059     2026-01-20              ATD
+18288      OOCU8793365     2026-01-20              ATD
+2026-01-22 10:26:58,414 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Returning 3 records
+2026-01-22 10:30:07,046 - shipping_chatbot - INFO - User_Query: how many containers departed from CNSHA day before yesterday, c_codes: ['0000866', '0040070', '0043881']
+2026-01-22 10:30:07,046 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'how many containers departed from CNSHA day before yesterday', length: 60
+2026-01-22 10:30:07,046 - shipping_chatbot - INFO - [DEBUG] q_lower: 'how many containers departed from cnsha day before yesterday'
+2026-01-22 10:30:09,518 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted: container=None, po=None, obl=None
+2026-01-22 10:30:09,518 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted load_port: 'CNSHA'
+2026-01-22 10:30:09,518 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Time window: 2026-01-20 00:00:00 to 2026-01-20 00:00:00 (day before yesterday)
+2026-01-22 10:30:09,574 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Port variants to match: {'CNSHA', 'SHANGHAI'}
+2026-01-22 10:30:09,597 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] After port filter: 161 rows matched
+2026-01-22 10:30:09,598 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Sample matched ports: ['SHANGHAI(CNSHA)', 'SHANGHAI(CNSHA)', 'SHANGHAI(CNSHA)', 'SHANGHAI(CNSHA)', 'SHANGHAI(CNSHA)']
+2026-01-22 10:30:09,600 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] After date filter: 4 rows matched
+2026-01-22 10:30:09,604 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Sample filtered results:
+      container_number dep_for_filter departure_source
+18570      PSXU2700726     2026-01-20              ATD
+18571      TLLU7515513     2026-01-20              ATD
+18572      DRYU9829654     2026-01-20              ATD
+18573      CSNU6187455     2026-01-20              ATD
+2026-01-22 10:30:09,607 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Returning 4 records
+2026-01-22 10:31:07,872 - shipping_chatbot - INFO - User_Query: how many containers departed from CNSHA day before yesterday, c_codes: ['0000866']
+2026-01-22 10:31:07,872 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'how many containers departed from CNSHA day before yesterday', length: 60
+2026-01-22 10:31:07,872 - shipping_chatbot - INFO - [DEBUG] q_lower: 'how many containers departed from cnsha day before yesterday'
+2026-01-22 10:31:10,302 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted: container=None, po=None, obl=None
+2026-01-22 10:31:10,302 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted load_port: 'CNSHA'
+2026-01-22 10:31:10,302 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Time window: 2026-01-20 00:00:00 to 2026-01-20 00:00:00 (day before yesterday)
+2026-01-22 10:31:10,360 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Port variants to match: {'CNSHA', 'SHANGHAI'}
+2026-01-22 10:31:10,369 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] After port filter: 106 rows matched
+2026-01-22 10:31:10,369 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Sample matched ports: ['SHANGHAI(CNSHA)', 'SHANGHAI(CNSHA)', 'SHANGHAI(CNSHA)', 'SHANGHAI(CNSHA)', 'SHANGHAI(CNSHA)']
+2026-01-22 10:31:10,381 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] After date filter: 0 rows matched
+2026-01-22 10:39:00,189 - shipping_chatbot - INFO - User_Query: how many containers departed from CNSHA yesterday, c_codes: ['0000866']
+2026-01-22 10:39:00,189 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'how many containers departed from CNSHA yesterday', length: 49
+2026-01-22 10:39:00,189 - shipping_chatbot - INFO - [DEBUG] q_lower: 'how many containers departed from cnsha yesterday'
+2026-01-22 10:39:03,038 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted: container=None, po=None, obl=None
+2026-01-22 10:39:03,038 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted load_port: 'CNSHA'
+2026-01-22 10:39:03,040 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Time window: 2026-01-21 00:00:00 to 2026-01-21 00:00:00 (yesterday)
+2026-01-22 10:39:03,112 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Port variants to match: {'CNSHA', 'SHANGHAI'}
+2026-01-22 10:39:03,130 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] After port filter: 106 rows matched
+2026-01-22 10:39:03,131 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Sample matched ports: ['SHANGHAI(CNSHA)', 'SHANGHAI(CNSHA)', 'SHANGHAI(CNSHA)', 'SHANGHAI(CNSHA)', 'SHANGHAI(CNSHA)']
+2026-01-22 10:39:03,133 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] After date filter: 0 rows matched
+2026-01-22 10:45:33,290 - shipping_chatbot - INFO - User_Query: Which containers will arrive in the next 10days at Nashville, c_codes: ['0000866']
+2026-01-22 10:45:33,290 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers will arrive in the next 10days at Nashville', length: 60
+2026-01-22 10:45:33,290 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers will arrive in the next 10days at nashville'
+2026-01-22 10:45:35,935 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: next 10 days, Dates: 2026-01-22 to 2026-01-31, is_past=False
+2026-01-22 10:45:36,096 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found bare port code: USBNA (validated against known codes)
+2026-01-22 10:52:10,649 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-22 10:52:10,649 - shipping_chatbot - INFO - Agent created with 54 tools
+2026-01-22 10:52:10,649 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-22 10:52:20,707 - shipping_chatbot - INFO - User_Query: Which containers will arrive in the next 10days at Nashville, c_codes: ['0000866']
+2026-01-22 10:52:20,707 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers will arrive in the next 10days at Nashville', length: 60
+2026-01-22 10:52:20,707 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers will arrive in the next 10days at nashville'
+2026-01-22 10:52:20,707 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-22 10:52:53,196 - shipping_chatbot - INFO - Fetched 19114 rows
+2026-01-22 10:52:53,196 - shipping_chatbot - INFO - Starting preprocessing on 19114 rows
+2026-01-22 10:52:53,315 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-22 10:52:54,250 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-22 10:52:54,546 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-22 10:52:55,394 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-22 10:52:55,395 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-22 10:52:55,395 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-22 10:52:55,463 - shipping_chatbot - INFO - Pre-processing finished - 19114 rows remain
+2026-01-22 10:52:58,439 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: next 10 days, Dates: 2026-01-22 to 2026-01-31, is_past=False
+2026-01-22 10:52:58,535 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found port code after preposition: USBNA
+2026-01-22 10:52:58,535 - shipping_chatbot - ERROR - Agent failed: cannot access local variable 'candidate_tokens' where it is not associated with a value
+Traceback (most recent call last):
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\api\main.py", line 342, in ask
+    result = AGENT.invoke({"input": q})
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\chains\base.py", line 166, in invoke
+    raise e
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\chains\base.py", line 156, in invoke
+    self._call(inputs, run_manager=run_manager)
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\agents\agent.py", line 1433, in _call
+    next_step_output = self._take_next_step(
+                       ^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\agents\agent.py", line 1139, in _take_next_step
+    [
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\agents\agent.py", line 1139, in <listcomp>
+    [
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\agents\agent.py", line 1224, in _iter_next_step
+    yield self._perform_agent_action(
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\agents\agent.py", line 1246, in _perform_agent_action
+    observation = tool.run(
+                  ^^^^^^^^^
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain_core\tools\base.py", line 586, in run
+    raise error_to_raise
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain_core\tools\base.py", line 555, in run
+    response = context.run(self._run, *tool_args, **tool_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain_core\tools\simple.py", line 84, in _run
+    return self.func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\agents\tools.py", line 3944, in get_upcoming_arrivals
+    for t in candidate_tokens
+             ^^^^^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'candidate_tokens' where it is not associated with a value
+2026-01-22 10:52:58,695 - shipping_chatbot - INFO - Router: Set consignee codes ['0000866'] for query: Which containers will arrive in the next 10days at Nashville
+2026-01-22 10:52:58,748 - shipping_chatbot - INFO - Consignee filtering validated: 2095 rows for codes ['0000866']
+2026-01-22 10:52:58,762 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: next 7 days (default), Dates: 2026-01-22 to 2026-01-28, is_past=False
+2026-01-22 10:52:58,848 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found city location: Nashville (normalized: NASHVILLE)
+2026-01-22 10:52:58,848 - shipping_chatbot - INFO - [get_upcoming_arrivals] Applying location filter for 'NASHVILLE'. Rows before filter: 2095, Matching rows: 1715
+2026-01-22 10:52:58,850 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample ports after filter: ['SAVANNAH, GA(USSAV)']
+2026-01-22 10:52:58,854 - shipping_chatbot - INFO - [get_upcoming_arrivals] Returning 17 containers. Unique discharge ports in result: ['HONG KONG(HKHKG)', 'LOS ANGELES, CA(USLAX)', 'NASHVILLE, TN(USBNA)']
+2026-01-22 10:52:58,854 - shipping_chatbot - WARNING - [get_upcoming_arrivals] WARNING: Multiple ports in result when filtering for 'NASHVILLE': ['HONG KONG(HKHKG)', 'LOS ANGELES, CA(USLAX)', 'NASHVILLE, TN(USBNA)']
+2026-01-22 10:53:14,722 - shipping_chatbot - INFO - User_Query: Which containers will arrive in the next 10days at Nashville, c_codes: ['0000866']
+2026-01-22 10:53:14,723 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers will arrive in the next 10days at Nashville', length: 60
+2026-01-22 10:53:14,723 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers will arrive in the next 10days at nashville'
+2026-01-22 10:53:17,166 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: next 10 days, Dates: 2026-01-22 to 2026-01-31, is_past=False
+2026-01-22 10:53:17,272 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found port code after preposition: USBNA
+2026-01-22 10:53:17,272 - shipping_chatbot - ERROR - Agent failed: cannot access local variable 'candidate_tokens' where it is not associated with a value
+Traceback (most recent call last):
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\api\main.py", line 342, in ask
+    result = AGENT.invoke({"input": q})
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\chains\base.py", line 166, in invoke
+    raise e
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\chains\base.py", line 156, in invoke
+    self._call(inputs, run_manager=run_manager)
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\agents\agent.py", line 1433, in _call
+    next_step_output = self._take_next_step(
+                       ^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\agents\agent.py", line 1139, in _take_next_step
+    [
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\agents\agent.py", line 1139, in <listcomp>
+    [
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\agents\agent.py", line 1224, in _iter_next_step
+    yield self._perform_agent_action(
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\agents\agent.py", line 1246, in _perform_agent_action
+    observation = tool.run(
+                  ^^^^^^^^^
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain_core\tools\base.py", line 586, in run
+    raise error_to_raise
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain_core\tools\base.py", line 555, in run
+    response = context.run(self._run, *tool_args, **tool_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain_core\tools\simple.py", line 84, in _run
+    return self.func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\agents\tools.py", line 3944, in get_upcoming_arrivals
+    for t in candidate_tokens
+             ^^^^^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'candidate_tokens' where it is not associated with a value
+2026-01-22 10:53:17,272 - shipping_chatbot - INFO - Router: Set consignee codes ['0000866'] for query: Which containers will arrive in the next 10days at Nashville
+2026-01-22 10:53:17,354 - shipping_chatbot - INFO - Consignee filtering validated: 2095 rows for codes ['0000866']
+2026-01-22 10:53:17,355 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: next 7 days (default), Dates: 2026-01-22 to 2026-01-28, is_past=False
+2026-01-22 10:53:17,452 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found city location: Nashville (normalized: NASHVILLE)
+2026-01-22 10:53:17,452 - shipping_chatbot - INFO - [get_upcoming_arrivals] Applying location filter for 'NASHVILLE'. Rows before filter: 2095, Matching rows: 1715
+2026-01-22 10:53:17,455 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample ports after filter: ['SAVANNAH, GA(USSAV)']
+2026-01-22 10:53:17,462 - shipping_chatbot - INFO - [get_upcoming_arrivals] Returning 17 containers. Unique discharge ports in result: ['HONG KONG(HKHKG)', 'LOS ANGELES, CA(USLAX)', 'NASHVILLE, TN(USBNA)']
+2026-01-22 10:53:17,462 - shipping_chatbot - WARNING - [get_upcoming_arrivals] WARNING: Multiple ports in result when filtering for 'NASHVILLE': ['HONG KONG(HKHKG)', 'LOS ANGELES, CA(USLAX)', 'NASHVILLE, TN(USBNA)']
+2026-01-22 10:54:04,756 - shipping_chatbot - INFO - User_Query: Which containers will arrive in the next 10days at Nashville, c_codes: ['0000866']
+2026-01-22 10:54:04,757 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers will arrive in the next 10days at Nashville', length: 60
+2026-01-22 10:54:04,757 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers will arrive in the next 10days at nashville'
+2026-01-22 10:54:07,117 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: next 10 days, Dates: 2026-01-22 to 2026-01-31, is_past=False
+2026-01-22 10:55:03,428 - shipping_chatbot - INFO - User_Query: Which containers will arrive in the next 10days at Nashville, c_codes: ['0000866']
+2026-01-22 10:55:03,428 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers will arrive in the next 10days at Nashville', length: 60
+2026-01-22 10:55:03,428 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers will arrive in the next 10days at nashville'
+2026-01-22 10:55:05,935 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: next 10 days, Dates: 2026-01-22 to 2026-01-31, is_past=False
+2026-01-22 10:55:06,030 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found port code after preposition: USBNA
+2026-01-22 10:55:06,031 - shipping_chatbot - ERROR - Agent failed: cannot access local variable 'candidate_tokens' where it is not associated with a value
+Traceback (most recent call last):
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\api\main.py", line 342, in ask
+    result = AGENT.invoke({"input": q})
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\chains\base.py", line 166, in invoke
+    raise e
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\chains\base.py", line 156, in invoke
+    self._call(inputs, run_manager=run_manager)
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\agents\agent.py", line 1433, in _call
+    next_step_output = self._take_next_step(
+                       ^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\agents\agent.py", line 1139, in _take_next_step
+    [
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\agents\agent.py", line 1139, in <listcomp>
+    [
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\agents\agent.py", line 1224, in _iter_next_step
+    yield self._perform_agent_action(
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\agents\agent.py", line 1246, in _perform_agent_action
+    observation = tool.run(
+                  ^^^^^^^^^
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain_core\tools\base.py", line 586, in run
+    raise error_to_raise
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain_core\tools\base.py", line 555, in run
+    response = context.run(self._run, *tool_args, **tool_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain_core\tools\simple.py", line 84, in _run
+    return self.func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\agents\tools.py", line 3944, in get_upcoming_arrivals
+    for t in candidate_tokens
+             ^^^^^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'candidate_tokens' where it is not associated with a value
+2026-01-22 10:55:06,033 - shipping_chatbot - INFO - Router: Set consignee codes ['0000866'] for query: Which containers will arrive in the next 10days at Nashville
+2026-01-22 10:55:06,114 - shipping_chatbot - INFO - Consignee filtering validated: 2095 rows for codes ['0000866']
+2026-01-22 10:55:06,115 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: next 7 days (default), Dates: 2026-01-22 to 2026-01-28, is_past=False
+2026-01-22 10:55:06,218 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found city location: Nashville (normalized: NASHVILLE)
+2026-01-22 10:55:06,218 - shipping_chatbot - INFO - [get_upcoming_arrivals] Applying location filter for 'NASHVILLE'. Rows before filter: 2095, Matching rows: 1715
+2026-01-22 10:55:06,221 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample ports after filter: ['SAVANNAH, GA(USSAV)']
+2026-01-22 10:55:06,228 - shipping_chatbot - INFO - [get_upcoming_arrivals] Returning 17 containers. Unique discharge ports in result: ['HONG KONG(HKHKG)', 'LOS ANGELES, CA(USLAX)', 'NASHVILLE, TN(USBNA)']
+2026-01-22 10:55:06,229 - shipping_chatbot - WARNING - [get_upcoming_arrivals] WARNING: Multiple ports in result when filtering for 'NASHVILLE': ['HONG KONG(HKHKG)', 'LOS ANGELES, CA(USLAX)', 'NASHVILLE, TN(USBNA)']
+2026-01-22 10:55:23,978 - shipping_chatbot - INFO - User_Query: Which containers will arrive in the next 10days at Nashville, c_codes: ['0000866']
+2026-01-22 10:55:23,978 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers will arrive in the next 10days at Nashville', length: 60
+2026-01-22 10:55:23,978 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers will arrive in the next 10days at nashville'
+2026-01-22 10:55:26,515 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: next 10 days, Dates: 2026-01-22 to 2026-01-31, is_past=False
+2026-01-22 11:00:13,931 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-22 11:00:13,931 - shipping_chatbot - INFO - Agent created with 54 tools
+2026-01-22 11:00:13,931 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-22 11:00:20,174 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-22 11:00:20,175 - shipping_chatbot - INFO - Agent created with 54 tools
+2026-01-22 11:00:20,175 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-22 11:00:26,670 - shipping_chatbot - INFO - User_Query: Which containers will arrive in the next 10days at Nashville, c_codes: ['0000866']
+2026-01-22 11:00:26,672 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers will arrive in the next 10days at Nashville', length: 60
+2026-01-22 11:00:26,672 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers will arrive in the next 10days at nashville'
+2026-01-22 11:00:26,672 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-22 11:00:52,751 - shipping_chatbot - INFO - Fetched 19114 rows
+2026-01-22 11:00:52,751 - shipping_chatbot - INFO - Starting preprocessing on 19114 rows
+2026-01-22 11:00:52,868 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-22 11:00:53,752 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-22 11:00:54,042 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-22 11:00:54,793 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-22 11:00:54,795 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-22 11:00:54,795 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-22 11:00:54,829 - shipping_chatbot - INFO - Pre-processing finished - 19114 rows remain
+2026-01-22 11:00:57,349 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: next 10 days, Dates: 2026-01-22 to 2026-01-31, is_past=False
+2026-01-22 11:00:57,443 - shipping_chatbot - INFO - [get_upcoming_arrivals] Extracted 48 known port codes from dataset
+2026-01-22 11:00:57,444 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample known codes: ['CAVAN', 'USORD', 'USIND', 'USSPX', 'USCMH', 'USFBX', 'USWAS', 'USSAV', 'USSEA', 'USPDX', 'USWOS', 'USHIB', 'USIAD', 'USMJB', 'HKHKG', 'USEWR', 'USJFK', 'USUXE', 'USLAX', 'CAPRR']
+2026-01-22 11:00:57,444 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found port code after preposition: USBNA
+2026-01-22 11:00:57,444 - shipping_chatbot - INFO - [get_upcoming_arrivals] Is USBNA in known_codes? True
+2026-01-22 11:00:57,446 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 112 matches in column 'discharge_port'
+2026-01-22 11:00:57,446 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 101 matches in column 'vehicle_arrival_lcn'
+2026-01-22 11:00:57,449 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 1548 matches in column 'final_destination'
+2026-01-22 11:00:57,452 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 1526 matches in column 'place_of_delivery'
+2026-01-22 11:00:57,452 - shipping_chatbot - INFO - [get_upcoming_arrivals] Successfully detected port code 'USBNA' after preposition. Matched 1715 rows.
+2026-01-22 11:00:57,453 - shipping_chatbot - ERROR - Agent failed: cannot access local variable 'candidate_tokens' where it is not associated with a value
+Traceback (most recent call last):
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\api\main.py", line 342, in ask
+    result = AGENT.invoke({"input": q})
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\chains\base.py", line 166, in invoke
+    raise e
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\chains\base.py", line 156, in invoke
+    self._call(inputs, run_manager=run_manager)
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\agents\agent.py", line 1433, in _call
+    next_step_output = self._take_next_step(
+                       ^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\agents\agent.py", line 1139, in _take_next_step
+    [
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\agents\agent.py", line 1139, in <listcomp>
+    [
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\agents\agent.py", line 1224, in _iter_next_step
+    yield self._perform_agent_action(
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\agents\agent.py", line 1246, in _perform_agent_action
+    observation = tool.run(
+                  ^^^^^^^^^
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain_core\tools\base.py", line 586, in run
+    raise error_to_raise
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain_core\tools\base.py", line 555, in run
+    response = context.run(self._run, *tool_args, **tool_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain_core\tools\simple.py", line 84, in _run
+    return self.func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\agents\tools.py", line 3966, in get_upcoming_arrivals
+    for t in candidate_tokens
+             ^^^^^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'candidate_tokens' where it is not associated with a value
+2026-01-22 11:00:57,459 - shipping_chatbot - INFO - Router: Set consignee codes ['0000866'] for query: Which containers will arrive in the next 10days at Nashville
+2026-01-22 11:00:57,534 - shipping_chatbot - INFO - Consignee filtering validated: 2095 rows for codes ['0000866']
+2026-01-22 11:00:57,538 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: next 7 days (default), Dates: 2026-01-22 to 2026-01-28, is_past=False
+2026-01-22 11:00:57,627 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found city location: Nashville (normalized: NASHVILLE)
+2026-01-22 11:00:57,627 - shipping_chatbot - INFO - [get_upcoming_arrivals] Applying location filter for 'NASHVILLE'. Rows before filter: 2095, Matching rows: 1715
+2026-01-22 11:00:57,629 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample ports after filter: ['SAVANNAH, GA(USSAV)']
+2026-01-22 11:00:57,637 - shipping_chatbot - INFO - [get_upcoming_arrivals] Returning 17 containers. Unique discharge ports in result: ['HONG KONG(HKHKG)', 'LOS ANGELES, CA(USLAX)', 'NASHVILLE, TN(USBNA)']
+2026-01-22 11:00:57,637 - shipping_chatbot - WARNING - [get_upcoming_arrivals] WARNING: Multiple ports in result when filtering for 'NASHVILLE': ['HONG KONG(HKHKG)', 'LOS ANGELES, CA(USLAX)', 'NASHVILLE, TN(USBNA)']
+2026-01-22 11:01:18,807 - shipping_chatbot - INFO - User_Query: Which containers will arrive in the next 10days at Nashville, c_codes: ['0000866']
+2026-01-22 11:01:18,807 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers will arrive in the next 10days at Nashville', length: 60
+2026-01-22 11:01:18,807 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers will arrive in the next 10days at nashville'
+2026-01-22 11:01:21,655 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: next 10 days, Dates: 2026-01-22 to 2026-01-31, is_past=False
+2026-01-22 11:01:21,753 - shipping_chatbot - INFO - [get_upcoming_arrivals] Extracted 48 known port codes from dataset
+2026-01-22 11:01:21,754 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample known codes: ['CAVAN', 'USORD', 'USIND', 'USSPX', 'USCMH', 'USFBX', 'USWAS', 'USSAV', 'USSEA', 'USPDX', 'USWOS', 'USHIB', 'USIAD', 'USMJB', 'HKHKG', 'USEWR', 'USJFK', 'USUXE', 'USLAX', 'CAPRR']
+2026-01-22 11:01:21,755 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found port code after preposition: USBNA
+2026-01-22 11:01:21,755 - shipping_chatbot - INFO - [get_upcoming_arrivals] Is USBNA in known_codes? True
+2026-01-22 11:01:21,757 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 112 matches in column 'discharge_port'
+2026-01-22 11:01:21,758 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 101 matches in column 'vehicle_arrival_lcn'
+2026-01-22 11:01:21,758 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 1548 matches in column 'final_destination'
+2026-01-22 11:01:21,763 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 1526 matches in column 'place_of_delivery'
+2026-01-22 11:01:21,763 - shipping_chatbot - INFO - [get_upcoming_arrivals] Successfully detected port code 'USBNA' after preposition. Matched 1715 rows.
+2026-01-22 11:01:21,763 - shipping_chatbot - ERROR - Agent failed: cannot access local variable 'candidate_tokens' where it is not associated with a value
+Traceback (most recent call last):
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\api\main.py", line 342, in ask
+    result = AGENT.invoke({"input": q})
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\chains\base.py", line 166, in invoke
+    raise e
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\chains\base.py", line 156, in invoke
+    self._call(inputs, run_manager=run_manager)
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\agents\agent.py", line 1433, in _call
+    next_step_output = self._take_next_step(
+                       ^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\agents\agent.py", line 1139, in _take_next_step
+    [
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\agents\agent.py", line 1139, in <listcomp>
+    [
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\agents\agent.py", line 1224, in _iter_next_step
+    yield self._perform_agent_action(
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\agents\agent.py", line 1246, in _perform_agent_action
+    observation = tool.run(
+                  ^^^^^^^^^
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain_core\tools\base.py", line 586, in run
+    raise error_to_raise
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain_core\tools\base.py", line 555, in run
+    response = context.run(self._run, *tool_args, **tool_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain_core\tools\simple.py", line 84, in _run
+    return self.func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\agents\tools.py", line 3966, in get_upcoming_arrivals
+    for t in candidate_tokens
+             ^^^^^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'candidate_tokens' where it is not associated with a value
+2026-01-22 11:01:21,765 - shipping_chatbot - INFO - Router: Set consignee codes ['0000866'] for query: Which containers will arrive in the next 10days at Nashville
+2026-01-22 11:01:21,810 - shipping_chatbot - INFO - Consignee filtering validated: 2095 rows for codes ['0000866']
+2026-01-22 11:01:21,810 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: next 7 days (default), Dates: 2026-01-22 to 2026-01-28, is_past=False
+2026-01-22 11:01:21,893 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found city location: Nashville (normalized: NASHVILLE)
+2026-01-22 11:01:21,893 - shipping_chatbot - INFO - [get_upcoming_arrivals] Applying location filter for 'NASHVILLE'. Rows before filter: 2095, Matching rows: 1715
+2026-01-22 11:01:21,893 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample ports after filter: ['SAVANNAH, GA(USSAV)']
+2026-01-22 11:01:21,908 - shipping_chatbot - INFO - [get_upcoming_arrivals] Returning 17 containers. Unique discharge ports in result: ['HONG KONG(HKHKG)', 'LOS ANGELES, CA(USLAX)', 'NASHVILLE, TN(USBNA)']
+2026-01-22 11:01:21,908 - shipping_chatbot - WARNING - [get_upcoming_arrivals] WARNING: Multiple ports in result when filtering for 'NASHVILLE': ['HONG KONG(HKHKG)', 'LOS ANGELES, CA(USLAX)', 'NASHVILLE, TN(USBNA)']
+2026-01-22 11:01:32,000 - shipping_chatbot - INFO - User_Query: Which containers will arrive in the next 10days at Nashville, c_codes: ['0000866']
+2026-01-22 11:01:32,000 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers will arrive in the next 10days at Nashville', length: 60
+2026-01-22 11:01:32,000 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers will arrive in the next 10days at nashville'
+2026-01-22 11:01:34,357 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: next 10 days, Dates: 2026-01-22 to 2026-01-31, is_past=False
+2026-01-22 11:01:34,462 - shipping_chatbot - INFO - [get_upcoming_arrivals] Extracted 48 known port codes from dataset
+2026-01-22 11:01:34,462 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample known codes: ['CAVAN', 'USORD', 'USIND', 'USSPX', 'USCMH', 'USFBX', 'USWAS', 'USSAV', 'USSEA', 'USPDX', 'USWOS', 'USHIB', 'USIAD', 'USMJB', 'HKHKG', 'USEWR', 'USJFK', 'USUXE', 'USLAX', 'CAPRR']
+2026-01-22 11:01:34,462 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found port code after preposition: USBNA
+2026-01-22 11:01:34,463 - shipping_chatbot - INFO - [get_upcoming_arrivals] Is USBNA in known_codes? True
+2026-01-22 11:01:34,465 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 112 matches in column 'discharge_port'
+2026-01-22 11:01:34,466 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 101 matches in column 'vehicle_arrival_lcn'
+2026-01-22 11:01:34,469 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 1548 matches in column 'final_destination'
+2026-01-22 11:01:34,471 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 1526 matches in column 'place_of_delivery'
+2026-01-22 11:01:34,471 - shipping_chatbot - INFO - [get_upcoming_arrivals] Successfully detected port code 'USBNA' after preposition. Matched 1715 rows.
+2026-01-22 11:01:34,471 - shipping_chatbot - ERROR - Agent failed: cannot access local variable 'candidate_tokens' where it is not associated with a value
+Traceback (most recent call last):
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\api\main.py", line 342, in ask
+    result = AGENT.invoke({"input": q})
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\chains\base.py", line 166, in invoke
+    raise e
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\chains\base.py", line 156, in invoke
+    self._call(inputs, run_manager=run_manager)
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\agents\agent.py", line 1433, in _call
+    next_step_output = self._take_next_step(
+                       ^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\agents\agent.py", line 1139, in _take_next_step
+    [
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\agents\agent.py", line 1139, in <listcomp>
+    [
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\agents\agent.py", line 1224, in _iter_next_step
+    yield self._perform_agent_action(
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\agents\agent.py", line 1246, in _perform_agent_action
+    observation = tool.run(
+                  ^^^^^^^^^
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain_core\tools\base.py", line 586, in run
+    raise error_to_raise
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain_core\tools\base.py", line 555, in run
+    response = context.run(self._run, *tool_args, **tool_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain_core\tools\simple.py", line 84, in _run
+    return self.func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\agents\tools.py", line 3966, in get_upcoming_arrivals
+    for t in candidate_tokens
+             ^^^^^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'candidate_tokens' where it is not associated with a value
+2026-01-22 11:01:34,473 - shipping_chatbot - INFO - Router: Set consignee codes ['0000866'] for query: Which containers will arrive in the next 10days at Nashville
+2026-01-22 11:01:34,543 - shipping_chatbot - INFO - Consignee filtering validated: 2095 rows for codes ['0000866']
+2026-01-22 11:01:34,543 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: next 7 days (default), Dates: 2026-01-22 to 2026-01-28, is_past=False
+2026-01-22 11:01:34,651 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found city location: Nashville (normalized: NASHVILLE)
+2026-01-22 11:01:34,651 - shipping_chatbot - INFO - [get_upcoming_arrivals] Applying location filter for 'NASHVILLE'. Rows before filter: 2095, Matching rows: 1715
+2026-01-22 11:01:34,655 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample ports after filter: ['SAVANNAH, GA(USSAV)']
+2026-01-22 11:01:34,661 - shipping_chatbot - INFO - [get_upcoming_arrivals] Returning 17 containers. Unique discharge ports in result: ['HONG KONG(HKHKG)', 'LOS ANGELES, CA(USLAX)', 'NASHVILLE, TN(USBNA)']
+2026-01-22 11:01:34,661 - shipping_chatbot - WARNING - [get_upcoming_arrivals] WARNING: Multiple ports in result when filtering for 'NASHVILLE': ['HONG KONG(HKHKG)', 'LOS ANGELES, CA(USLAX)', 'NASHVILLE, TN(USBNA)']
+2026-01-22 11:01:59,332 - shipping_chatbot - INFO - User_Query: Which containers will arrive in the next 10days at Nashville, c_codes: ['0000866']
+2026-01-22 11:01:59,332 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers will arrive in the next 10days at Nashville', length: 60
+2026-01-22 11:01:59,332 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers will arrive in the next 10days at nashville'
+2026-01-22 11:02:01,787 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: next 10 days, Dates: 2026-01-22 to 2026-01-31, is_past=False
+2026-01-22 11:02:01,900 - shipping_chatbot - INFO - [get_upcoming_arrivals] Extracted 48 known port codes from dataset
+2026-01-22 11:02:01,900 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample known codes: ['CAVAN', 'USORD', 'USIND', 'USSPX', 'USCMH', 'USFBX', 'USWAS', 'USSAV', 'USSEA', 'USPDX', 'USWOS', 'USHIB', 'USIAD', 'USMJB', 'HKHKG', 'USEWR', 'USJFK', 'USUXE', 'USLAX', 'CAPRR']
+2026-01-22 11:02:01,900 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found port code after preposition: USBNA
+2026-01-22 11:02:01,901 - shipping_chatbot - INFO - [get_upcoming_arrivals] Is USBNA in known_codes? True
+2026-01-22 11:02:01,902 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 112 matches in column 'discharge_port'
+2026-01-22 11:02:01,903 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 101 matches in column 'vehicle_arrival_lcn'
+2026-01-22 11:02:01,904 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 1548 matches in column 'final_destination'
+2026-01-22 11:02:01,905 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 1526 matches in column 'place_of_delivery'
+2026-01-22 11:02:01,905 - shipping_chatbot - INFO - [get_upcoming_arrivals] Successfully detected port code 'USBNA' after preposition. Matched 1715 rows.
+2026-01-22 11:02:01,905 - shipping_chatbot - ERROR - Agent failed: cannot access local variable 'candidate_tokens' where it is not associated with a value
+Traceback (most recent call last):
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\api\main.py", line 342, in ask
+    result = AGENT.invoke({"input": q})
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\chains\base.py", line 166, in invoke
+    raise e
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\chains\base.py", line 156, in invoke
+    self._call(inputs, run_manager=run_manager)
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\agents\agent.py", line 1433, in _call
+    next_step_output = self._take_next_step(
+                       ^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\agents\agent.py", line 1139, in _take_next_step
+    [
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\agents\agent.py", line 1139, in <listcomp>
+    [
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\agents\agent.py", line 1224, in _iter_next_step
+    yield self._perform_agent_action(
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\agents\agent.py", line 1246, in _perform_agent_action
+    observation = tool.run(
+                  ^^^^^^^^^
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain_core\tools\base.py", line 586, in run
+    raise error_to_raise
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain_core\tools\base.py", line 555, in run
+    response = context.run(self._run, *tool_args, **tool_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain_core\tools\simple.py", line 84, in _run
+    return self.func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\agents\tools.py", line 3966, in get_upcoming_arrivals
+    for t in candidate_tokens
+             ^^^^^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'candidate_tokens' where it is not associated with a value
+2026-01-22 11:02:01,908 - shipping_chatbot - INFO - Router: Set consignee codes ['0000866'] for query: Which containers will arrive in the next 10days at Nashville
+2026-01-22 11:02:01,978 - shipping_chatbot - INFO - Consignee filtering validated: 2095 rows for codes ['0000866']
+2026-01-22 11:02:01,980 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: next 7 days (default), Dates: 2026-01-22 to 2026-01-28, is_past=False
+2026-01-22 11:02:02,073 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found city location: Nashville (normalized: NASHVILLE)
+2026-01-22 11:02:02,074 - shipping_chatbot - INFO - [get_upcoming_arrivals] Applying location filter for 'NASHVILLE'. Rows before filter: 2095, Matching rows: 1715
+2026-01-22 11:02:02,078 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample ports after filter: ['SAVANNAH, GA(USSAV)']
+2026-01-22 11:02:02,086 - shipping_chatbot - INFO - [get_upcoming_arrivals] Returning 17 containers. Unique discharge ports in result: ['HONG KONG(HKHKG)', 'LOS ANGELES, CA(USLAX)', 'NASHVILLE, TN(USBNA)']
+2026-01-22 11:02:02,086 - shipping_chatbot - WARNING - [get_upcoming_arrivals] WARNING: Multiple ports in result when filtering for 'NASHVILLE': ['HONG KONG(HKHKG)', 'LOS ANGELES, CA(USLAX)', 'NASHVILLE, TN(USBNA)']
+2026-01-22 11:08:26,823 - shipping_chatbot - INFO - User_Query: Which containers will arrive in the next 10days at Nashville, c_codes: ['0000866']
+2026-01-22 11:08:26,823 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers will arrive in the next 10days at Nashville', length: 60
+2026-01-22 11:08:26,823 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers will arrive in the next 10days at nashville'
+2026-01-22 11:08:29,260 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: next 10 days, Dates: 2026-01-22 to 2026-01-31, is_past=False
+2026-01-22 11:08:29,364 - shipping_chatbot - INFO - [get_upcoming_arrivals] Extracted 48 known port codes from dataset
+2026-01-22 11:08:29,364 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample known codes: ['CAVAN', 'USORD', 'USIND', 'USSPX', 'USCMH', 'USFBX', 'USWAS', 'USSAV', 'USSEA', 'USPDX', 'USWOS', 'USHIB', 'USIAD', 'USMJB', 'HKHKG', 'USEWR', 'USJFK', 'USUXE', 'USLAX', 'CAPRR']
+2026-01-22 11:08:29,364 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found port code after preposition: USBNA
+2026-01-22 11:08:29,364 - shipping_chatbot - INFO - [get_upcoming_arrivals] Is USBNA in known_codes? True
+2026-01-22 11:08:29,369 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 112 matches in column 'discharge_port'
+2026-01-22 11:08:29,369 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 101 matches in column 'vehicle_arrival_lcn'
+2026-01-22 11:08:29,372 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 1548 matches in column 'final_destination'
+2026-01-22 11:08:29,374 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 1526 matches in column 'place_of_delivery'
+2026-01-22 11:08:29,374 - shipping_chatbot - INFO - [get_upcoming_arrivals] Successfully detected port code 'USBNA' after preposition. Matched 1715 rows.
+2026-01-22 11:08:29,375 - shipping_chatbot - ERROR - Agent failed: cannot access local variable 'candidate_tokens' where it is not associated with a value
+Traceback (most recent call last):
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\api\main.py", line 342, in ask
+    result = AGENT.invoke({"input": q})
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\chains\base.py", line 166, in invoke
+    raise e
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\chains\base.py", line 156, in invoke
+    self._call(inputs, run_manager=run_manager)
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\agents\agent.py", line 1433, in _call
+    next_step_output = self._take_next_step(
+                       ^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\agents\agent.py", line 1139, in _take_next_step
+    [
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\agents\agent.py", line 1139, in <listcomp>
+    [
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\agents\agent.py", line 1224, in _iter_next_step
+    yield self._perform_agent_action(
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain\agents\agent.py", line 1246, in _perform_agent_action
+    observation = tool.run(
+                  ^^^^^^^^^
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain_core\tools\base.py", line 586, in run
+    raise error_to_raise
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain_core\tools\base.py", line 555, in run
+    response = context.run(self._run, *tool_args, **tool_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot15102025\StlnkWebNprdChatV2-main\venv\Lib\site-packages\langchain_core\tools\simple.py", line 84, in _run
+    return self.func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\agents\tools.py", line 3966, in get_upcoming_arrivals
+    for t in candidate_tokens
+             ^^^^^^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'candidate_tokens' where it is not associated with a value
+2026-01-22 11:08:29,378 - shipping_chatbot - INFO - Router: Set consignee codes ['0000866'] for query: Which containers will arrive in the next 10days at Nashville
+2026-01-22 11:08:29,451 - shipping_chatbot - INFO - Consignee filtering validated: 2095 rows for codes ['0000866']
+2026-01-22 11:08:29,452 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: next 7 days (default), Dates: 2026-01-22 to 2026-01-28, is_past=False
+2026-01-22 11:08:29,550 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found city location: Nashville (normalized: NASHVILLE)
+2026-01-22 11:08:29,550 - shipping_chatbot - INFO - [get_upcoming_arrivals] Applying location filter for 'NASHVILLE'. Rows before filter: 2095, Matching rows: 1715
+2026-01-22 11:08:29,552 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample ports after filter: ['SAVANNAH, GA(USSAV)']
+2026-01-22 11:08:29,559 - shipping_chatbot - INFO - [get_upcoming_arrivals] Returning 17 containers. Unique discharge ports in result: ['HONG KONG(HKHKG)', 'LOS ANGELES, CA(USLAX)', 'NASHVILLE, TN(USBNA)']
+2026-01-22 11:08:29,559 - shipping_chatbot - WARNING - [get_upcoming_arrivals] WARNING: Multiple ports in result when filtering for 'NASHVILLE': ['HONG KONG(HKHKG)', 'LOS ANGELES, CA(USLAX)', 'NASHVILLE, TN(USBNA)']
+2026-01-22 11:10:08,182 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-22 11:10:08,186 - shipping_chatbot - INFO - Agent created with 54 tools
+2026-01-22 11:10:08,186 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-22 11:10:13,097 - shipping_chatbot - INFO - User_Query: Which containers will arrive in the next 10days at Nashville, c_codes: ['0000866']
+2026-01-22 11:10:13,097 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers will arrive in the next 10days at Nashville', length: 60
+2026-01-22 11:10:13,097 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers will arrive in the next 10days at nashville'
+2026-01-22 11:10:13,097 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-22 11:10:48,754 - shipping_chatbot - INFO - Fetched 19114 rows
+2026-01-22 11:10:48,759 - shipping_chatbot - INFO - Starting preprocessing on 19114 rows
+2026-01-22 11:10:48,825 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-22 11:10:49,350 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-22 11:10:49,516 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-22 11:10:50,075 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-22 11:10:50,078 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-22 11:10:50,078 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-22 11:10:50,104 - shipping_chatbot - INFO - Pre-processing finished - 19114 rows remain
+2026-01-22 11:10:52,741 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: next 10 days, Dates: 2026-01-22 to 2026-01-31, is_past=False
+2026-01-22 11:10:52,799 - shipping_chatbot - INFO - [get_upcoming_arrivals] Extracted 48 known port codes from dataset
+2026-01-22 11:10:52,799 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample known codes: ['USUXE', 'CNXMN', 'USSPX', 'CNTXG', 'USNYC', 'USSEA', 'CNPVG', 'USIAD', 'CAVAN', 'USWOS', 'USJFK', 'HKHKG', 'USLBA', 'USEWR', 'USCVG', 'DEHAM', 'USORD', 'USHIB', 'USBNA', 'USIND']
+2026-01-22 11:10:52,799 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found port code after preposition: USBNA
+2026-01-22 11:10:52,799 - shipping_chatbot - INFO - [get_upcoming_arrivals] Is USBNA in known_codes? True
+2026-01-22 11:10:52,799 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 112 matches in column 'discharge_port'
+2026-01-22 11:10:52,799 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 101 matches in column 'vehicle_arrival_lcn'
+2026-01-22 11:10:52,799 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 1548 matches in column 'final_destination'
+2026-01-22 11:10:52,814 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 1526 matches in column 'place_of_delivery'
+2026-01-22 11:10:52,815 - shipping_chatbot - INFO - [get_upcoming_arrivals] Successfully detected port code 'USBNA' after preposition. Matched 1715 rows.
+2026-01-22 11:10:52,815 - shipping_chatbot - INFO - [get_upcoming_arrivals] Applying location filter for 'USBNA'. Rows before filter: 2095, Matching rows: 1715
+2026-01-22 11:10:52,819 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample ports after filter: ['SAVANNAH, GA(USSAV)']
+2026-01-22 11:10:52,821 - shipping_chatbot - INFO - [get_upcoming_arrivals] Returning 18 containers. Unique discharge ports in result: ['HONG KONG(HKHKG)', 'LOS ANGELES, CA(USLAX)', 'NASHVILLE, TN(USBNA)']
+2026-01-22 11:10:52,821 - shipping_chatbot - WARNING - [get_upcoming_arrivals] WARNING: Multiple ports in result when filtering for 'USBNA': ['HONG KONG(HKHKG)', 'LOS ANGELES, CA(USLAX)', 'NASHVILLE, TN(USBNA)']
+2026-01-22 11:21:23,524 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-22 11:21:23,524 - shipping_chatbot - INFO - Agent created with 54 tools
+2026-01-22 11:21:23,524 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-22 11:21:28,159 - shipping_chatbot - INFO - User_Query: Which containers will arrive in the next 10days at Nashville, c_codes: ['0000866']
+2026-01-22 11:21:28,159 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers will arrive in the next 10days at Nashville', length: 60
+2026-01-22 11:21:28,159 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers will arrive in the next 10days at nashville'
+2026-01-22 11:21:28,159 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-22 11:21:58,751 - shipping_chatbot - INFO - Fetched 19114 rows
+2026-01-22 11:21:58,751 - shipping_chatbot - INFO - Starting preprocessing on 19114 rows
+2026-01-22 11:21:58,853 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-22 11:21:59,573 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-22 11:21:59,857 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-22 11:22:00,806 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-22 11:22:00,806 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-22 11:22:00,822 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-22 11:22:00,863 - shipping_chatbot - INFO - Pre-processing finished - 19114 rows remain
+2026-01-22 11:22:03,384 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: next 10 days, Dates: 2026-01-22 to 2026-01-31, is_past=False
+2026-01-22 11:22:03,482 - shipping_chatbot - INFO - [get_upcoming_arrivals] Extracted 48 known port codes from dataset
+2026-01-22 11:22:03,482 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample known codes: ['USBNA', 'USATL', 'USUXE', 'USDFW', 'USHIB', 'USTCN', 'DENSS', 'USCHS', 'USTIW', 'USLGB', 'USCMH', 'USNYC', 'CAYVR', 'USMJB', 'DEHAM', 'USSAV', 'USCVG', 'CNXMN', 'USIAH', 'USDAL']
+2026-01-22 11:22:03,483 - shipping_chatbot - INFO - [get_upcoming_arrivals] Checking for port code after preposition in query: 'CONTAINERS ARRIVING AT USBNA IN NEXT 10 DAYS'
+2026-01-22 11:22:03,484 - shipping_chatbot - INFO - [get_upcoming_arrivals] prep_code_match found: True
+2026-01-22 11:22:03,484 - shipping_chatbot - INFO - [get_upcoming_arrivals] Matched port code: USBNA
+2026-01-22 11:22:03,485 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found port code after preposition: USBNA
+2026-01-22 11:22:03,485 - shipping_chatbot - INFO - [get_upcoming_arrivals] Is USBNA in known_codes? True
+2026-01-22 11:22:03,488 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 112 matches in column 'discharge_port'
+2026-01-22 11:22:03,489 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 101 matches in column 'vehicle_arrival_lcn'
+2026-01-22 11:22:03,492 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 1548 matches in column 'final_destination'
+2026-01-22 11:22:03,494 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 1526 matches in column 'place_of_delivery'
+2026-01-22 11:22:03,494 - shipping_chatbot - INFO - [get_upcoming_arrivals] ✓ Successfully detected port code 'USBNA' after preposition. Matched 1715 rows. location_found=True
+2026-01-22 11:22:03,495 - shipping_chatbot - INFO - [get_upcoming_arrivals] Applying location filter for 'USBNA'. Rows before filter: 2095, Matching rows: 1715
+2026-01-22 11:22:03,496 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample ports after filter: ['SAVANNAH, GA(USSAV)']
+2026-01-22 11:22:03,507 - shipping_chatbot - INFO - [get_upcoming_arrivals] Returning 18 containers. Unique discharge ports in result: ['HONG KONG(HKHKG)', 'LOS ANGELES, CA(USLAX)', 'NASHVILLE, TN(USBNA)']
+2026-01-22 11:22:03,507 - shipping_chatbot - ERROR - [get_upcoming_arrivals] *** CRITICAL ERROR ***: Multiple ports in result when filtering for 'USBNA': ['HONG KONG(HKHKG)', 'LOS ANGELES, CA(USLAX)', 'NASHVILLE, TN(USBNA)']
+2026-01-22 11:22:03,508 - shipping_chatbot - ERROR - [get_upcoming_arrivals] This indicates the port filter was NOT applied correctly!
+2026-01-22 11:22:03,508 - shipping_chatbot - ERROR - [get_upcoming_arrivals] location_found=True, location_name=USBNA
+2026-01-22 11:22:03,510 - shipping_chatbot - INFO - [get_upcoming_arrivals] Emergency filter applied. Now returning 2 containers from USBNA only.
+2026-01-22 11:28:51,797 - shipping_chatbot - INFO - User_Query: how many containers departed from CNSHA day before yesterday, c_codes: ['0000866']
+2026-01-22 11:28:51,797 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'how many containers departed from CNSHA day before yesterday', length: 60
+2026-01-22 11:28:51,798 - shipping_chatbot - INFO - [DEBUG] q_lower: 'how many containers departed from cnsha day before yesterday'
+2026-01-22 11:28:54,706 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted: container=None, po=None, obl=None
+2026-01-22 11:28:54,708 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted load_port: 'CNSHA'
+2026-01-22 11:28:54,709 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Time window: 2026-01-20 00:00:00 to 2026-01-20 00:00:00 (day before yesterday)
+2026-01-22 11:28:54,840 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Port variants to match: {'SHANGHAI', 'CNSHA'}
+2026-01-22 11:28:54,884 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] After port filter: 106 rows matched
+2026-01-22 11:28:54,886 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Sample matched ports: ['SHANGHAI(CNSHA)', 'SHANGHAI(CNSHA)', 'SHANGHAI(CNSHA)', 'SHANGHAI(CNSHA)', 'SHANGHAI(CNSHA)']
+2026-01-22 11:28:54,892 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] After date filter: 0 rows matched
+2026-01-22 11:30:13,942 - shipping_chatbot - INFO - User_Query: how many containers departed from CNSHA last week, c_codes: ['0000866']
+2026-01-22 11:30:13,943 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'how many containers departed from CNSHA last week', length: 49
+2026-01-22 11:30:13,943 - shipping_chatbot - INFO - [DEBUG] q_lower: 'how many containers departed from cnsha last week'
+2026-01-22 11:30:16,582 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted: container=None, po=None, obl=None
+2026-01-22 11:30:16,583 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted load_port: 'CNSHA'
+2026-01-22 11:30:16,587 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Time window: 2026-01-12 00:00:00 to 2026-01-18 00:00:00 (last week)
+2026-01-22 11:30:16,736 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Port variants to match: {'SHANGHAI', 'CNSHA'}
+2026-01-22 11:30:16,784 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] After port filter: 106 rows matched
+2026-01-22 11:30:16,785 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Sample matched ports: ['SHANGHAI(CNSHA)', 'SHANGHAI(CNSHA)', 'SHANGHAI(CNSHA)', 'SHANGHAI(CNSHA)', 'SHANGHAI(CNSHA)']
+2026-01-22 11:30:16,792 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] After date filter: 2 rows matched
+2026-01-22 11:30:16,809 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Sample filtered results:
+      container_number dep_for_filter departure_source
+17383      MRSU5742890     2026-01-14              ATD
+18696      13105381456     2026-01-16              ATD
+2026-01-22 11:30:16,817 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Returning 2 records
+2026-01-22 11:32:22,453 - shipping_chatbot - INFO - User_Query: Which containers will arrive in the next 10days at Nashville, c_codes: ['0000866']
+2026-01-22 11:32:22,454 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers will arrive in the next 10days at Nashville', length: 60
+2026-01-22 11:32:22,455 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers will arrive in the next 10days at nashville'
+2026-01-22 11:32:24,978 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: next 10 days, Dates: 2026-01-22 to 2026-01-31, is_past=False
+2026-01-22 11:32:25,193 - shipping_chatbot - INFO - [get_upcoming_arrivals] Extracted 48 known port codes from dataset
+2026-01-22 11:32:25,193 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample known codes: ['USBNA', 'USATL', 'USUXE', 'USDFW', 'USHIB', 'USTCN', 'DENSS', 'USCHS', 'USTIW', 'USLGB', 'USCMH', 'USNYC', 'CAYVR', 'USMJB', 'DEHAM', 'USSAV', 'USCVG', 'CNXMN', 'USIAH', 'USDAL']
+2026-01-22 11:32:25,194 - shipping_chatbot - INFO - [get_upcoming_arrivals] Checking for port code after preposition in query: 'CONTAINERS ARRIVING AT USBNA IN NEXT 10 DAYS'
+2026-01-22 11:32:25,194 - shipping_chatbot - INFO - [get_upcoming_arrivals] prep_code_match found: True
+2026-01-22 11:32:25,195 - shipping_chatbot - INFO - [get_upcoming_arrivals] Matched port code: USBNA
+2026-01-22 11:32:25,195 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found port code after preposition: USBNA
+2026-01-22 11:32:25,195 - shipping_chatbot - INFO - [get_upcoming_arrivals] Is USBNA in known_codes? True
+2026-01-22 11:32:25,199 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 112 matches in column 'discharge_port'
+2026-01-22 11:32:25,202 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 101 matches in column 'vehicle_arrival_lcn'
+2026-01-22 11:32:25,204 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 1548 matches in column 'final_destination'
+2026-01-22 11:32:25,206 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 1526 matches in column 'place_of_delivery'
+2026-01-22 11:32:25,207 - shipping_chatbot - INFO - [get_upcoming_arrivals] ✓ Successfully detected port code 'USBNA' after preposition. Matched 1715 rows. location_found=True
+2026-01-22 11:32:25,207 - shipping_chatbot - INFO - [get_upcoming_arrivals] Applying location filter for 'USBNA'. Rows before filter: 2095, Matching rows: 1715
+2026-01-22 11:32:25,212 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample ports after filter: ['SAVANNAH, GA(USSAV)']
+2026-01-22 11:32:25,225 - shipping_chatbot - INFO - [get_upcoming_arrivals] Returning 18 containers. Unique discharge ports in result: ['HONG KONG(HKHKG)', 'LOS ANGELES, CA(USLAX)', 'NASHVILLE, TN(USBNA)']
+2026-01-22 11:32:25,226 - shipping_chatbot - ERROR - [get_upcoming_arrivals] *** CRITICAL ERROR ***: Multiple ports in result when filtering for 'USBNA': ['HONG KONG(HKHKG)', 'LOS ANGELES, CA(USLAX)', 'NASHVILLE, TN(USBNA)']
+2026-01-22 11:32:25,226 - shipping_chatbot - ERROR - [get_upcoming_arrivals] This indicates the port filter was NOT applied correctly!
+2026-01-22 11:32:25,226 - shipping_chatbot - ERROR - [get_upcoming_arrivals] location_found=True, location_name=USBNA
+2026-01-22 11:32:25,227 - shipping_chatbot - INFO - [get_upcoming_arrivals] Emergency filter applied. Now returning 2 containers from USBNA only.
+2026-01-22 11:38:14,263 - shipping_chatbot - INFO - User_Query: Can you please let me know the containers arriving at Nashville in next 5 days, c_codes: ['0000866']
+2026-01-22 11:38:14,263 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Can you please let me know the containers arriving at Nashville in next 5 days', length: 78
+2026-01-22 11:38:14,263 - shipping_chatbot - INFO - [DEBUG] q_lower: 'can you please let me know the containers arriving at nashville in next 5 days'
+2026-01-22 11:38:17,011 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: next 5 days, Dates: 2026-01-22 to 2026-01-26, is_past=False
+2026-01-22 11:38:17,077 - shipping_chatbot - INFO - [get_upcoming_arrivals] Extracted 48 known port codes from dataset
+2026-01-22 11:38:17,077 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample known codes: ['USBNA', 'USATL', 'USUXE', 'USDFW', 'USHIB', 'USTCN', 'DENSS', 'USCHS', 'USTIW', 'USLGB', 'USCMH', 'USNYC', 'CAYVR', 'USMJB', 'DEHAM', 'USSAV', 'USCVG', 'CNXMN', 'USIAH', 'USDAL']
+2026-01-22 11:38:17,077 - shipping_chatbot - INFO - [get_upcoming_arrivals] Checking for port code after preposition in query: 'CONTAINERS ARRIVING AT USBNA IN NEXT 5 DAYS'
+2026-01-22 11:38:17,077 - shipping_chatbot - INFO - [get_upcoming_arrivals] prep_code_match found: True
+2026-01-22 11:38:17,077 - shipping_chatbot - INFO - [get_upcoming_arrivals] Matched port code: USBNA
+2026-01-22 11:38:17,077 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found port code after preposition: USBNA
+2026-01-22 11:38:17,077 - shipping_chatbot - INFO - [get_upcoming_arrivals] Is USBNA in known_codes? True
+2026-01-22 11:38:17,077 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 112 matches in column 'discharge_port'
+2026-01-22 11:38:17,077 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 101 matches in column 'vehicle_arrival_lcn'
+2026-01-22 11:38:17,094 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 1548 matches in column 'final_destination'
+2026-01-22 11:38:17,096 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 1526 matches in column 'place_of_delivery'
+2026-01-22 11:38:17,096 - shipping_chatbot - INFO - [get_upcoming_arrivals] ✓ Successfully detected port code 'USBNA' after preposition. Matched 1715 rows. location_found=True
+2026-01-22 11:38:17,097 - shipping_chatbot - INFO - [get_upcoming_arrivals] Applying location filter for 'USBNA'. Rows before filter: 2095, Matching rows: 1715
+2026-01-22 11:38:17,099 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample ports after filter: ['SAVANNAH, GA(USSAV)']
+2026-01-22 11:38:17,106 - shipping_chatbot - INFO - [get_upcoming_arrivals] Returning 8 containers. Unique discharge ports in result: ['HONG KONG(HKHKG)', 'LOS ANGELES, CA(USLAX)', 'NASHVILLE, TN(USBNA)']
+2026-01-22 11:38:17,106 - shipping_chatbot - ERROR - [get_upcoming_arrivals] *** CRITICAL ERROR ***: Multiple ports in result when filtering for 'USBNA': ['HONG KONG(HKHKG)', 'LOS ANGELES, CA(USLAX)', 'NASHVILLE, TN(USBNA)']
+2026-01-22 11:38:17,106 - shipping_chatbot - ERROR - [get_upcoming_arrivals] This indicates the port filter was NOT applied correctly!
+2026-01-22 11:38:17,106 - shipping_chatbot - ERROR - [get_upcoming_arrivals] location_found=True, location_name=USBNA
+2026-01-22 11:38:17,107 - shipping_chatbot - INFO - [get_upcoming_arrivals] Emergency filter applied. Now returning 1 containers from USBNA only.
+2026-01-22 11:42:26,288 - shipping_chatbot - INFO - User_Query: Can you please let me know the Hot containers arriving at Los Angeles, c_codes: ['0000866']
+2026-01-22 11:42:26,288 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Can you please let me know the Hot containers arriving at Los Angeles', length: 69
+2026-01-22 11:42:26,288 - shipping_chatbot - INFO - [DEBUG] q_lower: 'can you please let me know the hot containers arriving at los angeles'
+2026-01-22 11:42:28,616 - shipping_chatbot - INFO - [get_hot_upcoming_arrivals] Query: hot containers arriving at USLAX
+2026-01-22 11:42:28,616 - shipping_chatbot - INFO - [get_hot_upcoming_arrivals] Time window: 2026-01-22 00:00:00..2026-01-28 00:00:00 (next 7 days (default))
+2026-01-22 11:42:28,675 - shipping_chatbot - INFO - [get_hot_upcoming_arrivals] Initial dataset: 2095 rows
+2026-01-22 11:42:28,675 - shipping_chatbot - INFO - [get_hot_upcoming_arrivals] Location filter: code=USLAX, name=None
+2026-01-22 11:42:28,675 - shipping_chatbot - INFO - [get_hot_upcoming_arrivals] After location filter: 1064 rows
+2026-01-22 11:42:28,684 - shipping_chatbot - INFO - [get_hot_upcoming_arrivals] After hot_container_flag filter: 346 rows
+2026-01-22 11:42:28,687 - shipping_chatbot - INFO - [get_hot_upcoming_arrivals] After date/upcoming filter (start=2026-01-22 00:00:00, end=2026-01-28 00:00:00): 9 rows
+2026-01-22 11:42:28,689 - shipping_chatbot - INFO - [get_hot_upcoming_arrivals] Returning 9 hot container records

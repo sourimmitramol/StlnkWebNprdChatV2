@@ -10,6 +10,16 @@ When you use a tool such as "Handle Non-shipping queries", include that tool’s
 as your final assistant answer instead of summarizing it.
 Do not write summaries like "the user now has a detailed guide".
 
+**CRITICAL: Date Handling Policy (Must Follow)**
+When calling tools with date-related queries:
+- NEVER calculate or convert relative dates yourself (e.g., "yesterday", "day before yesterday", "N days ago")
+- ALWAYS pass the user's ORIGINAL relative date phrase to the tool AS-IS
+- The tools have built-in date parsing that correctly handles current date context
+- ✓ CORRECT: action_input = "containers departed from QINGDAO day before yesterday"
+- ✗ WRONG: action_input = "containers departed from QINGDAO on 2025-10-23" (never insert explicit dates)
+- If user says "yesterday" and today is 2026-01-22, the tool will correctly interpret it as 2026-01-21
+- If user says "day before yesterday", the tool will correctly interpret it as 2026-01-20
+
 You are an expert shipping data assistant. The dataset contains many columns, each of which may be referred to by multiple names, abbreviations, or synonyms. Always map user terms to the correct column using the mappings below. Recognize both full forms and short forms, and treat them as equivalent.
 Port/location normalization (high priority)
 - Treat 3–6 letter alphanumeric tokens (case-insensitive) as possible location/port codes.
@@ -779,6 +789,94 @@ def parse_time_period(query: str) -> tuple[pd.Timestamp, pd.Timestamp, str]:
     current_year = today.year  # 2026
     current_month = today.month  # 1 (January)
 
+    # ========================================================================
+    # ABSOLUTE HIGHEST PRIORITY: Explicit date patterns (on YYYY-MM-DD)
+    # Check these FIRST to avoid agent-inserted incorrect dates
+    # ========================================================================
+
+    # Pattern 0: "on YYYY-MM-DD" or "at YYYY-MM-DD" (single date)
+    single_date_match = re.search(
+        r"\b(?:on|at)\s+(\d{4}[-/]\d{1,2}[-/]\d{1,2})\b", query
+    )
+    if single_date_match:
+        target_date = pd.to_datetime(
+            single_date_match.group(1), errors="coerce"
+        ).normalize()
+        if pd.notna(target_date):
+            try:
+                import logging
+
+                logger = logging.getLogger(__name__)
+                logger.info(
+                    f"[parse_time_period] Matched 'on/at {single_date_match.group(1)}': {target_date.strftime('%Y-%m-%d')}"
+                )
+            except:
+                pass
+            return target_date, target_date, f"on {target_date.strftime('%Y-%m-%d')}"
+
+    # ========================================================================
+    # HIGHEST PRIORITY: Relative date patterns (today, yesterday, etc.)
+    # MUST be checked FIRST before any month/year logic to avoid wrong year
+    # ========================================================================
+
+    # Pattern 1: "day before yesterday" or "2 days ago"
+    if re.search(r"\b(?:day\s+before\s+yesterday|2\s+days?\s+ago)\b", query):
+        target_date = today - pd.Timedelta(days=2)
+        try:
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.info(
+                f"[parse_time_period] Matched 'day before yesterday': {target_date.strftime('%Y-%m-%d')}"
+            )
+        except:
+            pass
+        return target_date, target_date, "day before yesterday"
+
+    # Pattern 2: "N days ago" (general pattern for 3+, 4+, etc.)
+    days_ago_match = re.search(r"\b(\d+)\s+days?\s+ago\b", query)
+    if days_ago_match:
+        n = int(days_ago_match.group(1))
+        target_date = today - pd.Timedelta(days=n)
+        try:
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.info(
+                f"[parse_time_period] Matched '{n} days ago': {target_date.strftime('%Y-%m-%d')}"
+            )
+        except:
+            pass
+        return target_date, target_date, f"{n} days ago"
+
+    # Pattern 3: "day after tomorrow"
+    if re.search(r"\b(?:day\s+after\s+tomorrow)\b", query):
+        target_date = today + pd.Timedelta(days=2)
+        return target_date, target_date, "day after tomorrow"
+
+    # Pattern 4: "today"
+    if re.search(r"\btoday\b", query):
+        return today, today, "today"
+
+    # Pattern 5: "tomorrow"
+    if re.search(r"\btomorrow\b", query):
+        tomorrow = today + pd.Timedelta(days=1)
+        return tomorrow, tomorrow, "tomorrow"
+
+    # Pattern 6: "yesterday"
+    if re.search(r"\byesterday\b", query):
+        yesterday = today - pd.Timedelta(days=1)
+        try:
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.info(
+                f"[parse_time_period] Matched 'yesterday': {yesterday.strftime('%Y-%m-%d')}"
+            )
+        except:
+            pass
+        return yesterday, yesterday, "yesterday"
+
     # Month name to number mapping
     month_map = {
         "jan": 1,
@@ -982,20 +1080,6 @@ def parse_time_period(query: str) -> tuple[pd.Timestamp, pd.Timestamp, str]:
                 ).normalize()
 
             return start_date, end_date, f"{month_name.capitalize()} {year}"
-
-    # Pattern 4: "today"
-    if re.search(r"\btoday\b", query):
-        return today, today, "today"
-
-    # Pattern 5: "tomorrow"
-    if re.search(r"\btomorrow\b", query):
-        tomorrow = today + pd.Timedelta(days=1)
-        return tomorrow, tomorrow, "tomorrow"
-
-    # Pattern 6: "yesterday"
-    if re.search(r"\byesterday\b", query):
-        yesterday = today - pd.Timedelta(days=1)
-        return yesterday, yesterday, "yesterday"
 
     # Pattern 7: "next X days" or "in next X days"
     m = re.search(r"(?:next|in\s+next|in)\s+(\d{1,3})\s+days?", query)
