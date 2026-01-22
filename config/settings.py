@@ -52,6 +52,14 @@ class Settings(BaseSettings):
     azure_service_name: str = Field(..., description="Azure service name")
     azure_openai_type: str = Field(..., description="Azure OpenAI type")
 
+    # ---------- Static greet/overview handler ----------
+    STATIC_GREET_INFO_ENABLED: bool = Field(
+        default=False, env="STATIC_GREET_INFO_ENABLED"
+    )
+    STATIC_GREET_INFO_SESSION_TTL_SECONDS: int = Field(
+        default=1800, env="STATIC_GREET_INFO_SESSION_TTL_SECONDS"
+    )
+
     class Config:
         env_file = ".env"
         case_sensitive = False

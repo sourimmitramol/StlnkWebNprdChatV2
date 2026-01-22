@@ -1,4 +1,5 @@
 # api/main.py
+# python -m uvicorn api.main:app --reload
 
 import ast
 import logging
@@ -24,6 +25,8 @@ from agents.tools import (_df, analyze_data_with_pandas,
                           get_weekly_status_changes, lookup_keyword,
                           sql_query_tool, vector_search_tool)
 from utils.container import extract_po_number
+from utils.static_greet_info_handler import (handle_static_greet_info,
+                                             is_static_greet_info_enabled)
 
 from .schemas import AskRequest, QueryWithConsigneeBody
 
@@ -145,6 +148,7 @@ def ask(body: QueryWithConsigneeBody):
     consignee_codes = list(
         dict.fromkeys(c.strip() for c in body.consignee_code.split(",") if c.strip())
     )
+    session_id = (body.session_id or "").strip() or None
     # print(consignee_codes)
     logger.info(f"User_Query: {q}, c_codes: {consignee_codes}")
     logger.info(
@@ -156,6 +160,11 @@ def ask(body: QueryWithConsigneeBody):
 
     if not consignee_codes:
         raise HTTPException(status_code=400, detail="Consignee code is required")
+
+    if is_static_greet_info_enabled():
+        static_result = handle_static_greet_info(q, session_id=session_id)
+        if static_result:
+            return static_result
 
     # Handle simple conversational queries before invoking agent to avoid parsing errors
     q_lower = q.lower().strip()
