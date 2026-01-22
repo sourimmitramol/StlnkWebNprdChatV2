@@ -6,4 +6,4 @@ venv/
 cache/
 app.log
 shipment_blob.db
-run_app.ps1/
+run_app.ps1
