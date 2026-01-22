@@ -8971,14 +8971,14 @@ def get_containers_by_etd_window(
         if not port_code:
             # Match "FROM CNSHA" or "FROM SHANGHAI" - stop at common boundary words
             m_name = re.search(
-                r"\bFROM\s+(?:LOAD\s+PORT\s+)?([A-Z][A-Z0-9\s\.\-]{2,15}?)(?=\s+(?:FOR|IN|ON|AT|WITH|TO|ETD|TODAY|TOMORROW|NEXT|WITHIN|YESTERDAY|LAST|THIS|CONSIGNEE|\d+)|[\?\.\,]|\s*$)",
+                r"\bFROM\s+(?:LOAD\s+PORT\s+)?([A-Z][A-Z0-9\s\.\-]{2,15}?)(?=\s+(?:FOR|IN|ON|AT|WITH|TO|ETD|TODAY|TOMORROW|NEXT|WITHIN|YESTERDAY|LAST|THIS|CONSIGNEE|THE|\d+)|[\?\.\,]|\s*$)",
                 q_up,
             )
             if m_name:
                 cand = m_name.group(1).strip()
                 # Clean up any trailing noise
                 cand = re.sub(
-                    r"(?:ETD|TODAY|TOMORROW|NEXT|WITHIN|FOR|CONSIGNEE).*$", "", cand
+                    r"(?:ETD|TODAY|TOMORROW|NEXT|WITHIN|FOR|CONSIGNEE|THE).*$", "", cand
                 ).strip()
                 if len(cand) >= 3:
                     name_phrase = cand
@@ -8986,13 +8986,13 @@ def get_containers_by_etd_window(
         # Pattern 3: "AT|IN|TO PORT_NAME" - similar fix
         if not port_code and not name_phrase:
             m_name = re.search(
-                r"\b(?:AT|IN|TO)\s+(?:LOAD\s+PORT\s+)?([A-Z][A-Z0-9\s\.\-]{2,15}?)(?=\s+(?:FOR|FROM|WITH|ETD|TODAY|TOMORROW|NEXT|WITHIN|YESTERDAY|LAST|THIS|CONSIGNEE|\d+)|[\?\.\,]|\s*$)",
+                r"\b(?:AT|IN|TO)\s+(?:LOAD\s+PORT\s+)?([A-Z][A-Z0-9\s\.\-]{2,15}?)(?=\s+(?:FOR|FROM|WITH|ETD|TODAY|TOMORROW|NEXT|WITHIN|YESTERDAY|LAST|THIS|CONSIGNEE|THE|\d+)|[\?\.\,]|\s*$)",
                 q_up,
             )
             if m_name:
                 cand = m_name.group(1).strip()
                 cand = re.sub(
-                    r"(?:ETD|TODAY|TOMORROW|NEXT|WITHIN|FOR|CONSIGNEE).*$", "", cand
+                    r"(?:ETD|TODAY|TOMORROW|NEXT|WITHIN|FOR|CONSIGNEE|THE).*$", "", cand
                 ).strip()
                 if len(cand) >= 3:
                     name_phrase = cand
@@ -9025,6 +9025,7 @@ def get_containers_by_etd_window(
                 "WITH",
                 "FOR",
                 "CONSIGNEE",
+                "THE",
             }
 
             for code in candidate_codes:
