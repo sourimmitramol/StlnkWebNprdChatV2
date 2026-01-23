@@ -3576,3 +3576,160 @@ UnboundLocalError: cannot access local variable 'candidate_tokens' where it is n
 2026-01-23 14:55:55,143 - shipping_chatbot - ERROR - [get_upcoming_arrivals] This indicates the port filter was NOT applied correctly!
 2026-01-23 14:55:55,152 - shipping_chatbot - ERROR - [get_upcoming_arrivals] location_found=True, location_name=USBNA
 2026-01-23 14:55:55,152 - shipping_chatbot - INFO - [get_upcoming_arrivals] Emergency filter applied. Now returning 2 containers from USBNA only.
+2026-01-23 15:45:42,565 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-23 15:45:42,577 - shipping_chatbot - INFO - Agent created with 55 tools
+2026-01-23 15:45:42,577 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-23 15:46:06,852 - shipping_chatbot - INFO - User_Query: When is the container MSKU4343533 is arriving, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-23 15:46:06,852 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'When is the container MSKU4343533 is arriving', length: 45
+2026-01-23 15:46:06,852 - shipping_chatbot - INFO - [DEBUG] q_lower: 'when is the container msku4343533 is arriving'
+2026-01-23 15:46:06,852 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-23 15:46:23,479 - shipping_chatbot - INFO - Fetched 19317 rows
+2026-01-23 15:46:23,485 - shipping_chatbot - INFO - Starting preprocessing on 19317 rows
+2026-01-23 15:46:23,670 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-23 15:46:24,836 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-23 15:46:25,242 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-23 15:46:26,534 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-23 15:46:26,547 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-23 15:46:26,551 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-23 15:46:26,635 - shipping_chatbot - INFO - Pre-processing finished - 19317 rows remain
+2026-01-23 15:47:21,785 - shipping_chatbot - INFO - User_Query: When is the MSKU4343533 is arriving, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-23 15:47:21,787 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'When is the MSKU4343533 is arriving', length: 35
+2026-01-23 15:47:21,787 - shipping_chatbot - INFO - [DEBUG] q_lower: 'when is the msku4343533 is arriving'
+2026-01-23 15:53:06,750 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-23 15:53:06,750 - shipping_chatbot - INFO - Agent created with 55 tools
+2026-01-23 15:53:06,753 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-23 15:53:25,165 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-23 15:53:25,165 - shipping_chatbot - INFO - Agent created with 55 tools
+2026-01-23 15:53:25,165 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-23 15:53:38,056 - shipping_chatbot - INFO - User_Query: When is the MSKU4343533 is arriving, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-23 15:53:38,061 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'When is the MSKU4343533 is arriving', length: 35
+2026-01-23 15:53:38,062 - shipping_chatbot - INFO - [DEBUG] q_lower: 'when is the msku4343533 is arriving'
+2026-01-23 15:53:38,062 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-23 15:53:57,146 - shipping_chatbot - INFO - Fetched 19317 rows
+2026-01-23 15:53:57,151 - shipping_chatbot - INFO - Starting preprocessing on 19317 rows
+2026-01-23 15:53:57,321 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-23 15:53:58,741 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-23 15:53:59,213 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-23 15:54:00,232 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-23 15:54:00,237 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-23 15:54:00,237 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-23 15:54:00,284 - shipping_chatbot - INFO - Pre-processing finished - 19317 rows remain
+2026-01-23 15:54:38,119 - shipping_chatbot - INFO - User_Query: When is the container MSKU4343533 is arriving, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-23 15:54:38,119 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'When is the container MSKU4343533 is arriving', length: 45
+2026-01-23 15:54:38,119 - shipping_chatbot - INFO - [DEBUG] q_lower: 'when is the container msku4343533 is arriving'
+2026-01-23 16:12:49,689 - shipping_chatbot - INFO - User_Query: Can you please let me know Hot containers delayed by 7 days, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-23 16:12:49,689 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Can you please let me know Hot containers delayed by 7 days', length: 59
+2026-01-23 16:12:49,689 - shipping_chatbot - INFO - [DEBUG] q_lower: 'can you please let me know hot containers delayed by 7 days'
+2026-01-23 16:12:52,655 - shipping_chatbot - INFO - [get_hot_containers] Initial dataframe size: 12765 rows
+2026-01-23 16:12:52,657 - shipping_chatbot - INFO - [get_hot_containers] Using hot flag column: hot_container_flag
+2026-01-23 16:12:52,676 - shipping_chatbot - INFO - [get_hot_containers] After strict hot flag filter: 1411 rows (removed 11354 non-hot)
+2026-01-23 16:12:52,688 - shipping_chatbot - INFO - [get_hot_containers] Parsed time period: next 7 days (default) (2026-01-23 to 2026-01-29)
+2026-01-23 16:12:52,690 - shipping_chatbot - INFO - [get_hot_containers] After date filter using revised_eta: 20 rows
+2026-01-23 16:12:52,690 - shipping_chatbot - INFO - [get_hot_containers] Returning 20 hot containers
+2026-01-23 16:25:16,509 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-23 16:25:16,509 - shipping_chatbot - INFO - Agent created with 55 tools
+2026-01-23 16:25:16,509 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-23 16:30:28,257 - shipping_chatbot - INFO - User_Query: Can you please let me know Hot containers delayed by 7 days, c_codes: ['0000866']
+2026-01-23 16:30:28,257 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Can you please let me know Hot containers delayed by 7 days', length: 59
+2026-01-23 16:30:28,257 - shipping_chatbot - INFO - [DEBUG] q_lower: 'can you please let me know hot containers delayed by 7 days'
+2026-01-23 16:30:28,257 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-23 16:30:40,984 - shipping_chatbot - INFO - Fetched 19317 rows
+2026-01-23 16:30:40,994 - shipping_chatbot - INFO - Starting preprocessing on 19317 rows
+2026-01-23 16:30:41,184 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-23 16:30:42,510 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-23 16:30:42,982 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-23 16:30:44,174 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-23 16:30:44,174 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-23 16:30:44,183 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-23 16:30:44,244 - shipping_chatbot - INFO - Pre-processing finished - 19317 rows remain
+2026-01-23 16:30:47,328 - shipping_chatbot - INFO - [get_hot_containers] Initial dataframe size: 2107 rows
+2026-01-23 16:30:47,330 - shipping_chatbot - INFO - [get_hot_containers] Using hot flag column: hot_container_flag
+2026-01-23 16:30:47,332 - shipping_chatbot - INFO - [get_hot_containers] After strict hot flag filter: 654 rows (removed 1453 non-hot)
+2026-01-23 16:30:47,332 - shipping_chatbot - INFO - [get_hot_containers] Parsed time period: next 7 days (default) (2026-01-23 to 2026-01-29)
+2026-01-23 16:30:47,347 - shipping_chatbot - INFO - [get_hot_containers] After date filter using revised_eta: 9 rows
+2026-01-23 16:30:47,352 - shipping_chatbot - INFO - [get_hot_containers] Returning 9 hot containers
+2026-01-23 16:35:39,454 - shipping_chatbot - INFO - User_Query: Can you please let me know the containers arriving at Nashville in next 5 days, c_codes: ['0000866']
+2026-01-23 16:35:39,456 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Can you please let me know the containers arriving at Nashville in next 5 days', length: 78
+2026-01-23 16:35:39,456 - shipping_chatbot - INFO - [DEBUG] q_lower: 'can you please let me know the containers arriving at nashville in next 5 days'
+2026-01-23 16:35:43,212 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: next 5 days, Dates: 2026-01-23 to 2026-01-27, is_past=False
+2026-01-23 16:35:43,351 - shipping_chatbot - INFO - [get_upcoming_arrivals] Extracted 48 known port codes from dataset
+2026-01-23 16:35:43,351 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample known codes: ['USPDX', 'USUXE', 'USEWR', 'CNTXG', 'USFBX', 'USIAD', 'USNYC', 'CAPRR', 'USDFW', 'CNBJS', 'USMEM', 'USCHS', 'USSID', 'USORD', 'USSAN', 'USHOU', 'USLUI', 'USSAV', 'USIND', 'USWAS']
+2026-01-23 16:35:43,353 - shipping_chatbot - INFO - [get_upcoming_arrivals] Checking for port code after preposition in query: 'CONTAINERS ARRIVING AT USBNA IN NEXT 5 DAYS'
+2026-01-23 16:35:43,353 - shipping_chatbot - INFO - [get_upcoming_arrivals] prep_code_match found: True
+2026-01-23 16:35:43,353 - shipping_chatbot - INFO - [get_upcoming_arrivals] Matched port code: USBNA
+2026-01-23 16:35:43,354 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found port code after preposition: USBNA
+2026-01-23 16:35:43,354 - shipping_chatbot - INFO - [get_upcoming_arrivals] Is USBNA in known_codes? True
+2026-01-23 16:35:43,358 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 112 matches in column 'discharge_port'
+2026-01-23 16:35:43,362 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 101 matches in column 'vehicle_arrival_lcn'
+2026-01-23 16:35:43,363 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 1555 matches in column 'final_destination'
+2026-01-23 16:35:43,369 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 1533 matches in column 'place_of_delivery'
+2026-01-23 16:35:43,369 - shipping_chatbot - INFO - [get_upcoming_arrivals] ✓ Successfully detected port code 'USBNA' after preposition. Matched 1722 rows. location_found=True
+2026-01-23 16:35:43,369 - shipping_chatbot - INFO - [get_upcoming_arrivals] Applying location filter for 'USBNA'. Rows before filter: 2107, Matching rows: 1722
+2026-01-23 16:35:43,374 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample ports after filter: ['SAVANNAH, GA(USSAV)', 'PRINCE RUPERT, BC(CAPRR)']
+2026-01-23 16:35:43,386 - shipping_chatbot - INFO - [get_upcoming_arrivals] Returning 13 containers. Unique discharge ports in result: ['NASHVILLE, TN(USBNA)', 'LOS ANGELES, CA(USLAX)', "CHICAGO O'HARE APT(USORD)"]
+2026-01-23 16:35:43,386 - shipping_chatbot - ERROR - [get_upcoming_arrivals] *** CRITICAL ERROR ***: Multiple ports in result when filtering for 'USBNA': ['NASHVILLE, TN(USBNA)', 'LOS ANGELES, CA(USLAX)', "CHICAGO O'HARE APT(USORD)"]
+2026-01-23 16:35:43,386 - shipping_chatbot - ERROR - [get_upcoming_arrivals] This indicates the port filter was NOT applied correctly!
+2026-01-23 16:35:43,387 - shipping_chatbot - ERROR - [get_upcoming_arrivals] location_found=True, location_name=USBNA
+2026-01-23 16:35:43,389 - shipping_chatbot - INFO - [get_upcoming_arrivals] Emergency filter applied. Now returning 1 containers from USBNA only.
+2026-01-23 16:36:28,267 - shipping_chatbot - INFO - User_Query: Can you please let me know the containers arriving at Nashville in next 5 days, c_codes: ['0000866']
+2026-01-23 16:36:28,267 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Can you please let me know the containers arriving at Nashville in next 5 days', length: 78
+2026-01-23 16:36:28,267 - shipping_chatbot - INFO - [DEBUG] q_lower: 'can you please let me know the containers arriving at nashville in next 5 days'
+2026-01-23 16:36:30,875 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: next 5 days, Dates: 2026-01-23 to 2026-01-27, is_past=False
+2026-01-23 16:36:30,976 - shipping_chatbot - INFO - [get_upcoming_arrivals] Extracted 48 known port codes from dataset
+2026-01-23 16:36:30,976 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample known codes: ['USPDX', 'USUXE', 'USEWR', 'CNTXG', 'USFBX', 'USIAD', 'USNYC', 'CAPRR', 'USDFW', 'CNBJS', 'USMEM', 'USCHS', 'USSID', 'USORD', 'USSAN', 'USHOU', 'USLUI', 'USSAV', 'USIND', 'USWAS']
+2026-01-23 16:36:30,976 - shipping_chatbot - INFO - [get_upcoming_arrivals] Checking for port code after preposition in query: 'CONTAINERS ARRIVING AT USBNA IN NEXT 5 DAYS'
+2026-01-23 16:36:30,976 - shipping_chatbot - INFO - [get_upcoming_arrivals] prep_code_match found: True
+2026-01-23 16:36:30,976 - shipping_chatbot - INFO - [get_upcoming_arrivals] Matched port code: USBNA
+2026-01-23 16:36:30,976 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found port code after preposition: USBNA
+2026-01-23 16:36:30,976 - shipping_chatbot - INFO - [get_upcoming_arrivals] Is USBNA in known_codes? True
+2026-01-23 16:36:30,976 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 112 matches in column 'discharge_port'
+2026-01-23 16:36:30,983 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 101 matches in column 'vehicle_arrival_lcn'
+2026-01-23 16:36:30,986 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 1555 matches in column 'final_destination'
+2026-01-23 16:36:30,987 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 1533 matches in column 'place_of_delivery'
+2026-01-23 16:36:30,987 - shipping_chatbot - INFO - [get_upcoming_arrivals] ✓ Successfully detected port code 'USBNA' after preposition. Matched 1722 rows. location_found=True
+2026-01-23 16:36:30,988 - shipping_chatbot - INFO - [get_upcoming_arrivals] Applying location filter for 'USBNA'. Rows before filter: 2107, Matching rows: 1722
+2026-01-23 16:36:30,991 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample ports after filter: ['SAVANNAH, GA(USSAV)', 'PRINCE RUPERT, BC(CAPRR)']
+2026-01-23 16:36:31,001 - shipping_chatbot - INFO - [get_upcoming_arrivals] Returning 13 containers. Unique discharge ports in result: ['NASHVILLE, TN(USBNA)', 'LOS ANGELES, CA(USLAX)', "CHICAGO O'HARE APT(USORD)"]
+2026-01-23 16:36:31,001 - shipping_chatbot - ERROR - [get_upcoming_arrivals] *** CRITICAL ERROR ***: Multiple ports in result when filtering for 'USBNA': ['NASHVILLE, TN(USBNA)', 'LOS ANGELES, CA(USLAX)', "CHICAGO O'HARE APT(USORD)"]
+2026-01-23 16:36:31,002 - shipping_chatbot - ERROR - [get_upcoming_arrivals] This indicates the port filter was NOT applied correctly!
+2026-01-23 16:36:31,002 - shipping_chatbot - ERROR - [get_upcoming_arrivals] location_found=True, location_name=USBNA
+2026-01-23 16:36:31,003 - shipping_chatbot - INFO - [get_upcoming_arrivals] Emergency filter applied. Now returning 1 containers from USBNA only.
+2026-01-23 16:39:30,129 - shipping_chatbot - INFO - User_Query: Which containers will arrive in the next 10days, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-23 16:39:30,129 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers will arrive in the next 10days', length: 47
+2026-01-23 16:39:30,129 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers will arrive in the next 10days'
+2026-01-23 16:39:32,528 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: next 10 days, Dates: 2026-01-23 to 2026-02-01, is_past=False
+2026-01-23 16:39:32,635 - shipping_chatbot - INFO - [get_upcoming_arrivals] Extracted 171 known port codes from dataset
+2026-01-23 16:39:32,637 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample known codes: ['USPDX', 'CNSHG', 'PRAGUE', 'USEWR', 'FRMZT', 'FRLEH', 'BEANR', 'LULUX', 'AUKBO', 'SEMMA', 'USPEF', 'MXMEX', 'ARHUS', 'USIAD', 'USNYC', 'GBFXT', 'USOGD', 'TWTPE', 'USSFO', 'CAPRR']
+2026-01-23 16:39:32,637 - shipping_chatbot - INFO - [get_upcoming_arrivals] Checking for port code after preposition in query: 'CONTAINERS ARRIVING IN NEXT 10 DAYS'
+2026-01-23 16:39:32,638 - shipping_chatbot - INFO - [get_upcoming_arrivals] prep_code_match found: False
+2026-01-23 17:06:23,505 - shipping_chatbot - INFO - User_Query: Which containers will arrive in the next 10days at Nashville, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-23 17:06:23,506 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers will arrive in the next 10days at Nashville', length: 60
+2026-01-23 17:06:23,506 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers will arrive in the next 10days at nashville'
+2026-01-23 17:06:26,082 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: next 10 days, Dates: 2026-01-23 to 2026-02-01, is_past=False
+2026-01-23 17:06:26,431 - shipping_chatbot - INFO - [get_upcoming_arrivals] Extracted 171 known port codes from dataset
+2026-01-23 17:06:26,431 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample known codes: ['USPDX', 'CNSHG', 'PRAGUE', 'USEWR', 'FRMZT', 'FRLEH', 'BEANR', 'LULUX', 'AUKBO', 'SEMMA', 'USPEF', 'MXMEX', 'ARHUS', 'USIAD', 'USNYC', 'GBFXT', 'USOGD', 'TWTPE', 'USSFO', 'CAPRR']
+2026-01-23 17:06:26,431 - shipping_chatbot - INFO - [get_upcoming_arrivals] Checking for port code after preposition in query: 'CONTAINERS ARRIVING AT USBNA IN NEXT 10 DAYS'
+2026-01-23 17:06:26,431 - shipping_chatbot - INFO - [get_upcoming_arrivals] prep_code_match found: True
+2026-01-23 17:06:26,435 - shipping_chatbot - INFO - [get_upcoming_arrivals] Matched port code: USBNA
+2026-01-23 17:06:26,435 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found port code after preposition: USBNA
+2026-01-23 17:06:26,435 - shipping_chatbot - INFO - [get_upcoming_arrivals] Is USBNA in known_codes? True
+2026-01-23 17:06:26,440 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 112 matches in column 'discharge_port'
+2026-01-23 17:06:26,452 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 101 matches in column 'vehicle_arrival_lcn'
+2026-01-23 17:06:26,460 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 1555 matches in column 'final_destination'
+2026-01-23 17:06:26,465 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 1533 matches in column 'place_of_delivery'
+2026-01-23 17:06:26,465 - shipping_chatbot - INFO - [get_upcoming_arrivals] ✓ Successfully detected port code 'USBNA' after preposition. Matched 1722 rows. location_found=True
+2026-01-23 17:06:26,465 - shipping_chatbot - INFO - [get_upcoming_arrivals] Applying location filter for 'USBNA'. Rows before filter: 12765, Matching rows: 1722
+2026-01-23 17:06:26,473 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample ports after filter: ['SAVANNAH, GA(USSAV)', 'PRINCE RUPERT, BC(CAPRR)']
+2026-01-23 17:06:26,488 - shipping_chatbot - INFO - [get_upcoming_arrivals] Returning 41 containers. Unique discharge ports in result: ['LOS ANGELES, CA(USLAX)', 'NASHVILLE, TN(USBNA)', "CHICAGO O'HARE APT(USORD)", 'HONG KONG(HKHKG)']
+2026-01-23 17:06:26,488 - shipping_chatbot - ERROR - [get_upcoming_arrivals] *** CRITICAL ERROR ***: Multiple ports in result when filtering for 'USBNA': ['LOS ANGELES, CA(USLAX)', 'NASHVILLE, TN(USBNA)', "CHICAGO O'HARE APT(USORD)", 'HONG KONG(HKHKG)']
+2026-01-23 17:06:26,488 - shipping_chatbot - ERROR - [get_upcoming_arrivals] This indicates the port filter was NOT applied correctly!
+2026-01-23 17:06:26,488 - shipping_chatbot - ERROR - [get_upcoming_arrivals] location_found=True, location_name=USBNA
+2026-01-23 17:06:26,492 - shipping_chatbot - INFO - [get_upcoming_arrivals] Emergency filter applied. Now returning 3 containers from USBNA only.
+2026-01-23 17:08:54,260 - shipping_chatbot - INFO - User_Query: What shipments are scheduled for this week?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-23 17:08:54,261 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'What shipments are scheduled for this week?', length: 43
+2026-01-23 17:08:54,261 - shipping_chatbot - INFO - [DEBUG] q_lower: 'what shipments are scheduled for this week?'
+2026-01-23 17:08:57,563 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: this week, Dates: 2026-01-19 to 2026-01-25, is_past=False
+2026-01-23 17:08:57,672 - shipping_chatbot - INFO - [get_upcoming_arrivals] Extracted 171 known port codes from dataset
+2026-01-23 17:08:57,673 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample known codes: ['USPDX', 'CNSHG', 'PRAGUE', 'USEWR', 'FRMZT', 'FRLEH', 'BEANR', 'LULUX', 'AUKBO', 'SEMMA', 'USPEF', 'MXMEX', 'ARHUS', 'USIAD', 'USNYC', 'GBFXT', 'USOGD', 'TWTPE', 'USSFO', 'CAPRR']
+2026-01-23 17:08:57,673 - shipping_chatbot - INFO - [get_upcoming_arrivals] Checking for port code after preposition in query: 'CONTAINERS SCHEDULED FOR THIS WEEK'
+2026-01-23 17:08:57,674 - shipping_chatbot - INFO - [get_upcoming_arrivals] prep_code_match found: False

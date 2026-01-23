@@ -1730,6 +1730,14 @@ def get_container_milestones(input_str: str) -> str:
     if not query:
         return "Please provide a container number, PO number, or OBL number."
 
+    # Strip common prefixes like "container", "the container", etc.
+    # This allows queries like "container MSKU4343533" to work
+    query_clean = re.sub(
+        r"^\s*(?:the\s+)?container\s+", "", query, flags=re.IGNORECASE
+    ).strip()
+    if not query_clean:
+        query_clean = query  # Fallback to original if nothing left
+
     df = _df().copy()
 
     # Normalize required columns
@@ -1740,10 +1748,10 @@ def get_container_milestones(input_str: str) -> str:
     container_no = None
     header_text = ""
 
-    # 1) Try direct container match
+    # 1) Try direct container match (use cleaned query)
     match_container = df[
         df["container_number"].str.replace(" ", "").str.upper()
-        == query.replace(" ", "").upper()
+        == query_clean.replace(" ", "").upper()
     ]
     if not match_container.empty:
         container_no = match_container.iloc[0]["container_number"]
@@ -1751,12 +1759,12 @@ def get_container_milestones(input_str: str) -> str:
         row = match_container.iloc[0]
     else:
         # 2) **ENHANCED PO MATCH** - Extract and normalize PO number
-        po_no = extract_po_number(query)
+        po_no = extract_po_number(query_clean)
 
         # Additional fallback for pure numeric PO (e.g., "5300009636")
         if not po_no:
             # Try to extract pure numeric sequence
-            m = re.search(r"\b(\d{6,})\b", query)
+            m = re.search(r"\b(\d{6,})\b", query_clean)
             if m:
                 po_no = m.group(1)
 
@@ -1807,14 +1815,16 @@ def get_container_milestones(input_str: str) -> str:
         else:
             # 3) Try OBL match
             match_obl = df[
-                df["ocean_bl_no_multiple"].str.contains(query, case=False, na=False)
+                df["ocean_bl_no_multiple"].str.contains(
+                    query_clean, case=False, na=False
+                )
             ]
             if not match_obl.empty:
                 container_no = match_obl.iloc[0]["container_number"]
-                header_text = f"The Container <con>{container_no}</con> is associated with the OBL <obl>{query}</obl> . Status is in below : \n\n"
+                header_text = f"The Container <con>{container_no}</con> is associated with the OBL <obl>{query_clean}</obl> . Status is in below : \n\n"
                 row = match_obl.iloc[0]
             else:
-                return f"No record found for {query}."
+                return f"No record found for container {query_clean}."
 
     # ---- milestone rows with priority (prevents bad data ordering) ----
     milestone_defs = [
