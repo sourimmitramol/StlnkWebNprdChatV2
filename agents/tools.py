@@ -2188,16 +2188,14 @@ def ensure_datetime(df: pd.DataFrame, columns: list) -> pd.DataFrame:
 # ...existing code...
 
 
-def get_delayed_containers(
-    question: str = None, consignee_code: str = None, **kwargs
-) -> str:
+def get_delayed_containers(question: str = None, **kwargs) -> str:
     """
     Get containers that arrived delayed (ATA > ETA at discharge port).
     Supports:
     - Delay thresholds: "more than N days", "at least N days", "exactly N days", etc.
     - Time windows: "this week", "last 7 days", "in August", etc. (applied to ATA)
     - Port filtering: "delayed at USNYC", "late at Rotterdam"
-    - Consignee filtering via consignee_code parameter
+    - Consignee filtering via thread-local storage (set by API endpoint)
 
     Returns list[dict] with: container_number, eta_dp, ata_dp, delay_days, discharge_port, consignee_code_multiple
     """
@@ -2209,9 +2207,7 @@ def get_delayed_containers(
     q_up = query.upper()
 
     try:
-        logger.info(
-            f"[get_delayed_containers] Query: {query!r}, consignee_code: {consignee_code}"
-        )
+        logger.info(f"[get_delayed_containers] Query: {query!r}")
     except Exception:
         pass
 
@@ -2311,42 +2307,40 @@ def get_delayed_containers(
     except Exception:
         pass
 
-    # 2) Load data
+    # 2) Load data with consignee filtering applied via thread-local storage in _df()
     df = _df()
     if df.empty:
         return "No container records available."
 
-    # 3) Apply consignee filter if provided
-    if consignee_code and "consignee_code_multiple" in df.columns:
-        codes = [c.strip().upper() for c in str(consignee_code).split(",") if c.strip()]
-        code_set = set(codes) | {c.lstrip("0") for c in codes}
+    # Log the data size after filtering
+    try:
+        import threading
 
-        def row_has_code(cell):
-            if pd.isna(cell):
-                return False
-            s = str(cell).upper()
-            if any(re.search(rf"\({re.escape(c)}\)", s) for c in code_set):
-                return True
-            return any(re.search(rf"\b{re.escape(c)}\b", s) for c in code_set)
+        has_consignee_filter = (
+            hasattr(threading.current_thread(), "consignee_codes")
+            and threading.current_thread().consignee_codes
+        )
+        logger.info(
+            f"[get_delayed_containers] Loaded {len(df)} rows "
+            f"(consignee filter: {'applied' if has_consignee_filter else 'not applied'})"
+        )
+    except Exception:
+        pass
 
-        df = df[df["consignee_code_multiple"].apply(row_has_code)].copy()
-        if df.empty:
-            return f"No containers found for consignee code(s) {', '.join(codes)}."
-
-    # 4) Validate required columns
+    # 3) Validate required columns
     if "ata_dp" not in df.columns or "eta_dp" not in df.columns:
         return "Required columns (ata_dp, eta_dp) not found in the dataset."
 
-    # 5) Parse dates
+    # 4) Parse dates
     df = ensure_datetime(df, ["ata_dp", "eta_dp"])
 
-    # 6) Filter to arrived containers only
+    # 5) Filter to arrived containers only
     arrived_mask = df["ata_dp"].notna() & df["eta_dp"].notna()
     df_arrived = df[arrived_mask].copy()
     if df_arrived.empty:
         return "No arrived containers found."
 
-    # 6.5) **HOT CONTAINER FILTER** - Check if query mentions "hot"
+    # 5.5) **HOT CONTAINER FILTER** - Check if query mentions "hot"
     is_hot_query = bool(re.search(r"\bhot\b", query, re.IGNORECASE))
     if is_hot_query:
         hot_flag_cols = [
@@ -2378,7 +2372,7 @@ def get_delayed_containers(
             if df_arrived.empty:
                 return "No hot containers have arrived for your authorized consignees."
 
-    # 7) Apply time window filter on ATA (if detected)
+    # 6) Apply time window filter on ATA (if detected)
     if apply_time_filter:
         ata_norm = df_arrived["ata_dp"].dt.normalize()
         time_mask = (ata_norm >= start_date) & (ata_norm <= end_date)
@@ -2393,14 +2387,14 @@ def get_delayed_containers(
         except Exception:
             pass
 
-    # 8) Calculate delay_days
+    # 7) Calculate delay_days
     df_arrived["delay_days"] = (
         ((df_arrived["ata_dp"] - df_arrived["eta_dp"]).dt.total_seconds() / 86400)
         .round()
         .astype(int)
     )
 
-    # 9) Parse delay threshold from query
+    # 8) Parse delay threshold from query
     delay_threshold = None
     delay_operator = ">"
     patterns = [
@@ -2412,6 +2406,7 @@ def get_delayed_containers(
             "<=",
         ),
         (r"(?:exactly|equal\s+to|=\s*)\s*(\d+)\s+days?", "=="),
+        # "delayed by X days" means exactly X days
         (r"(?:delayed\s+by|late\s+by)\s+(\d+)\s+days?(?:\s+late)?", "=="),
     ]
     for pattern, op in patterns:
@@ -2421,7 +2416,16 @@ def get_delayed_containers(
             delay_operator = op
             break
 
-    # 10) Apply delay filter
+    # Log the parsed delay filter for debugging
+    try:
+        if delay_threshold is not None:
+            logger.info(
+                f"[get_delayed_containers] Delay filter: {delay_operator} {delay_threshold} days"
+            )
+    except Exception:
+        pass
+
+    # 9) Apply delay filter
     if delay_threshold is not None:
         if delay_operator == "<":
             delay_mask = (df_arrived["delay_days"] > 0) & (
@@ -2450,14 +2454,25 @@ def get_delayed_containers(
         else:
             return f"No delayed containers found{time_context}."
 
-    # 11) Port filtering - **CRITICAL FIX**: Skip port filter if month was detected
+    # 10) Port filtering - **CRITICAL FIX**: Skip port filter if month was detected
     if "discharge_port" in result.columns and not requested_month:
         port_code = None
         port_name = None
 
+        # First try to extract port code in parentheses like (USBNA)
         m_code = re.search(r"\(([A-Z0-9]{3,6})\)", q_up)
         if m_code:
             port_code = m_code.group(1).strip().upper()
+
+        # If no parentheses, try to extract standalone port code (5-6 uppercase letters/numbers)
+        # This handles cases like "at USBNA" where agent converts port names to codes
+        if not port_code:
+            m_standalone = re.search(r"\b([A-Z]{2}[A-Z0-9]{3,4})\b", q_up)
+            if m_standalone:
+                potential_code = m_standalone.group(1).strip().upper()
+                # Verify it looks like a port code (2 letters + 3-4 alphanumeric)
+                if len(potential_code) >= 5 and potential_code[:2].isalpha():
+                    port_code = potential_code
 
         if not port_code:
             m_name = re.search(
@@ -2468,6 +2483,14 @@ def get_delayed_containers(
                 port_name = m_name.group(1).strip()
 
         if port_code or port_name:
+            # Log port filtering details
+            try:
+                logger.info(
+                    f"[get_delayed_containers] Port filter: code={port_code}, name={port_name}, "
+                    f"before_filter={len(result)} rows"
+                )
+            except Exception:
+                pass
 
             def normalize_port(s):
                 if pd.isna(s):
@@ -2479,8 +2502,11 @@ def get_delayed_containers(
             port_series = result["discharge_port"].astype(str)
 
             if port_code:
+                # Match port code either in parentheses or as standalone text
                 port_mask = port_series.str.upper().str.contains(
                     rf"\({re.escape(port_code)}\)", na=False
+                ) | port_series.str.upper().str.contains(
+                    rf"\b{re.escape(port_code)}\b", na=False
                 )
             else:
                 port_norm = result["discharge_port"].apply(normalize_port)
@@ -2501,12 +2527,20 @@ def get_delayed_containers(
 
             result = result[port_mask].copy()
 
+            # Log port filtering results
+            try:
+                logger.info(
+                    f"[get_delayed_containers] Port filter applied: after_filter={len(result)} rows"
+                )
+            except Exception:
+                pass
+
             if result.empty:
                 location = port_code or port_name
                 time_context = f" in {period_desc}" if apply_time_filter else ""
                 return f"No delayed containers at {location}{time_context}."
 
-    # 12) Sort and format output
+    # 11) Sort and format output
     if "ata_dp" in result.columns:
         result = result.sort_values(["ata_dp", "delay_days"], ascending=[False, False])
     else:
@@ -2531,6 +2565,312 @@ def get_delayed_containers(
     for dcol in ["eta_dp", "ata_dp"]:
         if dcol in out.columns and pd.api.types.is_datetime64_any_dtype(out[dcol]):
             out[dcol] = out[dcol].dt.strftime("%Y-%m-%d")
+
+    return out.where(pd.notnull(out), None).to_dict(orient="records")
+
+
+def get_delayed_containers_not_arrived(question: str = None, **kwargs) -> str:
+    """
+    Get containers that are delayed but NOT yet arrived (ata_dp is null, eta_dp has passed).
+
+    This function finds containers where:
+    - ata_dp (Actual Time of Arrival at Discharge Port) is NULL (not arrived yet)
+    - eta_dp (Expected Time of Arrival at Discharge Port) has passed (< today)
+    - Delay is calculated as: today - eta_dp
+
+    Supports:
+    - Delay thresholds: "more than N days", "at least N days", "exactly N days", etc.
+    - Port filtering: "arriving at USNYC", "delayed at Rotterdam"
+    - Hot container filtering: "hot containers delayed"
+    - Consignee filtering via thread-local storage (set by API endpoint)
+
+    Returns list[dict] with: container_number, eta_dp, delay_days, discharge_port,
+                            hot_container_flag, consignee_code_multiple
+    """
+    import re
+
+    import pandas as pd
+
+    query = (question or "").strip()
+    q_up = query.upper()
+
+    try:
+        logger.info(f"[get_delayed_containers_not_arrived] Query: {query!r}")
+    except Exception:
+        pass
+
+    # 1) Load data with consignee filtering applied via thread-local storage in _df()
+    df = _df()
+    if df.empty:
+        return "No container records available."
+
+    # Log the data size after filtering
+    try:
+        import threading
+
+        has_consignee_filter = (
+            hasattr(threading.current_thread(), "consignee_codes")
+            and threading.current_thread().consignee_codes
+        )
+        logger.info(
+            f"[get_delayed_containers_not_arrived] Loaded {len(df)} rows "
+            f"(consignee filter: {'applied' if has_consignee_filter else 'not applied'})"
+        )
+    except Exception:
+        pass
+
+    # 2) Validate required columns
+    if "ata_dp" not in df.columns or "eta_dp" not in df.columns:
+        return "Required columns (ata_dp, eta_dp) not found in the dataset."
+
+    # 3) Parse dates
+    df = ensure_datetime(df, ["ata_dp", "eta_dp"])
+
+    # 4) Get today's date
+    today = pd.Timestamp.today().normalize()
+
+    # 5) Filter to NOT arrived containers where ETA has passed
+    # ata_dp is null (not arrived) AND eta_dp < today (ETA has passed)
+    not_arrived_mask = (
+        df["ata_dp"].isna() & df["eta_dp"].notna() & (df["eta_dp"] < today)
+    )
+    df_not_arrived = df[not_arrived_mask].copy()
+
+    if df_not_arrived.empty:
+        return "No containers found that are delayed but not yet arrived."
+
+    try:
+        logger.info(
+            f"[get_delayed_containers_not_arrived] Found {len(df_not_arrived)} containers not arrived with passed ETA"
+        )
+    except Exception:
+        pass
+
+    # 6) Calculate delay_days: today - eta_dp
+    df_not_arrived["delay_days"] = (
+        ((today - df_not_arrived["eta_dp"]).dt.total_seconds() / 86400)
+        .round()
+        .astype(int)
+    )
+
+    # 7) **HOT CONTAINER FILTER** - Check if query mentions "hot"
+    is_hot_query = bool(re.search(r"\bhot\b", query, re.IGNORECASE))
+    if is_hot_query:
+        hot_flag_cols = [
+            c for c in df_not_arrived.columns if "hot_container_flag" in c.lower()
+        ]
+        if not hot_flag_cols:
+            hot_flag_cols = [
+                c for c in df_not_arrived.columns if "hot_flag" in c.lower()
+            ]
+
+        if hot_flag_cols:
+            hot_col = hot_flag_cols[0]
+
+            def _is_hot(v):
+                if pd.isna(v):
+                    return False
+                v_str = str(v).strip().upper()
+                return v_str in ["Y", "YES", "1", "TRUE"] or v is True or v == 1
+
+            before_count = len(df_not_arrived)
+            df_not_arrived = df_not_arrived[
+                df_not_arrived[hot_col].apply(_is_hot)
+            ].copy()
+            after_count = len(df_not_arrived)
+
+            try:
+                logger.info(
+                    f"[get_delayed_containers_not_arrived] Hot filter: {before_count} -> {after_count} rows"
+                )
+            except:
+                pass
+
+            if df_not_arrived.empty:
+                return "No hot containers are delayed but not yet arrived."
+
+    # 8) Parse delay threshold from query
+    delay_threshold = None
+    delay_operator = ">"
+    patterns = [
+        (r"(?:less\s+than|under|below|<)\s*(\d+)\s+days?", "<"),
+        (r"(?:more\s+than|over|above|greater\s+than|>)\s*(\d+)\s+days?", ">"),
+        (r"(?:at\s+least|minimum|>=\s*|≥\s*)\s*(\d+)\s+days?", ">="),
+        (
+            r"(?:up\s+to|no\s+more\s+than|maximum|within|<=\s*|≤\s*)\s*(\d+)\s+days?",
+            "<=",
+        ),
+        (r"(?:exactly|equal\s+to|=\s*)\s*(\d+)\s+days?", "=="),
+        # "delayed by X days" means exactly X days
+        (r"(?:delayed\s+by|late\s+by)\s+(\d+)\s+days?(?:\s+late)?", "=="),
+    ]
+    for pattern, op in patterns:
+        m = re.search(pattern, query, re.IGNORECASE)
+        if m:
+            delay_threshold = int(m.group(1))
+            delay_operator = op
+            break
+
+    # Log the parsed delay filter for debugging
+    try:
+        if delay_threshold is not None:
+            logger.info(
+                f"[get_delayed_containers_not_arrived] Delay filter: {delay_operator} {delay_threshold} days"
+            )
+    except Exception:
+        pass
+
+    # 9) Apply delay filter
+    if delay_threshold is not None:
+        if delay_operator == "<":
+            delay_mask = (df_not_arrived["delay_days"] > 0) & (
+                df_not_arrived["delay_days"] < delay_threshold
+            )
+        elif delay_operator == ">":
+            delay_mask = df_not_arrived["delay_days"] > delay_threshold
+        elif delay_operator == ">=":
+            delay_mask = df_not_arrived["delay_days"] >= delay_threshold
+        elif delay_operator == "==":
+            delay_mask = df_not_arrived["delay_days"] == delay_threshold
+        elif delay_operator == "<=":
+            delay_mask = (df_not_arrived["delay_days"] > 0) & (
+                df_not_arrived["delay_days"] <= delay_threshold
+            )
+        else:
+            delay_mask = df_not_arrived["delay_days"] > 0
+    else:
+        delay_mask = df_not_arrived["delay_days"] > 0
+
+    result = df_not_arrived[delay_mask].copy()
+
+    # Log delay filter results
+    try:
+        logger.info(
+            f"[get_delayed_containers_not_arrived] After delay filter: {len(result)} containers "
+            f"(threshold: {delay_operator} {delay_threshold} days)"
+            if delay_threshold
+            else f"[get_delayed_containers_not_arrived] After delay filter: {len(result)} containers (any delay > 0)"
+        )
+    except Exception:
+        pass
+
+    if result.empty:
+        if delay_threshold is not None:
+            return f"No containers delayed by {delay_operator} {delay_threshold} days that are not yet arrived."
+        else:
+            return "No delayed containers found that are not yet arrived."
+
+    # 10) Port filtering - detect from query
+    if "discharge_port" in result.columns:
+        port_code = None
+        port_name = None
+
+        # First try to extract port code in parentheses like (USBNA)
+        m_code = re.search(r"\(([A-Z0-9]{3,6})\)", q_up)
+        if m_code:
+            port_code = m_code.group(1).strip().upper()
+
+        # If no parentheses, try to extract standalone port code (5-6 uppercase letters/numbers)
+        # This handles cases like "at USBNA" where agent converts port names to codes
+        if not port_code:
+            m_standalone = re.search(r"\b([A-Z]{2}[A-Z0-9]{3,4})\b", q_up)
+            if m_standalone:
+                potential_code = m_standalone.group(1).strip().upper()
+                # Verify it looks like a port code (2 letters + 3-4 alphanumeric)
+                if len(potential_code) >= 5 and potential_code[:2].isalpha():
+                    port_code = potential_code
+
+        if not port_code:
+            m_name = re.search(
+                r"\b(?:AT|IN|FROM|ARRIVING)\s+([A-Z][A-Z\s\.\-]{3,}?)(?:\s+BUT\s+|\s+AND\s+|,|\?|\.$|\s*$)",
+                q_up,
+            )
+            if m_name:
+                port_name = m_name.group(1).strip()
+
+        if port_code or port_name:
+            # Log port filtering details
+            try:
+                logger.info(
+                    f"[get_delayed_containers_not_arrived] Port filter: code={port_code}, name={port_name}, "
+                    f"before_filter={len(result)} rows"
+                )
+            except Exception:
+                pass
+
+            def normalize_port(s):
+                if pd.isna(s):
+                    return ""
+                t = str(s).upper()
+                t = re.sub(r"\([^)]*\)", "", t)
+                return re.sub(r"\s+", " ", t).strip()
+
+            port_series = result["discharge_port"].astype(str)
+
+            if port_code:
+                # Match port code either in parentheses or as standalone text
+                port_mask = port_series.str.upper().str.contains(
+                    rf"\({re.escape(port_code)}\)", na=False
+                ) | port_series.str.upper().str.contains(
+                    rf"\b{re.escape(port_code)}\b", na=False
+                )
+            else:
+                port_norm = result["discharge_port"].apply(normalize_port)
+                phrase_norm = re.sub(r"\s+", " ", port_name).strip()
+                exact = port_norm == phrase_norm
+                if exact.any():
+                    port_mask = exact
+                else:
+                    words = [w for w in phrase_norm.split() if len(w) >= 3]
+                    if words:
+                        port_mask = pd.Series(True, index=result.index)
+                        for w in words:
+                            port_mask &= port_norm.str.contains(re.escape(w), na=False)
+                    else:
+                        port_mask = port_norm.str.contains(
+                            re.escape(phrase_norm), na=False
+                        )
+
+            result = result[port_mask].copy()
+
+            # Log port filtering results
+            try:
+                logger.info(
+                    f"[get_delayed_containers_not_arrived] Port filter applied: after_filter={len(result)} rows"
+                )
+            except Exception:
+                pass
+
+            if result.empty:
+                location = port_code or port_name
+                return f"No delayed containers (not yet arrived) at {location}."
+
+    # 11) Sort and format output
+    result = result.sort_values("delay_days", ascending=False)
+
+    out_cols = [
+        "container_number",
+        "eta_dp",
+        "delay_days",
+        "discharge_port",
+        "consignee_code_multiple",
+    ]
+
+    # Add optional columns if they exist
+    optional_cols = ["po_number_multiple", "final_carrier_name", "hot_container_flag"]
+    for col in optional_cols:
+        if col in result.columns:
+            out_cols.append(col)
+
+    out_cols = [c for c in out_cols if c in result.columns]
+    out = result[out_cols].head(200).copy()
+
+    # Format dates
+    if "eta_dp" in out.columns and pd.api.types.is_datetime64_any_dtype(out["eta_dp"]):
+        out["eta_dp"] = out["eta_dp"].dt.strftime("%Y-%m-%d")
+
+    # Add status column for clarity
+    out["arrival_status"] = "Not Arrived (Delayed in Transit)"
 
     return out.where(pd.notnull(out), None).to_dict(orient="records")
 
@@ -13479,6 +13819,45 @@ TOOLS = [
             "Use this tool for any question mentioning delay, late, ETA, overdue, "
             "behind schedule, missed arrival, days, or hot containers with delays. "
             "If the user mentions 'hot' and 'delay' together, use this tool."
+        ),
+    ),
+    Tool(
+        name="Get Delayed Containers Not Arrived",
+        func=get_delayed_containers_not_arrived,
+        description=(
+            "**USE THIS TOOL** for queries about containers that are DELAYED but NOT YET ARRIVED (in transit). "
+            "This tool finds containers where ata_dp is null (not arrived) but eta_dp has passed (delayed in transit). "
+            "\n"
+            "**MANDATORY: Use this tool when query contains 'arriving at/in' or 'which are arriving' or 'arriving to'**\n"
+            "\n"
+            "**EXACT QUERY PATTERNS TO ROUTE HERE:**\n"
+            "- 'please let me know containers delayed by 5 days which are arriving at SHANGHAI'\n"
+            "- 'please let me know containers delayed by more than 7 days which are arriving at SHANGHAI'\n"
+            "- 'please let me know containers delayed by less than 10 days which are arriving at SHANGHAI'\n"
+            "- 'containers delayed by X days arriving at [port]' (X = any number, port = any port name/code)\n"
+            "- 'containers delayed by more than X days arriving at [port]'\n"
+            "- 'containers delayed by less than X days arriving at [port]'\n"
+            "- 'containers delayed by at least X days arriving at [port]'\n"
+            "- 'containers delayed by up to X days arriving at [port]'\n"
+            "- 'delayed by X days which are arriving at [port]'\n"
+            "- 'show me containers delayed by 5 days arriving at Los Angeles'\n"
+            "- 'delayed containers arriving at [port]'\n"
+            "- 'containers delayed by X days at [port]' (when query mentions 'arriving')\n"
+            "- 'delayed containers not yet arrived'\n"
+            "- 'containers overdue arriving at [port]'\n"
+            "- 'late containers arriving at [port]'\n"
+            "- 'hot containers delayed arriving at [port]'\n"
+            "\n"
+            "**KEY INDICATORS - USE THIS TOOL IF ANY OF THESE ARE PRESENT:**\n"
+            "1. Query contains: 'arriving at', 'arriving in', 'arriving to', 'which are arriving'\n"
+            "2. Query contains: 'delayed' + 'arriving'\n"
+            "3. Query asks about delayed containers at a specific PORT (discharge port context)\n"
+            "\n"
+            "**Key difference from 'Get Delayed Containers':**\n"
+            "- This tool: ata_dp = NULL (not arrived yet), eta_dp < today (delayed in transit)\n"
+            "- Get Delayed Containers: ata_dp NOT NULL (already arrived late)\n"
+            "\n"
+            "Supports: delay thresholds (>, <, >=, <=, ==), port filtering, hot container filtering, consignee filtering (automatic)\n"
         ),
     ),
     Tool(
