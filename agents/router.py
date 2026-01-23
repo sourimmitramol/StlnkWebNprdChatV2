@@ -16,12 +16,12 @@ from agents.tools import (  # Add the missing functions
     get_containers_departed_from_load_port,
     get_containers_departing_from_load_port, get_containers_missed_planned_etd,
     get_containers_PO_OBL_by_supplier, get_containers_still_at_load_port,
-    get_delayed_containers, get_delayed_pos, get_eta_for_booking,
-    get_eta_for_po, get_field_info, get_hot_upcoming_arrivals,
-    get_load_port_for_container, get_po_transit_analysis,
-    get_upcoming_arrivals, get_upcoming_bls, get_upcoming_pos, get_vessel_info,
-    get_weekly_status_changes, lookup_keyword, sql_query_tool,
-    vector_search_tool)
+    get_delayed_containers, get_delayed_containers_not_arrived,
+    get_delayed_pos, get_eta_for_booking, get_eta_for_po, get_field_info,
+    get_hot_upcoming_arrivals, get_load_port_for_container,
+    get_po_transit_analysis, get_upcoming_arrivals, get_upcoming_bls,
+    get_upcoming_pos, get_vessel_info, get_weekly_status_changes,
+    lookup_keyword, sql_query_tool, vector_search_tool)
 from utils.logger import logger
 
 
@@ -162,9 +162,32 @@ def route_query(query: str, consignee_codes: list = None) -> str:
             return get_arrivals_by_port(query)
 
         # ========== PRIORITY 2: Handle delay queries ==========
-        if (
+        # Check if query is about delayed containers arriving/expected at a port (not yet arrived)
+        # Look for patterns: "delayed...arriving at", "delayed...which are arriving", "delayed...at [PORT]"
+        is_delayed_not_arrived_query = (
+            ("delay" in q or "late" in q or "overdue" in q)
+            and "days" in q
+            and (
+                "arriving at" in q
+                or "arriving in" in q
+                or "which are arriving" in q
+                or re.search(r"arriving\s+at\s+\w+", q)
+                or re.search(
+                    r"delayed.*at\s+[A-Z]{2,}", query
+                )  # "delayed...at SHANGHAI"
+            )
+        )
+
+        if is_delayed_not_arrived_query:
+            # This is for containers delayed but not yet arrived
+            logger.info(
+                f"Router: Delayed containers not arrived route for query: {query}"
+            )
+            return get_delayed_containers_not_arrived(query)
+        elif (
             "delay" in q or "late" in q or "overdue" in q or "missed" in q
         ) and "days" in q:
+            # This is for containers that already arrived late
             return get_delayed_containers(query)
 
         # ========== PRIORITY 3: Handle carrier queries (NEW - SPECIFIC) ==========
