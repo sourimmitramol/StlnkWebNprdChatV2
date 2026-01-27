@@ -3861,3 +3861,155 @@ UnboundLocalError: cannot access local variable 'candidate_tokens' where it is n
 2026-01-27 10:35:55,375 - shipping_chatbot - INFO - [get_delayed_containers] Loaded 7381 rows (consignee filter: applied)
 2026-01-27 10:35:55,386 - shipping_chatbot - INFO - [get_delayed_containers] Hot filter: 5902 -> 674 rows
 2026-01-27 10:35:55,396 - shipping_chatbot - INFO - [get_delayed_containers] Delay filter: == 7 days
+2026-01-27 10:40:28,807 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-27 10:40:28,810 - shipping_chatbot - INFO - Agent created with 55 tools
+2026-01-27 10:40:28,810 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-27 10:40:36,624 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-27 10:40:36,624 - shipping_chatbot - INFO - Agent created with 55 tools
+2026-01-27 10:40:36,624 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-27 10:53:59,011 - shipping_chatbot - INFO - User_Query: Can you please let me know Hot containers delayed by 7 days, c_codes: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
+2026-01-27 10:53:59,013 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Can you please let me know Hot containers delayed by 7 days', length: 59
+2026-01-27 10:53:59,013 - shipping_chatbot - INFO - [DEBUG] q_lower: 'can you please let me know hot containers delayed by 7 days'
+2026-01-27 10:53:59,013 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-27 10:54:33,662 - shipping_chatbot - INFO - Fetched 19117 rows
+2026-01-27 10:54:33,664 - shipping_chatbot - INFO - Starting preprocessing on 19117 rows
+2026-01-27 10:54:33,735 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-27 10:54:34,183 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-27 10:54:34,332 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-27 10:54:34,870 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-27 10:54:34,872 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-27 10:54:34,874 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-27 10:54:34,900 - shipping_chatbot - INFO - Pre-processing finished - 19117 rows remain
+2026-01-27 10:54:37,328 - shipping_chatbot - INFO - [get_delayed_containers] Query: 'hot containers delayed by 7 days'
+2026-01-27 10:54:37,382 - shipping_chatbot - INFO - [get_delayed_containers] Loaded 7381 rows (consignee filter: applied)
+2026-01-27 10:54:37,399 - shipping_chatbot - INFO - [get_delayed_containers] Hot filter: 5902 -> 674 rows
+2026-01-27 10:54:37,401 - shipping_chatbot - INFO - [get_delayed_containers] Delay filter: == 7 days
+2026-01-27 11:49:40,546 - shipping_chatbot - INFO - User_Query: Which containers have arrived DP but not yet to final destination?, c_codes: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
+2026-01-27 11:49:40,548 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers have arrived DP but not yet to final destination?', length: 66
+2026-01-27 11:49:40,548 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers have arrived dp but not yet to final destination?'
+2026-01-27 11:49:43,660 - shipping_chatbot - INFO - Processing natural language query: Find containers where ata_dp is not null (arrived at discharge port) and ata_fd is null (not yet arrived at final destination). Return container_number, ata_dp, eta_fd, ata_fd.
+2026-01-27 11:49:48,269 - shipping_chatbot - ERROR - Failed to process natural language query: 1 validation error for SQLDatabaseToolkit
+db
+  instance of SQLDatabase expected (type=type_error.arbitrary_type; expected_arbitrary_type=SQLDatabase)
+Traceback (most recent call last):
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\agents\tools.py", line 10118, in sql_query_tool
+    out_cols.append(hot_flag_cols[0])
+                ^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\agents\azure_agent.py", line 100, in initialize_sql_agent
+    sql_agent_executor = create_sql_agent(
+                         ^^^^^^^^^^^^^^^^^
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\venv\Lib\site-packages\langchain_community\agent_toolkits\sql\base.py", line 139, in create_sql_agent
+    toolkit = toolkit or SQLDatabaseToolkit(llm=llm, db=db)  # type: ignore[arg-type]
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\venv\Lib\site-packages\pydantic\v1\main.py", line 347, in __init__
+    raise validation_error
+pydantic.v1.error_wrappers.ValidationError: 1 validation error for SQLDatabaseToolkit
+db
+  instance of SQLDatabase expected (type=type_error.arbitrary_type; expected_arbitrary_type=SQLDatabase)
+2026-01-27 11:49:52,436 - shipping_chatbot - INFO - Processing natural language query: Find containers where ata_dp is not null and (ata_fd is null or ata_fd = ''). Return container_number, ata_dp, eta_fd, ata_fd.
+2026-01-27 11:49:56,205 - shipping_chatbot - ERROR - Failed to process natural language query: 1 validation error for SQLDatabaseToolkit
+db
+  instance of SQLDatabase expected (type=type_error.arbitrary_type; expected_arbitrary_type=SQLDatabase)
+Traceback (most recent call last):
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\agents\tools.py", line 10118, in sql_query_tool
+    out_cols.append(hot_flag_cols[0])
+                ^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\agents\azure_agent.py", line 100, in initialize_sql_agent
+    sql_agent_executor = create_sql_agent(
+                         ^^^^^^^^^^^^^^^^^
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\venv\Lib\site-packages\langchain_community\agent_toolkits\sql\base.py", line 139, in create_sql_agent
+    toolkit = toolkit or SQLDatabaseToolkit(llm=llm, db=db)  # type: ignore[arg-type]
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\venv\Lib\site-packages\pydantic\v1\main.py", line 347, in __init__
+    raise validation_error
+pydantic.v1.error_wrappers.ValidationError: 1 validation error for SQLDatabaseToolkit
+db
+  instance of SQLDatabase expected (type=type_error.arbitrary_type; expected_arbitrary_type=SQLDatabase)
+2026-01-27 11:50:04,472 - shipping_chatbot - INFO - Processing natural language query: Select container_number, ata_dp, eta_fd, ata_fd from shipments where ata_dp is not null and (ata_fd is null or ata_fd = '') limit 20
+2026-01-27 11:50:08,201 - shipping_chatbot - ERROR - Failed to process natural language query: 1 validation error for SQLDatabaseToolkit
+db
+  instance of SQLDatabase expected (type=type_error.arbitrary_type; expected_arbitrary_type=SQLDatabase)
+Traceback (most recent call last):
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\agents\tools.py", line 10118, in sql_query_tool
+    out_cols.append(hot_flag_cols[0])
+                ^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\agents\azure_agent.py", line 100, in initialize_sql_agent
+    sql_agent_executor = create_sql_agent(
+                         ^^^^^^^^^^^^^^^^^
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\venv\Lib\site-packages\langchain_community\agent_toolkits\sql\base.py", line 139, in create_sql_agent
+    toolkit = toolkit or SQLDatabaseToolkit(llm=llm, db=db)  # type: ignore[arg-type]
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\venv\Lib\site-packages\pydantic\v1\main.py", line 347, in __init__
+    raise validation_error
+pydantic.v1.error_wrappers.ValidationError: 1 validation error for SQLDatabaseToolkit
+db
+  instance of SQLDatabase expected (type=type_error.arbitrary_type; expected_arbitrary_type=SQLDatabase)
+2026-01-27 11:50:36,397 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-27 11:50:36,397 - shipping_chatbot - INFO - Agent created with 56 tools
+2026-01-27 11:50:36,397 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-27 11:51:03,169 - shipping_chatbot - INFO - User_Query: Which containers have arrived DP but not yet to final destination?, c_codes: ['0000866']
+2026-01-27 11:51:03,169 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers have arrived DP but not yet to final destination?', length: 66
+2026-01-27 11:51:03,169 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers have arrived dp but not yet to final destination?'
+2026-01-27 11:51:03,169 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-27 11:51:20,513 - shipping_chatbot - INFO - Fetched 19117 rows
+2026-01-27 11:51:20,513 - shipping_chatbot - INFO - Starting preprocessing on 19117 rows
+2026-01-27 11:51:20,619 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-27 11:51:21,581 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-27 11:51:21,872 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-27 11:51:22,810 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-27 11:51:22,810 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-27 11:51:22,810 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-27 11:51:22,845 - shipping_chatbot - INFO - Pre-processing finished - 19117 rows remain
+2026-01-27 11:51:25,575 - shipping_chatbot - INFO - [get_containers_at_dp_not_fd] Query: 'containers arrived at discharge port but not delivered'
+2026-01-27 11:51:25,643 - shipping_chatbot - INFO - [get_containers_at_dp_not_fd] Loaded 2057 rows
+2026-01-27 11:51:25,656 - shipping_chatbot - INFO - [get_containers_at_dp_not_fd] Found 105 containers at DP but not at FD
+2026-01-27 12:04:56,790 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-27 12:04:56,790 - shipping_chatbot - INFO - Agent created with 56 tools
+2026-01-27 12:04:56,790 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-27 12:09:39,115 - shipping_chatbot - INFO - User_Query: Which containers have arrived DP but not yet to final destination?, c_codes: ['0000866']
+2026-01-27 12:09:39,115 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers have arrived DP but not yet to final destination?', length: 66
+2026-01-27 12:09:39,115 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers have arrived dp but not yet to final destination?'
+2026-01-27 12:09:39,115 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-27 12:09:57,172 - shipping_chatbot - INFO - Fetched 19117 rows
+2026-01-27 12:09:57,176 - shipping_chatbot - INFO - Starting preprocessing on 19117 rows
+2026-01-27 12:09:57,300 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-27 12:09:58,216 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-27 12:09:58,488 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-27 12:09:59,246 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-27 12:09:59,249 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-27 12:09:59,249 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-27 12:09:59,279 - shipping_chatbot - INFO - Pre-processing finished - 19117 rows remain
+2026-01-27 12:10:02,577 - shipping_chatbot - INFO - [get_containers_at_dp_not_fd] Query: 'containers arrived at discharge port but not delivered'
+2026-01-27 12:10:02,648 - shipping_chatbot - INFO - [get_containers_at_dp_not_fd] Loaded 2057 rows
+2026-01-27 12:10:02,672 - shipping_chatbot - INFO - [get_containers_at_dp_not_fd] Found 105 containers at DP but not at FD
+2026-01-27 12:12:58,047 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-27 12:12:58,047 - shipping_chatbot - INFO - Agent created with 56 tools
+2026-01-27 12:12:58,047 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-27 12:14:00,101 - shipping_chatbot - INFO - User_Query: Which containers have arrived DP but not yet to final destination?, c_codes: ['0000866']
+2026-01-27 12:14:00,101 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers have arrived DP but not yet to final destination?', length: 66
+2026-01-27 12:14:00,101 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers have arrived dp but not yet to final destination?'
+2026-01-27 12:14:00,101 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-27 12:14:16,166 - shipping_chatbot - INFO - Fetched 19117 rows
+2026-01-27 12:14:16,171 - shipping_chatbot - INFO - Starting preprocessing on 19117 rows
+2026-01-27 12:14:16,296 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-27 12:14:17,361 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-27 12:14:17,650 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-27 12:14:18,678 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-27 12:14:18,685 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-27 12:14:18,687 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-27 12:14:18,730 - shipping_chatbot - INFO - Pre-processing finished - 19117 rows remain
+2026-01-27 12:14:21,610 - shipping_chatbot - INFO - [get_containers_at_dp_not_fd] Query: 'containers arrived at discharge port but not delivered'
+2026-01-27 12:14:21,727 - shipping_chatbot - INFO - [get_containers_at_dp_not_fd] Loaded 2057 rows
+2026-01-27 12:14:21,749 - shipping_chatbot - INFO - [get_containers_at_dp_not_fd] Found 105 containers at DP but not at FD
+2026-01-27 12:15:56,113 - shipping_chatbot - INFO - User_Query: Show me all containers that are delayed by more than 3 days, c_codes: ['0000866']
+2026-01-27 12:15:56,114 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Show me all containers that are delayed by more than 3 days', length: 59
+2026-01-27 12:15:56,114 - shipping_chatbot - INFO - [DEBUG] q_lower: 'show me all containers that are delayed by more than 3 days'
+2026-01-27 12:15:59,795 - shipping_chatbot - INFO - [get_delayed_containers] Query: 'containers delayed by more than 3 days'
+2026-01-27 12:15:59,902 - shipping_chatbot - INFO - [get_delayed_containers] Loaded 2057 rows (consignee filter: applied)
+2026-01-27 12:15:59,902 - shipping_chatbot - INFO - [get_delayed_containers] Delay filter: > 3 days
+2026-01-27 12:46:38,137 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-27 12:46:38,137 - shipping_chatbot - INFO - Agent created with 56 tools
+2026-01-27 12:46:38,137 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-27 12:46:45,529 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-27 12:46:45,529 - shipping_chatbot - INFO - Agent created with 56 tools
+2026-01-27 12:46:45,529 - shipping_chatbot - INFO - Agent ready for HTTP requests
