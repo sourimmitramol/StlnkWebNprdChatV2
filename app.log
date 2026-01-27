@@ -3733,3 +3733,131 @@ UnboundLocalError: cannot access local variable 'candidate_tokens' where it is n
 2026-01-23 17:08:57,673 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample known codes: ['USPDX', 'CNSHG', 'PRAGUE', 'USEWR', 'FRMZT', 'FRLEH', 'BEANR', 'LULUX', 'AUKBO', 'SEMMA', 'USPEF', 'MXMEX', 'ARHUS', 'USIAD', 'USNYC', 'GBFXT', 'USOGD', 'TWTPE', 'USSFO', 'CAPRR']
 2026-01-23 17:08:57,673 - shipping_chatbot - INFO - [get_upcoming_arrivals] Checking for port code after preposition in query: 'CONTAINERS SCHEDULED FOR THIS WEEK'
 2026-01-23 17:08:57,674 - shipping_chatbot - INFO - [get_upcoming_arrivals] prep_code_match found: False
+2026-01-23 17:25:58,298 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-23 17:25:58,298 - shipping_chatbot - INFO - Agent created with 55 tools
+2026-01-23 17:25:58,298 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-23 17:26:09,224 - shipping_chatbot - INFO - User_Query: When is the container MSKU4343533 is arriving, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-23 17:26:09,224 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'When is the container MSKU4343533 is arriving', length: 45
+2026-01-23 17:26:09,224 - shipping_chatbot - INFO - [DEBUG] q_lower: 'when is the container msku4343533 is arriving'
+2026-01-23 17:26:09,224 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-23 17:26:26,181 - shipping_chatbot - INFO - Fetched 19317 rows
+2026-01-23 17:26:26,183 - shipping_chatbot - INFO - Starting preprocessing on 19317 rows
+2026-01-23 17:26:26,321 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-23 17:26:26,948 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-23 17:26:27,180 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-23 17:26:27,916 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-23 17:26:27,916 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-23 17:26:27,916 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-23 17:26:27,935 - shipping_chatbot - INFO - Pre-processing finished - 19317 rows remain
+2026-01-27 08:48:23,579 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-27 08:48:23,581 - shipping_chatbot - INFO - Agent created with 55 tools
+2026-01-27 08:48:23,581 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-27 09:25:12,144 - shipping_chatbot - INFO - User_Query: please let me know containers delayed by 7 days which are arriving at Los Angeles, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-27 09:25:12,144 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'please let me know containers delayed by 7 days which are arriving at Los Angeles', length: 81
+2026-01-27 09:25:12,144 - shipping_chatbot - INFO - [DEBUG] q_lower: 'please let me know containers delayed by 7 days which are arriving at los angeles'
+2026-01-27 09:25:12,144 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-27 09:25:31,526 - shipping_chatbot - INFO - Fetched 19425 rows
+2026-01-27 09:25:31,529 - shipping_chatbot - INFO - Starting preprocessing on 19425 rows
+2026-01-27 09:25:31,630 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-27 09:25:32,118 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-27 09:25:32,302 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-27 09:25:32,843 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-27 09:25:32,845 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-27 09:25:32,847 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-27 09:25:32,873 - shipping_chatbot - INFO - Pre-processing finished - 19425 rows remain
+2026-01-27 09:25:35,783 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Query: 'containers delayed by 7 days arriving at USLAX'
+2026-01-27 09:25:35,852 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Loaded 12842 rows (consignee filter: applied)
+2026-01-27 09:25:35,856 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Found 1400 containers not arrived with passed ETA
+2026-01-27 09:25:35,858 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Delay filter: == 7 days
+2026-01-27 09:25:35,858 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] After delay filter: 13 containers (threshold: == 7 days)
+2026-01-27 09:25:35,859 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Port filter: code=USLAX, name=None, before_filter=13 rows
+2026-01-27 09:25:35,860 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Port filter applied: after_filter=0 rows
+2026-01-27 09:25:36,783 - shipping_chatbot - INFO - [get_delayed_containers] Query: 'containers delayed by 7 days at USLAX'
+2026-01-27 09:25:36,850 - shipping_chatbot - INFO - [get_delayed_containers] Loaded 12842 rows (consignee filter: applied)
+2026-01-27 09:25:36,864 - shipping_chatbot - INFO - [get_delayed_containers] Delay filter: == 7 days
+2026-01-27 09:25:36,867 - shipping_chatbot - INFO - [get_delayed_containers] Port filter: code=USLAX, name=None, before_filter=134 rows
+2026-01-27 09:25:36,870 - shipping_chatbot - INFO - [get_delayed_containers] Port filter applied: after_filter=5 rows
+2026-01-27 09:46:05,756 - shipping_chatbot - INFO - User_Query: please let me know containers delayed by 7 days which are arriving at Los Angeles, c_codes: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
+2026-01-27 09:46:05,756 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'please let me know containers delayed by 7 days which are arriving at Los Angeles', length: 81
+2026-01-27 09:46:05,756 - shipping_chatbot - INFO - [DEBUG] q_lower: 'please let me know containers delayed by 7 days which are arriving at los angeles'
+2026-01-27 09:46:08,339 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Query: 'containers delayed by 7 days arriving at USLAX'
+2026-01-27 09:46:08,404 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Loaded 7500 rows (consignee filter: applied)
+2026-01-27 09:46:08,404 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Found 995 containers not arrived with passed ETA
+2026-01-27 09:46:08,404 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Delay filter: == 7 days
+2026-01-27 09:46:08,404 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] After delay filter: 6 containers (threshold: == 7 days)
+2026-01-27 09:46:08,404 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Port filter: code=USLAX, name=None, before_filter=6 rows
+2026-01-27 09:46:08,404 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Port filter applied: after_filter=0 rows
+2026-01-27 09:46:42,107 - shipping_chatbot - INFO - User_Query: Can you please let me know Hot containers delayed by 7 days, c_codes: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
+2026-01-27 09:46:42,107 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Can you please let me know Hot containers delayed by 7 days', length: 59
+2026-01-27 09:46:42,107 - shipping_chatbot - INFO - [DEBUG] q_lower: 'can you please let me know hot containers delayed by 7 days'
+2026-01-27 09:46:44,984 - shipping_chatbot - INFO - [get_hot_containers] Initial dataframe size: 7500 rows
+2026-01-27 09:46:44,987 - shipping_chatbot - INFO - [get_hot_containers] Using hot flag column: hot_container_flag
+2026-01-27 09:46:44,994 - shipping_chatbot - INFO - [get_hot_containers] After strict hot flag filter: 793 rows (removed 6707 non-hot)
+2026-01-27 09:46:44,997 - shipping_chatbot - INFO - [get_hot_containers] Parsed time period: next 7 days (default) (2026-01-27 to 2026-02-02)
+2026-01-27 09:46:44,999 - shipping_chatbot - INFO - [get_hot_containers] After date filter using revised_eta: 12 rows
+2026-01-27 09:46:45,004 - shipping_chatbot - INFO - [get_hot_containers] Returning 12 hot containers
+2026-01-27 09:49:06,877 - shipping_chatbot - INFO - User_Query: Can you please let me know Hot containers delayed by 7 days, c_codes: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
+2026-01-27 09:49:06,877 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Can you please let me know Hot containers delayed by 7 days', length: 59
+2026-01-27 09:49:06,877 - shipping_chatbot - INFO - [DEBUG] q_lower: 'can you please let me know hot containers delayed by 7 days'
+2026-01-27 09:49:09,489 - shipping_chatbot - INFO - [get_hot_containers] Initial dataframe size: 7500 rows
+2026-01-27 09:49:09,489 - shipping_chatbot - INFO - [get_hot_containers] Using hot flag column: hot_container_flag
+2026-01-27 09:49:09,508 - shipping_chatbot - INFO - [get_hot_containers] After strict hot flag filter: 793 rows (removed 6707 non-hot)
+2026-01-27 09:49:09,511 - shipping_chatbot - INFO - [get_hot_containers] Parsed time period: next 7 days (default) (2026-01-27 to 2026-02-02)
+2026-01-27 09:49:09,512 - shipping_chatbot - INFO - [get_hot_containers] After date filter using revised_eta: 12 rows
+2026-01-27 09:49:09,512 - shipping_chatbot - INFO - [get_hot_containers] Returning 12 hot containers
+2026-01-27 09:49:32,406 - shipping_chatbot - INFO - [get_delayed_containers] Query: 'hot containers delayed by 7 days'
+2026-01-27 09:49:32,482 - shipping_chatbot - INFO - [get_delayed_containers] Loaded 7500 rows (consignee filter: applied)
+2026-01-27 09:49:32,506 - shipping_chatbot - INFO - [get_delayed_containers] Hot filter: 6000 -> 691 rows
+2026-01-27 09:49:32,508 - shipping_chatbot - INFO - [get_delayed_containers] Delay filter: == 7 days
+2026-01-27 09:49:43,593 - shipping_chatbot - INFO - Router: Set consignee codes ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392'] for query: Can you please let me know Hot containers delayed by 7 days
+2026-01-27 09:49:43,694 - shipping_chatbot - INFO - Consignee filtering validated: 7500 rows for codes ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
+2026-01-27 09:49:43,695 - shipping_chatbot - INFO - [get_delayed_containers] Query: 'Can you please let me know Hot containers delayed by 7 days'
+2026-01-27 09:49:43,792 - shipping_chatbot - INFO - [get_delayed_containers] Loaded 7500 rows (consignee filter: applied)
+2026-01-27 09:49:43,817 - shipping_chatbot - INFO - [get_delayed_containers] Hot filter: 6000 -> 691 rows
+2026-01-27 09:49:43,821 - shipping_chatbot - INFO - [get_delayed_containers] Delay filter: == 7 days
+2026-01-27 09:49:43,823 - shipping_chatbot - INFO - [get_delayed_containers] Port filter: code=PLEASE, name=None, before_filter=2 rows
+2026-01-27 09:49:43,823 - shipping_chatbot - INFO - [get_delayed_containers] Port filter applied: after_filter=0 rows
+2026-01-27 09:50:20,358 - shipping_chatbot - INFO - User_Query: Can you please let me know Hot containers delayed by 7 days, c_codes: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
+2026-01-27 09:50:20,358 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Can you please let me know Hot containers delayed by 7 days', length: 59
+2026-01-27 09:50:20,358 - shipping_chatbot - INFO - [DEBUG] q_lower: 'can you please let me know hot containers delayed by 7 days'
+2026-01-27 09:50:22,915 - shipping_chatbot - INFO - [get_hot_containers] Initial dataframe size: 7500 rows
+2026-01-27 09:50:22,916 - shipping_chatbot - INFO - [get_hot_containers] Using hot flag column: hot_container_flag
+2026-01-27 09:50:22,923 - shipping_chatbot - INFO - [get_hot_containers] After strict hot flag filter: 793 rows (removed 6707 non-hot)
+2026-01-27 09:50:22,925 - shipping_chatbot - INFO - [get_hot_containers] Parsed time period: next 7 days (default) (2026-01-27 to 2026-02-02)
+2026-01-27 09:50:22,926 - shipping_chatbot - INFO - [get_hot_containers] After date filter using revised_eta: 12 rows
+2026-01-27 09:50:22,928 - shipping_chatbot - INFO - [get_hot_containers] Returning 12 hot containers
+2026-01-27 09:50:29,314 - shipping_chatbot - INFO - [get_hot_containers] Initial dataframe size: 7500 rows
+2026-01-27 09:50:29,314 - shipping_chatbot - INFO - [get_hot_containers] Using hot flag column: hot_container_flag
+2026-01-27 09:50:29,330 - shipping_chatbot - INFO - [get_hot_containers] After strict hot flag filter: 793 rows (removed 6707 non-hot)
+2026-01-27 09:50:29,333 - shipping_chatbot - INFO - [get_hot_containers] Parsed time period: next 7 days (default) (2026-01-27 to 2026-02-02)
+2026-01-27 09:50:29,335 - shipping_chatbot - INFO - [get_hot_containers] After date filter using revised_eta: 12 rows
+2026-01-27 09:50:29,338 - shipping_chatbot - INFO - [get_hot_containers] Returning 12 hot containers
+2026-01-27 09:57:44,734 - shipping_chatbot - INFO - User_Query: Can you please let me know Hot containers delayed by 7 days, c_codes: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
+2026-01-27 09:57:44,735 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Can you please let me know Hot containers delayed by 7 days', length: 59
+2026-01-27 09:57:44,736 - shipping_chatbot - INFO - [DEBUG] q_lower: 'can you please let me know hot containers delayed by 7 days'
+2026-01-27 09:57:47,182 - shipping_chatbot - INFO - [get_hot_containers] Initial dataframe size: 7500 rows
+2026-01-27 09:57:47,182 - shipping_chatbot - INFO - [get_hot_containers] Using hot flag column: hot_container_flag
+2026-01-27 09:57:47,198 - shipping_chatbot - INFO - [get_hot_containers] After strict hot flag filter: 793 rows (removed 6707 non-hot)
+2026-01-27 09:57:47,199 - shipping_chatbot - INFO - [get_hot_containers] Parsed time period: next 7 days (default) (2026-01-27 to 2026-02-02)
+2026-01-27 09:57:47,201 - shipping_chatbot - INFO - [get_hot_containers] After date filter using revised_eta: 12 rows
+2026-01-27 09:57:47,202 - shipping_chatbot - INFO - [get_hot_containers] Returning 12 hot containers
+2026-01-27 10:35:33,162 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-27 10:35:33,162 - shipping_chatbot - INFO - Agent created with 55 tools
+2026-01-27 10:35:33,163 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-27 10:35:38,762 - shipping_chatbot - INFO - User_Query: Can you please let me know Hot containers delayed by 7 days, c_codes: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
+2026-01-27 10:35:38,762 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Can you please let me know Hot containers delayed by 7 days', length: 59
+2026-01-27 10:35:38,762 - shipping_chatbot - INFO - [DEBUG] q_lower: 'can you please let me know hot containers delayed by 7 days'
+2026-01-27 10:35:38,762 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-27 10:35:50,870 - shipping_chatbot - INFO - Fetched 19117 rows
+2026-01-27 10:35:50,870 - shipping_chatbot - INFO - Starting preprocessing on 19117 rows
+2026-01-27 10:35:50,990 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-27 10:35:51,802 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-27 10:35:51,999 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-27 10:35:52,710 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-27 10:35:52,712 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-27 10:35:52,712 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-27 10:35:52,756 - shipping_chatbot - INFO - Pre-processing finished - 19117 rows remain
+2026-01-27 10:35:55,325 - shipping_chatbot - INFO - [get_delayed_containers] Query: 'hot containers delayed by 7 days'
+2026-01-27 10:35:55,375 - shipping_chatbot - INFO - [get_delayed_containers] Loaded 7381 rows (consignee filter: applied)
+2026-01-27 10:35:55,386 - shipping_chatbot - INFO - [get_delayed_containers] Hot filter: 5902 -> 674 rows
+2026-01-27 10:35:55,396 - shipping_chatbot - INFO - [get_delayed_containers] Delay filter: == 7 days
