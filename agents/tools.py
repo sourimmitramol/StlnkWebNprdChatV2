@@ -2201,8 +2201,17 @@ def ensure_datetime(df: pd.DataFrame, columns: list) -> pd.DataFrame:
 def get_delayed_containers(question: str = None, **kwargs) -> str:
     """
     Get containers that arrived delayed (ATA > ETA at discharge port).
+
+    **PRIMARY USE CASES:**
+    - "Containers delayed by N days" (exact delay threshold)
+    - "Hot containers delayed by N days" (hot + delay threshold combination)
+    - "Containers delayed more than/less than N days"
+    - "Delayed containers in [time period]"
+    - "Delayed containers at [port]"
+
     Supports:
-    - Delay thresholds: "more than N days", "at least N days", "exactly N days", etc.
+    - Delay thresholds: "delayed by N days", "more than N days", "at least N days", "exactly N days", etc.
+    - Hot container filtering: Automatically filters for hot containers when "hot" is in query
     - Time windows: "this week", "last 7 days", "in August", etc. (applied to ATA)
     - Port filtering: "delayed at USNYC", "late at Rotterdam"
     - Consignee filtering via thread-local storage (set by API endpoint)
@@ -13826,9 +13835,15 @@ TOOLS = [
         name="Get Delayed Containers",
         func=get_delayed_containers,
         description=(
-            "Use this tool for any question mentioning delay, late, ETA, overdue, "
-            "behind schedule, missed arrival, days, or hot containers with delays. "
-            "If the user mentions 'hot' and 'delay' together, use this tool."
+            "**PRIMARY TOOL** for delay-related queries with specific day thresholds. "
+            "Use this tool for questions about: \n"
+            "- 'containers delayed by N days' (exact delay like 'delayed by 7 days')\n"
+            "- 'hot containers delayed by N days' (combines hot filter with delay threshold)\n"
+            "- 'containers delayed more than/less than/at least N days'\n"
+            "- 'delayed containers in [time period]' or 'at [port]'\n"
+            "- Any query with 'delay/late/overdue' AND a specific number of days\n\n"
+            "This tool has built-in hot container filtering - when query mentions 'hot' AND a delay threshold, "
+            "this tool applies both filters correctly. Do NOT use 'Get Hot Containers' for delay threshold queries."
         ),
     ),
     Tool(

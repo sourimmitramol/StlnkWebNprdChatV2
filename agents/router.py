@@ -188,6 +188,9 @@ def route_query(query: str, consignee_codes: list = None) -> str:
             "delay" in q or "late" in q or "overdue" in q or "missed" in q
         ) and "days" in q:
             # This is for containers that already arrived late
+            # CRITICAL: This handles "hot containers delayed by X days" queries
+            # because get_delayed_containers has built-in hot filtering
+            logger.info(f"Router: Delayed containers route for query: {query}")
             return get_delayed_containers(query)
 
         # ========== PRIORITY 3: Handle carrier queries (NEW - SPECIFIC) ==========
@@ -196,8 +199,25 @@ def route_query(query: str, consignee_codes: list = None) -> str:
             return get_container_carrier(query)
 
         # ========== PRIORITY 4: Hot containers routing ==========
-        if "hot container" in q or "hot containers" in q:
+        # NOTE: Queries with "hot" + delay thresholds ("delayed by X days")
+        # are handled by PRIORITY 2 above, not here
+        if (
+            ("hot container" in q or "hot containers" in q)
+            and "delay" not in q
+            and "late" not in q
+        ):
             return get_hot_containers(query)
+        elif "hot container" in q or "hot containers" in q:
+            # If hot + delay/late without specific day threshold, use get_hot_containers
+            # Check if there's a specific day threshold
+            has_day_threshold = re.search(r"\d+\s+days?", query, re.IGNORECASE)
+            if has_day_threshold:
+                logger.info(
+                    f"Router: Hot containers with delay threshold -> get_delayed_containers for query: {query}"
+                )
+                return get_delayed_containers(query)
+            else:
+                return get_hot_containers(query)
 
         # ========== PRIORITY 5: Container status queries ==========
         if any(
