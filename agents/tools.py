@@ -2897,6 +2897,120 @@ def get_delayed_containers_not_arrived(question: str = None, **kwargs) -> str:
 # ...existing code...
 
 
+def get_containers_at_dp_not_fd(question: str = None, **kwargs) -> str:
+    """
+    Get containers that have arrived at Discharge Port (DP) but not yet delivered to Final Destination (FD).
+
+    **PRIMARY USE CASES:**
+    - "Containers arrived at DP but not at final destination"
+    - "Which containers have reached discharge port but not delivered"
+    - "Containers at port waiting for delivery"
+    - "Shipments reached DP but not FD"
+
+    Logic:
+    1. Container reached DP if: ata_dp exists OR derived_ata_dp < today
+    2. Container NOT delivered to FD if: empty_container_return_date is null AND delivery_date_to_consignee is null
+
+    Returns list[dict] with: container_number, ata_dp, derived_ata_dp, discharge_port,
+                            consignee_code_multiple, po_number_multiple, status
+    """
+    from datetime import datetime
+
+    import pandas as pd
+
+    try:
+        logger.info(f"[get_containers_at_dp_not_fd] Query: {question!r}")
+    except Exception:
+        pass
+
+    # Load data with consignee filtering applied via thread-local storage
+    df = _df()
+    if df.empty:
+        return "No container records available."
+
+    try:
+        logger.info(f"[get_containers_at_dp_not_fd] Loaded {len(df)} rows")
+    except Exception:
+        pass
+
+    # Get today's date for comparison
+    today = pd.Timestamp.today().normalize()
+
+    # Ensure date columns are properly typed
+    date_columns = [
+        "ata_dp",
+        "derived_ata_dp",
+        "empty_container_return_date",
+        "delivery_date_to_consignee",
+    ]
+    for col in date_columns:
+        if col in df.columns:
+            df[col] = pd.to_datetime(df[col], errors="coerce")
+
+    # 1. Identify shipments that reached DP
+    # Condition: ata_dp not null OR derived_ata_dp < today
+    reached_dp_condition = df["ata_dp"].notna() | (
+        df["derived_ata_dp"].notna() & (df["derived_ata_dp"] < today)
+    )
+
+    # 2. Identify shipments NOT delivered to FD
+    # Condition: empty_container_return_date is null AND delivery_date_to_consignee is null
+    not_delivered_fd_condition = (
+        df["empty_container_return_date"].isna()
+        & df["delivery_date_to_consignee"].isna()
+    )
+
+    # 3. Combine conditions
+    final_condition = reached_dp_condition & not_delivered_fd_condition
+
+    # Apply filter
+    result = df[final_condition].copy()
+
+    try:
+        logger.info(
+            f"[get_containers_at_dp_not_fd] Found {len(result)} containers at DP but not at FD"
+        )
+    except Exception:
+        pass
+
+    if result.empty:
+        return "No containers found that have arrived at discharge port but not yet delivered to final destination."
+
+    # Sort by arrival date (most recent first)
+    if "ata_dp" in result.columns:
+        result = result.sort_values("ata_dp", ascending=False, na_position="last")
+
+    # Select output columns
+    out_cols = [
+        "container_number",
+        "ata_dp",
+        "revised_eta",
+        "discharge_port",
+        "consignee_code_multiple",
+        "po_number_multiple",
+        "ocean_bl_no_multiple",
+    ]
+
+    # Only include columns that exist
+    out_cols = [c for c in out_cols if c in result.columns]
+    out = result[out_cols].head(200).copy()
+
+    # Format date columns
+    for dcol in [
+        "ata_dp",
+        "derived_ata_dp",
+        "equipment_arrived_at_last_cy",
+        "out_gate_at_last_cy",
+    ]:
+        if dcol in out.columns and pd.api.types.is_datetime64_any_dtype(out[dcol]):
+            out[dcol] = out[dcol].dt.strftime("%Y-%m-%d")
+
+    # Add status column for clarity
+    out["current_status"] = "At Discharge Port - Awaiting Final Delivery"
+
+    return out.where(pd.notnull(out), None).to_dict(orient="records")
+
+
 def get_delayed_bls(question: str = None, consignee_code: str = None, **kwargs) -> str:
     """
     Find delayed shipments by ocean BL (ocean_bl_no_multiple).
@@ -13844,6 +13958,27 @@ TOOLS = [
             "- Any query with 'delay/late/overdue' AND a specific number of days\n\n"
             "This tool has built-in hot container filtering - when query mentions 'hot' AND a delay threshold, "
             "this tool applies both filters correctly. Do NOT use 'Get Hot Containers' for delay threshold queries."
+        ),
+    ),
+    Tool(
+        name="Get Containers At DP Not FD",
+        func=get_containers_at_dp_not_fd,
+        description=(
+            "**USE THIS TOOL** for queries about containers that have ARRIVED at Discharge Port but NOT YET DELIVERED to Final Destination. "
+            "\n"
+            "**EXACT QUERY PATTERNS TO ROUTE HERE:**\n"
+            "- 'containers arrived at DP but not at final destination'\n"
+            "- 'containers arrived at discharge port but not delivered'\n"
+            "- 'which containers have arrived DP but not yet to final destination'\n"
+            "- 'containers reached discharge port but not at FD'\n"
+            "- 'shipments at port waiting for delivery'\n"
+            "- 'containers at port but not delivered to consignee'\n"
+            "- 'reached DP but not delivered'\n"
+            "- 'arrived at port but not at final location'\n"
+            "\n"
+            "This tool identifies containers where:\n"
+            "- Container has reached discharge port (ata_dp exists OR derived_ata_dp < today)\n"
+            "- Container has NOT been delivered (both empty_container_return_date and delivery_date_to_consignee are null)\n"
         ),
     ),
     Tool(

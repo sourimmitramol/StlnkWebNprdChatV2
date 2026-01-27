@@ -72,6 +72,7 @@ Tool selection (must use exact tool names)
 - **Hot containers with delay thresholds** (e.g., "hot containers delayed by 7 days", "hot containers delayed more than 5 days"): call tool "Get Delayed Containers" (NOT "Get Hot Containers") - it has built-in hot filtering.
 - **Delay with day thresholds** (e.g., "containers delayed by N days", "delayed more than/less than N days"): call tool "Get Delayed Containers".
 - Delay at a port (e.g., "which containers delayed at NLRTM", "reached delayed at USNYC"): call tool "Get Delayed Containers" and include the strict port filter in the query.
+- **Containers at DP but not at FD** (e.g., "arrived at discharge port but not delivered", "reached DP but not at final destination", "containers at port waiting for delivery"): call tool "Get Containers At DP Not FD".
 - **Hot containers without delay thresholds** (e.g., "show hot containers", "list hot containers"): call tool "Get Hot Containers".
 - Upcoming arrivals window (e.g., "arrivals in next 5 days"): call "Get Upcoming Arrivals" or "Get Containers Arriving Soon".
 - Arrivals by port (no delay): call "Get Arrivals By Port" and apply the same strict location policy.

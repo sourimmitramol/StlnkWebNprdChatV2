@@ -12,8 +12,8 @@ from agents.tools import (  # Add the missing functions
     get_bulk_container_transit_analysis, get_container_carrier,
     get_container_etd, get_container_milestones,
     get_container_transit_analysis, get_containers_arriving_soon,
-    get_containers_by_carrier, get_containers_by_etd_window,
-    get_containers_departed_from_load_port,
+    get_containers_at_dp_not_fd, get_containers_by_carrier,
+    get_containers_by_etd_window, get_containers_departed_from_load_port,
     get_containers_departing_from_load_port, get_containers_missed_planned_etd,
     get_containers_PO_OBL_by_supplier, get_containers_still_at_load_port,
     get_delayed_containers, get_delayed_containers_not_arrived,
@@ -192,6 +192,25 @@ def route_query(query: str, consignee_codes: list = None) -> str:
             # because get_delayed_containers has built-in hot filtering
             logger.info(f"Router: Delayed containers route for query: {query}")
             return get_delayed_containers(query)
+
+        # ========== PRIORITY 2.5: Handle "arrived at DP but not at FD" queries ==========
+        # Check for queries about containers that reached discharge port but not delivered
+        is_dp_not_fd_query = (
+            ("arrived" in q or "reached" in q)
+            and ("dp" in q or "discharge port" in q or "discharge" in q)
+            and ("not" in q or "not yet" in q or "waiting" in q)
+            and (
+                "fd" in q
+                or "final destination" in q
+                or "delivered" in q
+                or "delivery" in q
+                or "consignee" in q
+            )
+        )
+
+        if is_dp_not_fd_query:
+            logger.info(f"Router: Containers at DP not FD route for query: {query}")
+            return get_containers_at_dp_not_fd(query)
 
         # ========== PRIORITY 3: Handle carrier queries (NEW - SPECIFIC) ==========
         # Questions 15, 16, 17, 18: Carrier queries for PO/Container/OBL
