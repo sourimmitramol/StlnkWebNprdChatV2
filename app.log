@@ -4013,3 +4013,231 @@ db
 2026-01-27 12:46:45,529 - shipping_chatbot - INFO - AzureChatOpenAI ready
 2026-01-27 12:46:45,529 - shipping_chatbot - INFO - Agent created with 56 tools
 2026-01-27 12:46:45,529 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-27 14:00:38,159 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-27 14:00:38,159 - shipping_chatbot - INFO - Agent created with 56 tools
+2026-01-27 14:00:38,159 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-27 15:46:08,143 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-27 15:46:08,143 - shipping_chatbot - INFO - Agent created with 56 tools
+2026-01-27 15:46:08,143 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-27 16:38:39,388 - shipping_chatbot - INFO - User_Query: Which carrier is handling my container MSKU5883177, c_codes: ['0000866', '0001363', '0001540', '0001615', '0002679', '0002990', '0003427', '0003905', '0004932', '0005052', '0005053', '0005056', '0005171', '0005176', '0009633', '0013505', '0021472', '0023453', '0028662', '0028664', '0029594', '0030961', '0030962', '0037361', '0048392']
+2026-01-27 16:38:39,388 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which carrier is handling my container MSKU5883177', length: 50
+2026-01-27 16:38:39,391 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which carrier is handling my container msku5883177'
+2026-01-27 16:38:39,391 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-27 16:38:54,889 - shipping_chatbot - INFO - Fetched 19181 rows
+2026-01-27 16:38:54,891 - shipping_chatbot - INFO - Starting preprocessing on 19181 rows
+2026-01-27 16:38:54,995 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-27 16:38:55,566 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-27 16:38:55,765 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-27 16:38:56,474 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-27 16:38:56,474 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-27 16:38:56,474 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-27 16:38:56,508 - shipping_chatbot - INFO - Pre-processing finished - 19181 rows remain
+2026-01-28 09:08:01,158 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-28 09:08:01,159 - shipping_chatbot - INFO - Agent created with 56 tools
+2026-01-28 09:08:01,159 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-28 09:11:35,087 - shipping_chatbot - INFO - User_Query: Which containers are going to ENFIELD, CT in Oct, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-28 09:11:35,087 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers are going to ENFIELD, CT in Oct', length: 48
+2026-01-28 09:11:35,089 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers are going to enfield, ct in oct'
+2026-01-28 09:11:35,089 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-28 09:11:51,599 - shipping_chatbot - INFO - Fetched 19181 rows
+2026-01-28 09:11:51,599 - shipping_chatbot - INFO - Starting preprocessing on 19181 rows
+2026-01-28 09:11:51,717 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-28 09:11:52,612 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-28 09:11:52,881 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-28 09:11:53,814 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-28 09:11:53,814 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-28 09:11:53,814 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-28 09:11:53,875 - shipping_chatbot - INFO - Pre-processing finished - 19181 rows remain
+2026-01-28 09:11:56,581 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: Oct 2026, Dates: 2026-10-01 to 2026-10-31, is_past=False
+2026-01-28 09:11:56,813 - shipping_chatbot - INFO - [get_upcoming_arrivals] Extracted 172 known port codes from dataset
+2026-01-28 09:11:56,829 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample known codes: ['USONT', 'FRPAR', 'MYPKL', 'TRIST', 'USORF', 'VIENNA', 'USCSW', 'USMEM', 'MXTPZ', 'USPAC', 'USLUI', 'SGSIN', 'FRMZT', 'USMIA', 'AUJDP', 'FRSVB', 'DENSS', 'USDFW', 'CNSHA', 'JPNRT']
+2026-01-28 09:11:56,830 - shipping_chatbot - INFO - [get_upcoming_arrivals] Checking for port code after preposition in query: 'CONTAINERS GOING TO ENFIELD, CT IN OCT'
+2026-01-28 09:11:56,830 - shipping_chatbot - INFO - [get_upcoming_arrivals] prep_code_match found: False
+2026-01-28 11:15:36,460 - shipping_chatbot - INFO - User_Query: Which containers are going to ENFIELD, CT in Oct, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-28 11:15:36,469 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers are going to ENFIELD, CT in Oct', length: 48
+2026-01-28 11:15:36,471 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers are going to enfield, ct in oct'
+2026-01-28 11:15:39,444 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: Oct 2026, Dates: 2026-10-01 to 2026-10-31, is_past=False
+2026-01-28 11:15:39,939 - shipping_chatbot - INFO - [get_upcoming_arrivals] Extracted 172 known port codes from dataset
+2026-01-28 11:15:39,939 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample known codes: ['USONT', 'FRPAR', 'MYPKL', 'TRIST', 'USORF', 'VIENNA', 'USCSW', 'USMEM', 'MXTPZ', 'USPAC', 'USLUI', 'SGSIN', 'FRMZT', 'USMIA', 'AUJDP', 'FRSVB', 'DENSS', 'USDFW', 'CNSHA', 'JPNRT']
+2026-01-28 11:15:39,939 - shipping_chatbot - INFO - [get_upcoming_arrivals] Checking for port code after preposition in query: 'CONTAINERS GOING TO ENFIELD, CT IN OCT'
+2026-01-28 11:15:39,939 - shipping_chatbot - INFO - [get_upcoming_arrivals] prep_code_match found: False
+2026-01-28 11:49:29,449 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-28 11:49:29,449 - shipping_chatbot - INFO - Agent created with 56 tools
+2026-01-28 11:49:29,449 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-28 11:49:55,801 - shipping_chatbot - INFO - User_Query: Which containers are going to ENFIELD, CT in jan, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-28 11:49:55,801 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers are going to ENFIELD, CT in jan', length: 48
+2026-01-28 11:49:55,801 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers are going to enfield, ct in jan'
+2026-01-28 11:49:55,801 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-28 11:50:16,902 - shipping_chatbot - INFO - Fetched 19181 rows
+2026-01-28 11:50:16,902 - shipping_chatbot - INFO - Starting preprocessing on 19181 rows
+2026-01-28 11:50:16,987 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-28 11:50:17,485 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-28 11:50:17,650 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-28 11:50:18,171 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-28 11:50:18,171 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-28 11:50:18,183 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-28 11:50:18,210 - shipping_chatbot - INFO - Pre-processing finished - 19181 rows remain
+2026-01-28 11:50:21,021 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: Jan 2026, Dates: 2026-01-01 to 2026-01-31, is_past=False
+2026-01-28 11:50:21,182 - shipping_chatbot - INFO - [get_upcoming_arrivals] Extracted 172 known port codes from dataset
+2026-01-28 11:50:21,183 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample known codes: ['KRICN', 'USDFW', 'USSLC', 'USFBX', 'CNXAM', 'GBFXT', 'USMSY', 'USPAC', 'CNSGH', 'FRSVB', 'KRYJU', 'JPOSA', 'ARHUS', 'PHMNL', 'AUFRE', 'THLCH', 'USMVL', 'SEHEL', 'AUBRS', 'CAYYZ']
+2026-01-28 11:50:21,183 - shipping_chatbot - INFO - [get_upcoming_arrivals] Checking for port code after preposition in query: 'CONTAINERS GOING TO ENFIELD IN JAN'
+2026-01-28 11:50:21,184 - shipping_chatbot - INFO - [get_upcoming_arrivals] prep_code_match found: False
+2026-01-28 11:50:41,180 - shipping_chatbot - INFO - Router: Set consignee codes ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392'] for query: Which containers are going to ENFIELD, CT in jan
+2026-01-28 11:50:41,248 - shipping_chatbot - INFO - Consignee filtering validated: 12706 rows for codes ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-28 11:50:56,340 - shipping_chatbot - INFO - User_Query: Which containers are going to ENFIELD, CT in jan, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-28 11:50:56,340 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers are going to ENFIELD, CT in jan', length: 48
+2026-01-28 11:50:56,340 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers are going to enfield, ct in jan'
+2026-01-28 11:50:59,121 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: Jan 2026, Dates: 2026-01-01 to 2026-01-31, is_past=False
+2026-01-28 11:50:59,339 - shipping_chatbot - INFO - [get_upcoming_arrivals] Extracted 172 known port codes from dataset
+2026-01-28 11:50:59,339 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample known codes: ['KRICN', 'USDFW', 'USSLC', 'USFBX', 'CNXAM', 'GBFXT', 'USMSY', 'USPAC', 'CNSGH', 'FRSVB', 'KRYJU', 'JPOSA', 'ARHUS', 'PHMNL', 'AUFRE', 'THLCH', 'USMVL', 'SEHEL', 'AUBRS', 'CAYYZ']
+2026-01-28 11:50:59,339 - shipping_chatbot - INFO - [get_upcoming_arrivals] Checking for port code after preposition in query: 'CONTAINERS GOING TO ENFIELD, CT IN JAN'
+2026-01-28 11:50:59,339 - shipping_chatbot - INFO - [get_upcoming_arrivals] prep_code_match found: False
+2026-01-28 12:12:53,836 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-28 12:12:53,836 - shipping_chatbot - INFO - Agent created with 56 tools
+2026-01-28 12:12:53,836 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-28 12:13:18,115 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-28 12:13:18,115 - shipping_chatbot - INFO - Agent created with 56 tools
+2026-01-28 12:13:18,115 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-28 12:13:30,750 - shipping_chatbot - INFO - User_Query: Which containers are going to ENFIELD, CT in jan, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-28 12:13:30,750 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers are going to ENFIELD, CT in jan', length: 48
+2026-01-28 12:13:30,750 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers are going to enfield, ct in jan'
+2026-01-28 12:13:30,750 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-28 12:13:44,677 - shipping_chatbot - INFO - Fetched 19181 rows
+2026-01-28 12:13:44,677 - shipping_chatbot - INFO - Starting preprocessing on 19181 rows
+2026-01-28 12:13:44,777 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-28 12:13:45,570 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-28 12:13:45,820 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-28 12:13:46,744 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-28 12:13:46,744 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-28 12:13:46,744 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-28 12:13:46,776 - shipping_chatbot - INFO - Pre-processing finished - 19181 rows remain
+2026-01-28 12:13:49,372 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: Jan 2026, Dates: 2026-01-01 to 2026-01-31, is_past=False
+2026-01-28 12:13:49,902 - shipping_chatbot - INFO - [get_upcoming_arrivals] Extracted 172 known port codes from dataset
+2026-01-28 12:13:49,902 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample known codes: ['ATALK', 'DEHAM', 'USJFK', 'VIENNA', 'SGSIN', 'FRSVB', 'GBIRV', 'USSPX', 'LULUX', 'JPSTM', 'USSFO', 'GBSOU', 'NLRTM', 'ATVDD', 'FRLEH', 'MYPKL', 'USCMH', 'USTIW', 'TWTPE', 'SEHEL']
+2026-01-28 12:13:49,902 - shipping_chatbot - INFO - [get_upcoming_arrivals] Checking for port code after preposition in query: 'CONTAINERS GOING TO ENFIELD, CT IN JAN'
+2026-01-28 12:13:49,902 - shipping_chatbot - INFO - [get_upcoming_arrivals] prep_code_match found: False
+2026-01-28 12:13:49,902 - shipping_chatbot - WARNING - [get_upcoming_arrivals] Query contains location 'ENFIELD, CT' but no matches found in dataset. Returning empty result instead of all containers.
+2026-01-28 12:14:19,529 - shipping_chatbot - INFO - User_Query: Which containers are going to ENFIELD, CT in oct, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-28 12:14:19,531 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers are going to ENFIELD, CT in oct', length: 48
+2026-01-28 12:14:19,531 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers are going to enfield, ct in oct'
+2026-01-28 12:14:22,158 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: Oct 2026, Dates: 2026-10-01 to 2026-10-31, is_past=False
+2026-01-28 12:14:22,681 - shipping_chatbot - INFO - [get_upcoming_arrivals] Extracted 172 known port codes from dataset
+2026-01-28 12:14:22,683 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample known codes: ['ATALK', 'DEHAM', 'USJFK', 'VIENNA', 'SGSIN', 'FRSVB', 'GBIRV', 'USSPX', 'LULUX', 'JPSTM', 'USSFO', 'GBSOU', 'NLRTM', 'ATVDD', 'FRLEH', 'MYPKL', 'USCMH', 'USTIW', 'TWTPE', 'SEHEL']
+2026-01-28 12:14:22,683 - shipping_chatbot - INFO - [get_upcoming_arrivals] Checking for port code after preposition in query: 'CONTAINERS GOING TO ENFIELD, CT IN OCT'
+2026-01-28 12:14:22,683 - shipping_chatbot - INFO - [get_upcoming_arrivals] prep_code_match found: False
+2026-01-28 12:14:22,683 - shipping_chatbot - WARNING - [get_upcoming_arrivals] Query contains location 'ENFIELD, CT' but no matches found in dataset. Returning empty result instead of all containers.
+2026-01-28 12:14:37,454 - shipping_chatbot - INFO - Router: Set consignee codes ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392'] for query: Which containers are going to ENFIELD, CT in oct
+2026-01-28 12:14:37,569 - shipping_chatbot - INFO - Consignee filtering validated: 12706 rows for codes ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-28 12:14:51,688 - shipping_chatbot - INFO - User_Query: Which containers are going to ENFIELD, CT in oct, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-28 12:14:51,688 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers are going to ENFIELD, CT in oct', length: 48
+2026-01-28 12:14:51,688 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers are going to enfield, ct in oct'
+2026-01-28 12:14:54,388 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: Oct 2026, Dates: 2026-10-01 to 2026-10-31, is_past=False
+2026-01-28 12:14:54,881 - shipping_chatbot - INFO - [get_upcoming_arrivals] Extracted 172 known port codes from dataset
+2026-01-28 12:14:54,881 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample known codes: ['ATALK', 'DEHAM', 'USJFK', 'VIENNA', 'SGSIN', 'FRSVB', 'GBIRV', 'USSPX', 'LULUX', 'JPSTM', 'USSFO', 'GBSOU', 'NLRTM', 'ATVDD', 'FRLEH', 'MYPKL', 'USCMH', 'USTIW', 'TWTPE', 'SEHEL']
+2026-01-28 12:14:54,881 - shipping_chatbot - INFO - [get_upcoming_arrivals] Checking for port code after preposition in query: 'CONTAINERS GOING TO ENFIELD, CT IN OCT'
+2026-01-28 12:14:54,881 - shipping_chatbot - INFO - [get_upcoming_arrivals] prep_code_match found: False
+2026-01-28 12:14:54,881 - shipping_chatbot - WARNING - [get_upcoming_arrivals] Query contains location 'ENFIELD, CT' but no matches found in dataset. Returning empty result instead of all containers.
+2026-01-28 12:15:10,640 - shipping_chatbot - INFO - Router: Set consignee codes ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392'] for query: Which containers are going to ENFIELD, CT in oct
+2026-01-28 12:15:10,754 - shipping_chatbot - INFO - Consignee filtering validated: 12706 rows for codes ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-28 12:16:55,067 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-28 12:16:55,067 - shipping_chatbot - INFO - Agent created with 56 tools
+2026-01-28 12:16:55,083 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-28 12:17:03,154 - shipping_chatbot - INFO - User_Query: Which containers are going to ENFIELD, CT in oct, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-28 12:17:03,154 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers are going to ENFIELD, CT in oct', length: 48
+2026-01-28 12:17:03,154 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers are going to enfield, ct in oct'
+2026-01-28 12:17:03,154 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-28 12:17:15,963 - shipping_chatbot - INFO - Fetched 19181 rows
+2026-01-28 12:17:15,966 - shipping_chatbot - INFO - Starting preprocessing on 19181 rows
+2026-01-28 12:17:16,069 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-28 12:17:16,950 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-28 12:17:17,190 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-28 12:17:17,915 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-28 12:17:17,915 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-28 12:17:17,915 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-28 12:17:17,949 - shipping_chatbot - INFO - Pre-processing finished - 19181 rows remain
+2026-01-28 12:17:20,614 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: Oct 2026, Dates: 2026-10-01 to 2026-10-31, is_past=False
+2026-01-28 12:17:20,938 - shipping_chatbot - INFO - [get_upcoming_arrivals] Extracted 172 known port codes from dataset
+2026-01-28 12:17:20,938 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample known codes: ['FRLEH', 'USDEN', 'TWTPE', 'GBMAN', 'HKHKG', 'USSPX', 'FRSX8', 'USCHI', 'USCVG', 'JPOSA', 'CNLFZ', 'USSID', 'CAHAL', 'CHZRH', 'ATVIE', 'USAJJ', 'USORD', 'BEANR', 'DKCPH', 'USORF']
+2026-01-28 12:17:20,938 - shipping_chatbot - INFO - [get_upcoming_arrivals] Checking for port code after preposition in query: 'CONTAINERS GOING TO ENFIELD, CT IN OCT'
+2026-01-28 12:17:20,938 - shipping_chatbot - INFO - [get_upcoming_arrivals] prep_code_match found: False
+2026-01-28 12:17:20,938 - shipping_chatbot - WARNING - [get_upcoming_arrivals] Query contains location 'ENFIELD, CT' but no matches found in dataset. Returning empty result instead of all containers.
+2026-01-28 12:17:36,375 - shipping_chatbot - INFO - Router: Set consignee codes ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392'] for query: Which containers are going to ENFIELD, CT in oct
+2026-01-28 12:17:36,454 - shipping_chatbot - INFO - Consignee filtering validated: 12706 rows for codes ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-28 12:17:36,459 - shipping_chatbot - INFO - Router: Upcoming arrivals route for query: Which containers are going to ENFIELD, CT in oct
+2026-01-28 12:17:36,460 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: Oct 2026, Dates: 2026-10-01 to 2026-10-31, is_past=False
+2026-01-28 12:17:36,741 - shipping_chatbot - INFO - [get_upcoming_arrivals] Extracted 172 known port codes from dataset
+2026-01-28 12:17:36,741 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample known codes: ['FRLEH', 'USDEN', 'TWTPE', 'GBMAN', 'HKHKG', 'USSPX', 'FRSX8', 'USCHI', 'USCVG', 'JPOSA', 'CNLFZ', 'USSID', 'CAHAL', 'CHZRH', 'ATVIE', 'USAJJ', 'USORD', 'BEANR', 'DKCPH', 'USORF']
+2026-01-28 12:17:36,741 - shipping_chatbot - INFO - [get_upcoming_arrivals] Checking for port code after preposition in query: 'WHICH CONTAINERS ARE GOING TO ENFIELD, CT IN OCT'
+2026-01-28 12:17:36,757 - shipping_chatbot - INFO - [get_upcoming_arrivals] prep_code_match found: False
+2026-01-28 12:17:36,757 - shipping_chatbot - WARNING - [get_upcoming_arrivals] Query contains location 'ENFIELD, CT' but no matches found in dataset. Returning empty result instead of all containers.
+2026-01-28 12:18:02,041 - shipping_chatbot - INFO - User_Query: Which containers are going to ENFIELD, CT in oct, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-28 12:18:02,041 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers are going to ENFIELD, CT in oct', length: 48
+2026-01-28 12:18:02,041 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers are going to enfield, ct in oct'
+2026-01-28 12:18:04,597 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: Oct 2026, Dates: 2026-10-01 to 2026-10-31, is_past=False
+2026-01-28 12:18:04,993 - shipping_chatbot - INFO - [get_upcoming_arrivals] Extracted 172 known port codes from dataset
+2026-01-28 12:18:04,993 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample known codes: ['FRLEH', 'USDEN', 'TWTPE', 'GBMAN', 'HKHKG', 'USSPX', 'FRSX8', 'USCHI', 'USCVG', 'JPOSA', 'CNLFZ', 'USSID', 'CAHAL', 'CHZRH', 'ATVIE', 'USAJJ', 'USORD', 'BEANR', 'DKCPH', 'USORF']
+2026-01-28 12:18:04,993 - shipping_chatbot - INFO - [get_upcoming_arrivals] Checking for port code after preposition in query: 'CONTAINERS GOING TO ENFIELD, CT IN OCT'
+2026-01-28 12:18:04,993 - shipping_chatbot - INFO - [get_upcoming_arrivals] prep_code_match found: False
+2026-01-28 12:18:04,993 - shipping_chatbot - WARNING - [get_upcoming_arrivals] Query contains location 'ENFIELD, CT' but no matches found in dataset. Returning empty result instead of all containers.
+2026-01-28 12:19:21,442 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-28 12:19:21,442 - shipping_chatbot - INFO - Agent created with 56 tools
+2026-01-28 12:19:21,442 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-28 12:19:26,140 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-28 12:19:26,140 - shipping_chatbot - INFO - Agent created with 56 tools
+2026-01-28 12:19:26,140 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-28 12:19:38,151 - shipping_chatbot - INFO - User_Query: Which containers are going to ENFIELD, CT in oct, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-28 12:19:38,151 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers are going to ENFIELD, CT in oct', length: 48
+2026-01-28 12:19:38,151 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers are going to enfield, ct in oct'
+2026-01-28 12:19:38,151 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-28 12:19:57,045 - shipping_chatbot - INFO - Fetched 19181 rows
+2026-01-28 12:19:57,045 - shipping_chatbot - INFO - Starting preprocessing on 19181 rows
+2026-01-28 12:19:57,142 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-28 12:19:57,644 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-28 12:19:57,819 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-28 12:19:58,363 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-28 12:19:58,363 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-28 12:19:58,363 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-28 12:19:58,400 - shipping_chatbot - INFO - Pre-processing finished - 19181 rows remain
+2026-01-28 12:20:01,243 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: Oct 2026, Dates: 2026-10-01 to 2026-10-31, is_past=False
+2026-01-28 12:20:01,626 - shipping_chatbot - INFO - [get_upcoming_arrivals] Extracted 172 known port codes from dataset
+2026-01-28 12:20:01,626 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample known codes: ['USTCN', 'CAHAL', 'USLEL', 'USOGD', 'THBKK', 'LULUX', 'CAPRR', 'GBGLW', 'USONT', 'ITVCE', 'AUFRE', 'USCSW', 'GBGRG', 'USMEM', 'JPNRT', 'USCHS', 'VNHAN', 'USFBX', 'GBLGP', 'KRPUS']
+2026-01-28 12:20:01,626 - shipping_chatbot - INFO - [get_upcoming_arrivals] Checking for port code after preposition in query: 'CONTAINERS GOING TO ENFIELD, CT IN OCT'
+2026-01-28 12:20:01,626 - shipping_chatbot - INFO - [get_upcoming_arrivals] prep_code_match found: False
+2026-01-28 12:20:01,643 - shipping_chatbot - WARNING - [get_upcoming_arrivals] Query contains location 'ENFIELD, CT' but no matches found in dataset. Returning empty result instead of all containers.
+2026-01-28 12:20:24,897 - shipping_chatbot - INFO - User_Query: Which containers are going to ENFIELD, CT in jan, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-28 12:20:24,897 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers are going to ENFIELD, CT in jan', length: 48
+2026-01-28 12:20:24,897 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers are going to enfield, ct in jan'
+2026-01-28 12:20:27,467 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: Jan 2026, Dates: 2026-01-01 to 2026-01-31, is_past=False
+2026-01-28 12:20:27,738 - shipping_chatbot - INFO - [get_upcoming_arrivals] Extracted 172 known port codes from dataset
+2026-01-28 12:20:27,738 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample known codes: ['USTCN', 'CAHAL', 'USLEL', 'USOGD', 'THBKK', 'LULUX', 'CAPRR', 'GBGLW', 'USONT', 'ITVCE', 'AUFRE', 'USCSW', 'GBGRG', 'USMEM', 'JPNRT', 'USCHS', 'VNHAN', 'USFBX', 'GBLGP', 'KRPUS']
+2026-01-28 12:20:27,738 - shipping_chatbot - INFO - [get_upcoming_arrivals] Checking for port code after preposition in query: 'CONTAINERS GOING TO ENFIELD, CT IN JAN'
+2026-01-28 12:20:27,738 - shipping_chatbot - INFO - [get_upcoming_arrivals] prep_code_match found: False
+2026-01-28 12:20:27,738 - shipping_chatbot - WARNING - [get_upcoming_arrivals] Query contains location 'ENFIELD, CT' but no matches found in dataset. Returning empty result instead of all containers.
+2026-01-28 12:20:45,488 - shipping_chatbot - INFO - User_Query: Which containers are going to ENFIELD, CT in feb, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-28 12:20:45,488 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers are going to ENFIELD, CT in feb', length: 48
+2026-01-28 12:20:45,488 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers are going to enfield, ct in feb'
+2026-01-28 12:20:48,029 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: Feb 2026, Dates: 2026-02-01 to 2026-02-28, is_past=False
+2026-01-28 12:20:48,327 - shipping_chatbot - INFO - [get_upcoming_arrivals] Extracted 172 known port codes from dataset
+2026-01-28 12:20:48,327 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample known codes: ['USTCN', 'CAHAL', 'USLEL', 'USOGD', 'THBKK', 'LULUX', 'CAPRR', 'GBGLW', 'USONT', 'ITVCE', 'AUFRE', 'USCSW', 'GBGRG', 'USMEM', 'JPNRT', 'USCHS', 'VNHAN', 'USFBX', 'GBLGP', 'KRPUS']
+2026-01-28 12:20:48,327 - shipping_chatbot - INFO - [get_upcoming_arrivals] Checking for port code after preposition in query: 'CONTAINERS GOING TO ENFIELD, CT IN FEB'
+2026-01-28 12:20:48,327 - shipping_chatbot - INFO - [get_upcoming_arrivals] prep_code_match found: False
+2026-01-28 12:20:48,327 - shipping_chatbot - WARNING - [get_upcoming_arrivals] Query contains location 'ENFIELD, CT' but no matches found in dataset. Returning empty result instead of all containers.
+2026-01-28 12:26:17,840 - shipping_chatbot - INFO - User_Query: Which containers are going to NEW YORK in jan, c_codes: ['0044344']
+2026-01-28 12:26:17,840 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers are going to NEW YORK in jan', length: 45
+2026-01-28 12:26:17,840 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers are going to new york in jan'
+2026-01-28 12:26:20,660 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: Jan 2026, Dates: 2026-01-01 to 2026-01-31, is_past=False
+2026-01-28 12:26:20,717 - shipping_chatbot - INFO - [get_upcoming_arrivals] Extracted 18 known port codes from dataset
+2026-01-28 12:26:20,717 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample known codes: ['USPHL', 'USJFK', 'USENF', 'USPDX', 'USBNA', 'USLAX', 'USXEA', 'USYLB', 'USSAV', 'USONT', 'USCMH', 'USEWR', 'USLBN', 'USJNT', 'USNYC', 'USLGB', 'USWEP', 'USCEK']
+2026-01-28 12:26:20,717 - shipping_chatbot - INFO - [get_upcoming_arrivals] Checking for port code after preposition in query: 'CONTAINERS GOING TO USNYC IN JAN'
+2026-01-28 12:26:20,717 - shipping_chatbot - INFO - [get_upcoming_arrivals] prep_code_match found: True
+2026-01-28 12:26:20,717 - shipping_chatbot - INFO - [get_upcoming_arrivals] Matched port code: USNYC
+2026-01-28 12:26:20,717 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found port code after preposition: USNYC
+2026-01-28 12:26:20,717 - shipping_chatbot - INFO - [get_upcoming_arrivals] Is USNYC in known_codes? True
+2026-01-28 12:26:20,717 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 430 matches in column 'discharge_port'
+2026-01-28 12:26:20,717 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 323 matches in column 'vehicle_arrival_lcn'
+2026-01-28 12:26:20,722 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 1 matches in column 'final_destination'
+2026-01-28 12:26:20,722 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found 397 matches in column 'place_of_delivery'
+2026-01-28 12:26:20,722 - shipping_chatbot - INFO - [get_upcoming_arrivals] ✓ Successfully detected port code 'USNYC' after preposition. Matched 430 rows. location_found=True
+2026-01-28 12:26:20,722 - shipping_chatbot - INFO - [get_upcoming_arrivals] Applying location filter for 'USNYC'. Rows before filter: 610, Matching rows: 430
+2026-01-28 12:26:20,722 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample ports after filter: ['NEW YORK, NY(USNYC)']
+2026-01-28 12:26:20,728 - shipping_chatbot - INFO - [get_upcoming_arrivals] Returning 5 containers. Unique discharge ports in result: ['NEW YORK, NY(USNYC)']

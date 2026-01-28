@@ -4262,6 +4262,8 @@ def get_upcoming_arrivals(query: str) -> str:
             city_patterns = [
                 # Pattern with prepositions: "at/in/to CITY_NAME"
                 r"\b(?:AT|IN|TO)\s+([A-Z][A-Za-z\s\.\-\']{3,}?)(?:\s+IN\s+|\s+NEXT\s+|\s+WITHIN\s+|,|\s*$)",
+                # City, State format (e.g., "ENFIELD, CT" or "LOS ANGELES, CA")
+                r"\b([A-Z][A-Za-z\s\.\-\']+),\s*([A-Z]{2})\b",
                 # Known major ports/cities
                 r"\b(LOS\s+ANGELES|LONG\s+BEACH|NEW\s+YORK|NASHVILLE|SINGAPORE|ROTTERDAM|HONG\s+KONG|SHANGHAI|BUSAN|TOKYO|OAKLAND|SAVANNAH|HOUSTON|MIAMI|SEATTLE|CHICAGO|ATLANTA|SAN\s+DIEGO|PORT\s+OF\s+[A-Z\s]+)\b",
             ]
@@ -4269,23 +4271,33 @@ def get_upcoming_arrivals(query: str) -> str:
             for pattern in city_patterns:
                 city_match = re.search(pattern, query, re.IGNORECASE)
                 if city_match:
-                    city = city_match.group(1).strip()
-                    # Clean up the matched city name by removing trailing timeframe words
-                    city = re.sub(
-                        r"\s+(IN\s+)?NEXT.*$", "", city, flags=re.IGNORECASE
-                    ).strip()
-                    city = re.sub(
-                        r"\s+(IN\s+)?THE\s+LAST.*$", "", city, flags=re.IGNORECASE
-                    ).strip()
-                    city = re.sub(
-                        r"\s+LAST\s+.*$", "", city, flags=re.IGNORECASE
-                    ).strip()
-
-                    if city and len(city) > 2:
+                    # Handle "CITY, STATE" pattern specially (pattern index 1)
+                    if len(city_match.groups()) >= 2 and city_match.group(2):
+                        # This is a "CITY, STATE" match
+                        city = city_match.group(1).strip()
+                        state = city_match.group(2).strip()
+                        location_name = f"{city.upper()}, {state.upper()}"
+                        # For matching, we'll use just the city part primarily
+                        city_for_matching = city
+                    else:
+                        # Single group match (preposition or major city patterns)
+                        city = city_match.group(1).strip()
+                        # Clean up the matched city name by removing trailing timeframe words
+                        city = re.sub(
+                            r"\s+(IN\s+)?NEXT.*$", "", city, flags=re.IGNORECASE
+                        ).strip()
+                        city = re.sub(
+                            r"\s+(IN\s+)?THE\s+LAST.*$", "", city, flags=re.IGNORECASE
+                        ).strip()
+                        city = re.sub(
+                            r"\s+LAST\s+.*$", "", city, flags=re.IGNORECASE
+                        ).strip()
                         location_name = city.upper()
+                        city_for_matching = city
 
+                    if city_for_matching and len(city_for_matching) > 2:
                         # Normalize and match
-                        city_norm = normalize_port_name(city)
+                        city_norm = normalize_port_name(city_for_matching)
                         city_words = city_norm.split()
 
                         city_mask = pd.Series(False, index=df.index)
@@ -4313,7 +4325,7 @@ def get_upcoming_arrivals(query: str) -> str:
                             location_found = True
                             try:
                                 logger.info(
-                                    f"[get_upcoming_arrivals] Found city location: {city} (normalized: {city_norm})"
+                                    f"[get_upcoming_arrivals] Found city location: {location_name} (normalized: {city_norm})"
                                 )
                             except:
                                 pass
@@ -4499,6 +4511,13 @@ def get_upcoming_arrivals(query: str) -> str:
             potential_port_code = re.search(
                 r"\b(?:AT|IN|TO)\s+([A-Z]{2}[A-Z0-9]{3,4})\b", query.upper()
             )
+            # Also check for CITY, STATE pattern (e.g., "ENFIELD, CT")
+            potential_city_state = re.search(
+                r"\b(?:going\s+to|arriving\s+at|arriving\s+in|to)\s+([A-Z][A-Za-z\s\.\-\']+),\s*([A-Z]{2})\b",
+                query,
+                re.IGNORECASE,
+            )
+
             if potential_port_code:
                 port = potential_port_code.group(1)
                 try:
@@ -4509,6 +4528,19 @@ def get_upcoming_arrivals(query: str) -> str:
                 except:
                     pass
                 return f"No containers found for port code {port}. This port may not have any shipments for your authorized consignees."
+
+            if potential_city_state:
+                city = potential_city_state.group(1).strip()
+                state = potential_city_state.group(2).strip()
+                location_str = f"{city.upper()}, {state.upper()}"
+                try:
+                    logger.warning(
+                        f"[get_upcoming_arrivals] Query contains location '{location_str}' but no matches found in dataset. "
+                        f"Returning empty result instead of all containers."
+                    )
+                except:
+                    pass
+                return f"No containers found going to {location_str}. This location may not have any shipments for your authorized consignees in the specified time period."
 
         # Apply location filter if found
         if location_found:
@@ -14028,6 +14060,7 @@ TOOLS = [
     Tool(
         name="Get Upcoming Arrivals",
         func=get_upcoming_arrivals,
+        return_direct=True,
         description=(
             "List **containers** (NOT POs) scheduled to arrive OR that have already arrived on specific dates."
             "Use ONLY when query asks about containers/shipments WITHOUT mentioning 'PO' or 'purchase order'."
