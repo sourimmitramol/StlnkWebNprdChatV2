@@ -397,7 +397,53 @@ def route_query(query: str, consignee_codes: list = None) -> str:
             return get_bulk_container_transit_analysis(query)
 
         # ========== PRIORITY 13: Upcoming arrivals ==========
-        if ("arriving" in q or "arrive" in q) and ("next" in q or "coming" in q):
+        # Enhanced detection for arrival queries with dates, locations, or timeframes
+        has_arrival_keyword = any(kw in q for kw in ["arriving", "arrive", "arrival"])
+        has_time_keyword = any(
+            kw in q
+            for kw in [
+                "next",
+                "coming",
+                "upcoming",
+                "within",
+                "in jan",
+                "in feb",
+                "in mar",
+                "in apr",
+                "in may",
+                "in jun",
+                "in jul",
+                "in aug",
+                "in sep",
+                "in oct",
+                "in nov",
+                "in dec",
+                "this month",
+                "last month",
+                "this week",
+                "last week",
+                "today",
+                "tomorrow",
+                "days",
+            ]
+        )
+        has_going_to = "going to" in q or "scheduled to" in q or "scheduled for" in q
+        has_location_pattern = re.search(
+            r"\b(?:to|at|in)\s+[A-Z][A-Za-z\s,\.]+(?:,\s*[A-Z]{2})?\b",
+            query,
+            re.IGNORECASE,
+        )
+
+        # Route to get_upcoming_arrivals if:
+        # 1. Has arrival keyword + time keyword
+        # 2. Has "going to" + location
+        # 3. Has location pattern + date/month
+        if (
+            (has_arrival_keyword and has_time_keyword)
+            or (has_going_to and (has_location_pattern or has_time_keyword))
+            or (has_location_pattern and has_time_keyword)
+        ):
+            logger.info(f"Router: Upcoming arrivals route for query: {query}")
             return get_upcoming_arrivals(query)
 
         # ========== PRIORITY 14: Question 7 - General field info (MOVED TO END) ==========
