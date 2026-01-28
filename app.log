@@ -4241,3 +4241,38 @@ db
 2026-01-28 12:26:20,722 - shipping_chatbot - INFO - [get_upcoming_arrivals] Applying location filter for 'USNYC'. Rows before filter: 610, Matching rows: 430
 2026-01-28 12:26:20,722 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample ports after filter: ['NEW YORK, NY(USNYC)']
 2026-01-28 12:26:20,728 - shipping_chatbot - INFO - [get_upcoming_arrivals] Returning 5 containers. Unique discharge ports in result: ['NEW YORK, NY(USNYC)']
+2026-01-28 14:33:30,269 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-28 14:33:30,269 - shipping_chatbot - INFO - Agent created with 56 tools
+2026-01-28 14:33:30,269 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-28 14:34:46,492 - shipping_chatbot - INFO - User_Query: Which carrier is handling my container MSKU5883177, c_codes: ['0000866']
+2026-01-28 14:34:46,492 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which carrier is handling my container MSKU5883177', length: 50
+2026-01-28 14:34:46,492 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which carrier is handling my container msku5883177'
+2026-01-28 14:34:46,492 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-28 14:35:01,419 - shipping_chatbot - INFO - Fetched 19181 rows
+2026-01-28 14:35:01,427 - shipping_chatbot - INFO - Starting preprocessing on 19181 rows
+2026-01-28 14:35:01,552 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-28 14:35:02,405 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-28 14:35:02,653 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-28 14:35:03,351 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-28 14:35:03,351 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-28 14:35:03,356 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-28 14:35:03,391 - shipping_chatbot - INFO - Pre-processing finished - 19181 rows remain
+2026-01-28 14:43:14,574 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-28 14:43:14,574 - shipping_chatbot - INFO - Agent created with 56 tools
+2026-01-28 14:43:14,574 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-28 14:43:45,326 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-28 14:43:45,326 - shipping_chatbot - INFO - Agent created with 56 tools
+2026-01-28 14:43:45,335 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-28 14:45:30,133 - shipping_chatbot - INFO - User_Query: Which carrier is handling my container MSKU5883177, c_codes: ['0000866']
+2026-01-28 14:45:30,133 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which carrier is handling my container MSKU5883177', length: 50
+2026-01-28 14:45:30,133 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which carrier is handling my container msku5883177'
+2026-01-28 14:45:30,133 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-28 14:45:43,853 - shipping_chatbot - INFO - Fetched 19181 rows
+2026-01-28 14:45:43,853 - shipping_chatbot - INFO - Starting preprocessing on 19181 rows
+2026-01-28 14:45:44,019 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-28 14:45:45,052 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-28 14:45:45,413 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-28 14:45:46,485 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-28 14:45:46,503 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-28 14:45:46,507 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-28 14:45:46,575 - shipping_chatbot - INFO - Pre-processing finished - 19181 rows remain
