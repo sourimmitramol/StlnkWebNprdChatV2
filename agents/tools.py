@@ -9321,61 +9321,62 @@ def get_container_carrier(input_str: str) -> str:
             row = rows.iloc[0]
             selection_info = ""
 
-    # Build carrier information response
-    carrier_info = []
+    # Prepare output columns with carrier information
+    output_cols = ["container_number"]
 
-    # Primary carrier information from final_carrier_name
-    if (
-        "final_carrier_name" in row.index
-        and pd.notnull(row["final_carrier_name"])
-        and str(row["final_carrier_name"]).strip()
-    ):
-        carrier_info.append(f"Final Carrier Name: {row['final_carrier_name']}")
+    # Add PO column if PO query
+    if po_no:
+        po_col = (
+            "po_number_multiple" if "po_number_multiple" in row.index else "po_number"
+        )
+        if po_col in row.index:
+            output_cols.append(po_col)
 
-    # Additional carrier details
+    # Add carrier fields
     carrier_fields = [
-        ("final_carrier_code", "Final Carrier Code"),
-        ("final_carrier_scac_code", "Final Carrier SCAC Code"),
-        ("true_carrier_code", "True Carrier Code"),
-        ("true_carrier_scac_code", "True Carrier SCAC Code"),
+        "final_carrier_name",
+        "final_carrier_code",
+        "final_carrier_scac_code",
+        "true_carrier_code",
+        "true_carrier_scac_code",
     ]
 
-    for field, label in carrier_fields:
-        if field in row.index and pd.notnull(row[field]) and str(row[field]).strip():
-            carrier_info.append(f"{label}: {row[field]}")
+    for field in carrier_fields:
+        if field in row.index and field not in output_cols:
+            output_cols.append(field)
 
-    if not carrier_info:
+    # Check if we have any carrier data
+    has_carrier_data = any(
+        field in row.index and pd.notnull(row[field]) and str(row[field]).strip()
+        for field in carrier_fields
+    )
+
+    if not has_carrier_data:
         return f"No carrier information available for {identifier}."
 
-    # Build response
-    response_lines = []
+    # Add selection dates for PO queries with multiple records
     if po_no and len(rows) > 1:
-        response_lines.append(f"Carrier information for {identifier}{selection_info}:")
-    else:
-        response_lines.append(f"Carrier information for {identifier}:")
-
-    response_lines.extend(carrier_info)
-
-    # Add additional context for PO queries with selection details
-    if po_no and "selection_info" in locals() and len(rows) > 1:
-        # Show the date used for selection if available
-        date_info = []
         for col in ["etd_lp", "etd_flp", "eta_dp", "eta_fd"]:
-            if col in row.index and pd.notnull(row[col]):
-                date_val = row[col]
-                if hasattr(date_val, "strftime"):
-                    date_str = date_val.strftime("%Y-%m-%d")
-                else:
-                    date_str = str(date_val)
-                col_name = col.replace("_", " ").upper()
-                date_info.append(f"{col_name}: {date_str}")
+            if col in row.index and col not in output_cols:
+                output_cols.append(col)
 
-        if date_info:
-            response_lines.append("")
-            response_lines.append("Selection based on latest date from:")
-            response_lines.append(f"- {', '.join(date_info)}")
+    # Filter to available columns
+    output_cols = [c for c in output_cols if c in row.index]
 
-    return "\n".join(response_lines)
+    # Create output DataFrame from the single row
+    out = pd.DataFrame([row[output_cols]])
+
+    # Format date columns
+    date_cols = ["etd_lp", "etd_flp", "eta_dp", "eta_fd"]
+    for dcol in date_cols:
+        if dcol in out.columns and pd.api.types.is_datetime64_any_dtype(out[dcol]):
+            out[dcol] = out[dcol].dt.strftime("%Y-%m-%d")
+
+    # Add metadata for PO queries with multiple records
+    if po_no and len(rows) > 1:
+        out["_note"] = f"Latest from {len(rows)} records based on ETD/ETA"
+
+    return out.where(pd.notnull(out), None).to_dict(orient="records")
 
 
 def get_containers_by_etd_window(
