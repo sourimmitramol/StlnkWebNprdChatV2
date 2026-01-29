@@ -4276,3 +4276,197 @@ db
 2026-01-28 14:45:46,503 - shipping_chatbot - INFO - Added `actual_transit_days` column
 2026-01-28 14:45:46,507 - shipping_chatbot - INFO - Added `estimated_transit_days` column
 2026-01-28 14:45:46,575 - shipping_chatbot - INFO - Pre-processing finished - 19181 rows remain
+2026-01-28 15:04:28,473 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-28 15:04:28,473 - shipping_chatbot - INFO - Agent created with 56 tools
+2026-01-28 15:04:28,475 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-28 15:04:39,553 - shipping_chatbot - INFO - User_Query: Which carrier is assigned to my purchase order 5302967849, c_codes: ['0000866']
+2026-01-28 15:04:39,554 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which carrier is assigned to my purchase order 5302967849', length: 57
+2026-01-28 15:04:39,554 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which carrier is assigned to my purchase order 5302967849'
+2026-01-28 15:04:39,554 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-28 15:04:55,176 - shipping_chatbot - INFO - Fetched 19181 rows
+2026-01-28 15:04:55,176 - shipping_chatbot - INFO - Starting preprocessing on 19181 rows
+2026-01-28 15:04:55,310 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-28 15:04:56,069 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-28 15:04:56,314 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-28 15:04:57,107 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-28 15:04:57,107 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-28 15:04:57,107 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-28 15:04:57,154 - shipping_chatbot - INFO - Pre-processing finished - 19181 rows remain
+2026-01-29 09:22:35,885 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-29 09:22:35,885 - shipping_chatbot - INFO - Agent created with 56 tools
+2026-01-29 09:22:35,885 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-29 09:41:13,632 - shipping_chatbot - INFO - User_Query: Which carrier is assigned to my purchase order 5302967849, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-29 09:41:13,635 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which carrier is assigned to my purchase order 5302967849', length: 57
+2026-01-29 09:41:13,635 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which carrier is assigned to my purchase order 5302967849'
+2026-01-29 09:41:13,635 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-29 09:41:28,950 - shipping_chatbot - INFO - Fetched 19277 rows
+2026-01-29 09:41:28,963 - shipping_chatbot - INFO - Starting preprocessing on 19277 rows
+2026-01-29 09:41:29,103 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-29 09:41:29,872 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-29 09:41:30,133 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-29 09:41:30,911 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-29 09:41:30,917 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-29 09:41:30,917 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-29 09:41:30,969 - shipping_chatbot - INFO - Pre-processing finished - 19277 rows remain
+2026-01-29 10:42:45,172 - shipping_chatbot - INFO - User_Query: Show me Containers from supplier QUEST COMPOSITE TECHNOLOGY in the last 7 days, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-29 10:42:45,175 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Show me Containers from supplier QUEST COMPOSITE TECHNOLOGY in the last 7 days', length: 78
+2026-01-29 10:42:45,177 - shipping_chatbot - INFO - [DEBUG] q_lower: 'show me containers from supplier quest composite technology in the last 7 days'
+2026-01-29 10:46:30,339 - shipping_chatbot - INFO - User_Query: Show me Containers from supplier QUEST COMPOSITE TECHNOLOGY, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-29 10:46:30,340 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Show me Containers from supplier QUEST COMPOSITE TECHNOLOGY', length: 59
+2026-01-29 10:46:30,341 - shipping_chatbot - INFO - [DEBUG] q_lower: 'show me containers from supplier quest composite technology'
+2026-01-29 10:46:33,713 - shipping_chatbot - INFO - [get_containers_PO_OBL_by_supplier] Extracted: container=None, po=None, obl=None, is_lookup=False
+2026-01-29 10:50:37,583 - shipping_chatbot - INFO - User_Query: Show me Containers from supplier QUEST COMPOSITE TECHNOLOGY in the last 7 days, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-29 10:50:37,584 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Show me Containers from supplier QUEST COMPOSITE TECHNOLOGY in the last 7 days', length: 78
+2026-01-29 10:50:37,584 - shipping_chatbot - INFO - [DEBUG] q_lower: 'show me containers from supplier quest composite technology in the last 7 days'
+2026-01-29 10:55:30,460 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-29 10:55:30,460 - shipping_chatbot - INFO - Agent created with 56 tools
+2026-01-29 10:55:30,460 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-29 10:55:38,297 - shipping_chatbot - INFO - User_Query: Show me Containers from supplier QUEST COMPOSITE TECHNOLOGY in the last 7 days, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-29 10:55:38,309 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Show me Containers from supplier QUEST COMPOSITE TECHNOLOGY in the last 7 days', length: 78
+2026-01-29 10:55:38,310 - shipping_chatbot - INFO - [DEBUG] q_lower: 'show me containers from supplier quest composite technology in the last 7 days'
+2026-01-29 10:55:38,310 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-29 10:55:51,122 - shipping_chatbot - INFO - Fetched 19277 rows
+2026-01-29 10:55:51,134 - shipping_chatbot - INFO - Starting preprocessing on 19277 rows
+2026-01-29 10:55:51,282 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-29 10:55:52,485 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-29 10:55:52,955 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-29 10:55:54,254 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-29 10:55:54,258 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-29 10:55:54,258 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-29 10:55:54,329 - shipping_chatbot - INFO - Pre-processing finished - 19277 rows remain
+2026-01-29 10:56:09,900 - shipping_chatbot - INFO - User_Query: Show me Containers from supplier QUEST COMPOSITE TECHNOLOGY in the last 7 days, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-29 10:56:09,900 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Show me Containers from supplier QUEST COMPOSITE TECHNOLOGY in the last 7 days', length: 78
+2026-01-29 10:56:09,900 - shipping_chatbot - INFO - [DEBUG] q_lower: 'show me containers from supplier quest composite technology in the last 7 days'
+2026-01-29 11:00:17,133 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-29 11:00:17,133 - shipping_chatbot - INFO - Agent created with 56 tools
+2026-01-29 11:00:17,133 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-29 11:00:38,992 - shipping_chatbot - INFO - User_Query: Show me Containers from supplier QUEST COMPOSITE TECHNOLOGY in the last 7 days, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-29 11:00:38,994 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Show me Containers from supplier QUEST COMPOSITE TECHNOLOGY in the last 7 days', length: 78
+2026-01-29 11:00:38,994 - shipping_chatbot - INFO - [DEBUG] q_lower: 'show me containers from supplier quest composite technology in the last 7 days'
+2026-01-29 11:00:38,994 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-29 11:01:00,576 - shipping_chatbot - INFO - Fetched 19277 rows
+2026-01-29 11:01:00,576 - shipping_chatbot - INFO - Starting preprocessing on 19277 rows
+2026-01-29 11:01:00,784 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-29 11:01:02,050 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-29 11:01:02,547 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-29 11:01:03,907 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-29 11:01:03,917 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-29 11:01:03,919 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-29 11:01:03,984 - shipping_chatbot - INFO - Pre-processing finished - 19277 rows remain
+2026-01-29 11:03:26,940 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-29 11:03:26,940 - shipping_chatbot - INFO - Agent created with 56 tools
+2026-01-29 11:03:26,955 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-29 11:37:01,283 - shipping_chatbot - INFO - User_Query: Is purchase order 5302967849 scheduled to be delivered this month?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-29 11:37:01,283 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Is purchase order 5302967849 scheduled to be delivered this month?', length: 66
+2026-01-29 11:37:01,283 - shipping_chatbot - INFO - [DEBUG] q_lower: 'is purchase order 5302967849 scheduled to be delivered this month?'
+2026-01-29 11:37:01,283 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-29 11:37:16,878 - shipping_chatbot - INFO - Fetched 19277 rows
+2026-01-29 11:37:16,878 - shipping_chatbot - INFO - Starting preprocessing on 19277 rows
+2026-01-29 11:37:16,977 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-29 11:37:17,689 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-29 11:37:17,915 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-29 11:37:18,579 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-29 11:37:18,583 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-29 11:37:18,583 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-29 11:37:18,612 - shipping_chatbot - INFO - Pre-processing finished - 19277 rows remain
+2026-01-29 12:13:10,130 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-29 12:13:10,130 - shipping_chatbot - INFO - Agent created with 56 tools
+2026-01-29 12:13:10,130 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-29 12:25:43,917 - shipping_chatbot - INFO - User_Query: Is purchase order 5302967849 scheduled to be delivered this month?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-29 12:25:43,917 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Is purchase order 5302967849 scheduled to be delivered this month?', length: 66
+2026-01-29 12:25:43,917 - shipping_chatbot - INFO - [DEBUG] q_lower: 'is purchase order 5302967849 scheduled to be delivered this month?'
+2026-01-29 12:25:43,917 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-29 12:25:56,870 - shipping_chatbot - INFO - Fetched 19277 rows
+2026-01-29 12:25:56,873 - shipping_chatbot - INFO - Starting preprocessing on 19277 rows
+2026-01-29 12:25:56,978 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-29 12:25:57,752 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-29 12:25:58,047 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-29 12:25:59,036 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-29 12:25:59,037 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-29 12:25:59,038 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-29 12:25:59,075 - shipping_chatbot - INFO - Pre-processing finished - 19277 rows remain
+2026-01-29 13:07:40,531 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-29 13:07:40,531 - shipping_chatbot - INFO - Agent created with 56 tools
+2026-01-29 13:07:40,531 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-29 13:09:56,251 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-29 13:09:56,251 - shipping_chatbot - INFO - Agent created with 57 tools
+2026-01-29 13:09:56,252 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-29 13:10:00,728 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-29 13:10:00,728 - shipping_chatbot - INFO - Agent created with 57 tools
+2026-01-29 13:10:00,728 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-29 13:10:13,321 - shipping_chatbot - INFO - User_Query: Will container UETU4079469 be moved via Rail?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-29 13:10:13,321 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Will container UETU4079469 be moved via Rail?', length: 45
+2026-01-29 13:10:13,321 - shipping_chatbot - INFO - [DEBUG] q_lower: 'will container uetu4079469 be moved via rail?'
+2026-01-29 13:10:13,321 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-29 13:10:30,622 - shipping_chatbot - INFO - Fetched 19277 rows
+2026-01-29 13:10:30,624 - shipping_chatbot - INFO - Starting preprocessing on 19277 rows
+2026-01-29 13:10:30,737 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-29 13:10:31,567 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-29 13:10:31,842 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-29 13:10:32,593 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-29 13:10:32,596 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-29 13:10:32,596 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-29 13:10:32,647 - shipping_chatbot - INFO - Pre-processing finished - 19277 rows remain
+2026-01-29 13:10:35,296 - shipping_chatbot - INFO - [get_container_rail_transport_status] Query: 'container UETU4079469', Container: UETU4079469
+2026-01-29 13:12:43,699 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-29 13:12:43,699 - shipping_chatbot - INFO - Agent created with 57 tools
+2026-01-29 13:12:43,699 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-29 14:19:26,753 - shipping_chatbot - INFO - User_Query: Will container FSCU8137107 be moved via Rail?, c_codes: ['0040070', '0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-29 14:19:26,753 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Will container FSCU8137107 be moved via Rail?', length: 45
+2026-01-29 14:19:26,753 - shipping_chatbot - INFO - [DEBUG] q_lower: 'will container fscu8137107 be moved via rail?'
+2026-01-29 14:19:26,753 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-29 14:19:40,680 - shipping_chatbot - INFO - Fetched 19277 rows
+2026-01-29 14:19:40,680 - shipping_chatbot - INFO - Starting preprocessing on 19277 rows
+2026-01-29 14:19:40,785 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-29 14:19:41,413 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-29 14:19:41,630 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-29 14:19:42,260 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-29 14:19:42,263 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-29 14:19:42,263 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-29 14:19:42,304 - shipping_chatbot - INFO - Pre-processing finished - 19277 rows remain
+2026-01-29 14:19:45,664 - shipping_chatbot - INFO - [get_container_rail_transport_status] Query: 'container FSCU8137107', Container: FSCU8137107
+2026-01-29 14:21:38,273 - shipping_chatbot - INFO - User_Query: Will container UETU4079469 be moved via Rail?, c_codes: ['0040070', '0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-29 14:21:38,273 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Will container UETU4079469 be moved via Rail?', length: 45
+2026-01-29 14:21:38,273 - shipping_chatbot - INFO - [DEBUG] q_lower: 'will container uetu4079469 be moved via rail?'
+2026-01-29 14:21:41,296 - shipping_chatbot - INFO - [get_container_rail_transport_status] Query: 'container UETU4079469', Container: UETU4079469
+2026-01-29 14:26:10,917 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-29 14:26:10,918 - shipping_chatbot - INFO - Agent created with 57 tools
+2026-01-29 14:26:10,918 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-29 14:26:37,089 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-29 14:26:37,089 - shipping_chatbot - INFO - Agent created with 57 tools
+2026-01-29 14:26:37,089 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-29 14:26:46,722 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-29 14:26:46,722 - shipping_chatbot - INFO - Agent created with 57 tools
+2026-01-29 14:26:46,722 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-29 14:27:49,959 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-29 14:27:49,959 - shipping_chatbot - INFO - Agent created with 57 tools
+2026-01-29 14:27:49,959 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-29 14:27:55,855 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-29 14:27:55,855 - shipping_chatbot - INFO - Agent created with 57 tools
+2026-01-29 14:27:55,857 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-29 14:28:00,495 - shipping_chatbot - INFO - User_Query: Will container UETU4079469 be moved via Rail?, c_codes: ['0040070', '0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-29 14:28:00,495 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Will container UETU4079469 be moved via Rail?', length: 45
+2026-01-29 14:28:00,498 - shipping_chatbot - INFO - [DEBUG] q_lower: 'will container uetu4079469 be moved via rail?'
+2026-01-29 14:28:00,498 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-29 14:28:13,807 - shipping_chatbot - INFO - Fetched 19277 rows
+2026-01-29 14:28:13,807 - shipping_chatbot - INFO - Starting preprocessing on 19277 rows
+2026-01-29 14:28:13,933 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-29 14:28:15,007 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-29 14:28:15,232 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-29 14:28:16,242 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-29 14:28:16,252 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-29 14:28:16,252 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-29 14:28:16,307 - shipping_chatbot - INFO - Pre-processing finished - 19277 rows remain
+2026-01-29 14:28:19,458 - shipping_chatbot - INFO - [get_container_rail_transport_status] Query: 'container UETU4079469', Container: UETU4079469
+2026-01-29 15:24:53,482 - shipping_chatbot - INFO - User_Query: Check rail transport for container TCLU4703170, c_codes: ['0040070', '0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-29 15:24:53,483 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Check rail transport for container TCLU4703170', length: 46
+2026-01-29 15:24:53,484 - shipping_chatbot - INFO - [DEBUG] q_lower: 'check rail transport for container tclu4703170'
+2026-01-29 15:24:56,374 - shipping_chatbot - INFO - [get_container_rail_transport_status] Query: 'TCLU4703170', Container: TCLU4703170
+2026-01-29 15:44:45,836 - shipping_chatbot - INFO - User_Query: which containers are taking more than 10days of transit time, c_codes: ['0040070', '0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-29 15:44:45,836 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'which containers are taking more than 10days of transit time', length: 60
+2026-01-29 15:44:45,838 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers are taking more than 10days of transit time'
+2026-01-29 16:00:47,837 - shipping_chatbot - INFO - User_Query: Which POs will be shipped in coming 20 days?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-29 16:00:47,840 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which POs will be shipped in coming 20 days?', length: 44
+2026-01-29 16:00:47,840 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which pos will be shipped in coming 20 days?'
+2026-01-29 16:00:50,769 - shipping_chatbot - INFO - [get_upcoming_pos] Period: next 20 days, Dates: 2026-01-29 to 2026-02-17
+2026-01-29 16:00:50,900 - shipping_chatbot - INFO - [get_upcoming_pos] Returning 200 PO records

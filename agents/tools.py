@@ -777,16 +777,44 @@ def get_containers_by_carrier(query: str) -> str:
 
 # Helper: parse supplier name (strip trailing "(code)")
 def _parse_supplier_name(q: str) -> str:
-    # try "supplier X..." or "from X..."
-    m = re.search(r"(?:supplier|from)\s+([A-Z0-9&\.\'\-\s]+)", q, re.IGNORECASE)
-    name = m.group(1) if m else ""
-    # fallback: grab longest caps span
-    if not name:
+    # First, try to find supplier name between keyword and time/status phrase
+    # Match patterns like "supplier X in the last" or "from supplier X in the"
+    patterns = [
+        # Pattern 1: keyword + name + time phrase (most specific)
+        r"(?:from\s+)?(?:supplier|shipper|vendor)\s+([A-Z0-9&\.\'\-\s]+?)\s+(?:in\s+the\s+(?:last|next|past)|arriving|delayed|in\s+transit|for\s+the|within|during|over)",
+        # Pattern 2: just "from" + name + time phrase
+        r"from\s+([A-Z0-9&\.\'\-\s]+?)\s+(?:in\s+the\s+(?:last|next|past)|arriving|delayed|in\s+transit|for\s+the|within|during|over)",
+        # Pattern 3: keyword + name (no time phrase)
+        r"(?:from\s+)?(?:supplier|shipper|vendor)\s+([A-Z0-9&\.\'\-\s]+?)(?:\s+(?:container|po|in|for|with)|$)",
+        # Pattern 4: just "from" + name
+        r"from\s+([A-Z0-9&\.\'\-\s]+?)(?:\s+(?:container|po|in|for|with)|$)",
+    ]
+
+    name = ""
+    for pattern in patterns:
+        m = re.search(pattern, q, re.IGNORECASE)
+        if m:
+            name = m.group(1).strip()
+            # Clean up if we accidentally captured leading keywords
+            name = re.sub(
+                r"^(?:supplier|shipper|vendor|from)\s+", "", name, flags=re.IGNORECASE
+            ).strip()
+            if name and len(name) > 2:
+                break
+
+    # Fallback: grab longest caps span
+    if not name or len(name) <= 2:
         caps = re.findall(r"[A-Z][A-Z0-9&\.\'\-\s]{5,}", q.upper())
-        name = max(caps, key=len) if caps else ""
+        if caps:
+            name = max(caps, key=len)
+
     name = name.strip()
-    # remove trailing "(001234)" etc.
+    # Remove trailing "(001234)" etc.
     name = re.sub(r"\s*\([^)]+\)\s*$", "", name).strip()
+    # Remove common trailing words
+    name = re.sub(
+        r"\s+(?:container|containers|po|in|for|with)\s*$", "", name, flags=re.IGNORECASE
+    ).strip()
     return name
 
 
@@ -1489,27 +1517,151 @@ def _po_in_cell(cell: str, po_norm: str) -> bool:
 
 
 # ...existing code...
+# def check_po_month_arrival(query: str) -> str:
+#     """
+#     Can PO arrive at destination by end of this month?
+
+#     Logic:
+#     1) If any row for PO has ata_dp NOT NULL -> it's already arrived. Return that.
+#     2) Otherwise, compute next_eta_fd = NVL(predictive_eta_fd, revised_eta_fd, eta_fd)
+#        and check if next_eta_fd <= last day of current month.
+#     """
+#     # --- robust PO extraction ---
+
+#     po_no = extract_po_number(query)
+#     if not po_no:
+#         m = re.search(
+#             r"(?:po(?:\s*number)?\s*[:#-]?\s*)?([A-Z0-9]{6,20})", query, re.IGNORECASE
+#         )
+#         po_no = m.group(1) if m else None
+#     if po_no and po_no.upper().startswith("PO") and po_no[2:].isdigit():
+#         po_no = po_no[2:]
+#     if not po_no:
+#         return "Please specify a valid PO number."
+
+#     po_norm = _normalize_po_token(po_no)
+#     df = _df()
+
+#     # choose PO column
+#     po_col = (
+#         "po_number_multiple"
+#         if "po_number_multiple" in df.columns
+#         else ("po_number" if "po_number" in df.columns else None)
+#     )
+#     if not po_col:
+#         return "PO column not found in the dataset."
+
+#     # match rows where normalized PO token is present in the multi-value cell
+#     mask = df[po_col].apply(lambda cell: _po_in_cell(cell, po_norm))
+#     matches = df[mask].copy()
+#     if matches.empty:
+#         return f"No data found for PO {po_no}."
+
+#     # ensure datetime for required fields
+#     date_cols = [
+#         c
+#         for c in ["ata_dp", "predictive_eta_fd", "revised_eta_fd", "eta_fd"]
+#         if c in matches.columns
+#     ]
+#     if date_cols:
+#         matches = ensure_datetime(matches, date_cols)
+
+#     # last day of current month
+#     today = pd.Timestamp.today().normalize()
+#     first = pd.Timestamp(today.year, today.month, 1)
+#     last_day = first + pd.DateOffset(months=1) - pd.Timedelta(days=1)
+
+#     # 1) If any ata_dp exists -> already arrived
+#     if "ata_dp" in matches.columns and matches["ata_dp"].notna().any():
+#         arrived_rows = matches[matches["ata_dp"].notna()].copy()
+#         # pick earliest or show min as the arrival confirmation
+#         ata_min = arrived_rows["ata_dp"].min()
+#         if pd.notna(ata_min):
+#             dt_str = (
+#                 ata_min.strftime("%Y-%m-%d")
+#                 if hasattr(ata_min, "strftime")
+#                 else str(ata_min)
+#             )
+#             return f"Yes, PO {po_no} has already arrived on {dt_str}."
+#         return f"Yes, PO {po_no} has already arrived."
+
+#     # 2) Not arrived yet -> use NVL(predictive_eta_fd, revised_eta_fd, eta_fd)
+#     # build next_eta_fd
+#     next_eta = pd.Series(pd.NaT, index=matches.index, dtype="datetime64[ns]")
+#     for c in ["predictive_eta_fd", "revised_eta_fd", "eta_fd"]:
+#         if c in matches.columns:
+#             next_eta = next_eta.fillna(matches[c])
+#     matches["_next_eta_fd"] = next_eta
+
+#     pending = matches[matches["_next_eta_fd"].notna()].copy()
+#     if pending.empty:
+#         return f"No ETA FD available for PO {po_no}."
+
+#     within = pending["_next_eta_fd"] <= last_day
+#     if within.any():
+#         eta_pick = pending.loc[within, "_next_eta_fd"].min()
+#         eta_str = (
+#             eta_pick.strftime("%Y-%m-%d")
+#             if hasattr(eta_pick, "strftime")
+#             else str(eta_pick)
+#         )
+#         # include containers if present
+#         conts = (
+#             pending.loc[within, "container_number"]
+#             .dropna()
+#             .astype(str)
+#             .unique()
+#             .tolist()
+#             if "container_number" in pending.columns
+#             else []
+#         )
+#         cont_str = f" Containers: {', '.join(conts)}." if conts else ""
+#         return f"Yes, PO {po_no} can arrive by {eta_str} (on or before month end {last_day.strftime('%Y-%m-%d')}).{cont_str}"
+#     else:
+#         eta_pick = pending["_next_eta_fd"].min()
+#         eta_str = (
+#             eta_pick.strftime("%Y-%m-%d")
+#             if hasattr(eta_pick, "strftime")
+#             else str(eta_pick)
+#         )
+#         conts = (
+#             pending.loc[pending["_next_eta_fd"] == eta_pick, "container_number"]
+#             .dropna()
+#             .astype(str)
+#             .unique()
+#             .tolist()
+#             if "container_number" in pending.columns
+#             else []
+#         )
+#         cont_str = f" Containers: {', '.join(conts)}." if conts else ""
+#         return f"No, PO {po_no} is expected on {eta_str} (after month end {last_day.strftime('%Y-%m-%d')}).{cont_str}"
+
+
 def check_po_month_arrival(query: str) -> str:
     """
     Can PO arrive at destination by end of this month?
 
-    Logic:
-    1) If any row for PO has ata_dp NOT NULL -> it's already arrived. Return that.
-    2) Otherwise, compute next_eta_fd = NVL(predictive_eta_fd, revised_eta_fd, eta_fd)
-       and check if next_eta_fd <= last day of current month.
+    Correct Logic:
+    1) If ata_dp is not null:
+       - PO has arrived at discharge port on ata_dp date
+       - If delivery_date_to_consignee OR empty_container_return_date is also not null:
+         * PO is delivered on the latest of these two dates
+       - Otherwise: PO arrived at discharge port but not yet delivered
+    2) If ata_dp is null:
+       - PO is scheduled to arrive on revised_eta (if available)
+       - Check if revised_eta <= last day of current month
     """
     # --- robust PO extraction ---
-
     po_no = extract_po_number(query)
     if not po_no:
-        m = re.search(
-            r"(?:po(?:\s*number)?\s*[:#-]?\s*)?([A-Z0-9]{6,20})", query, re.IGNORECASE
-        )
-        po_no = m.group(1) if m else None
+        return "Please specify a valid PO number in your question."
+
+    # Strip "PO" prefix if present (e.g., "PO5302967849" -> "5302967849")
     if po_no and po_no.upper().startswith("PO") and po_no[2:].isdigit():
         po_no = po_no[2:]
+
     if not po_no:
-        return "Please specify a valid PO number."
+        return "Could not extract a valid PO number from the query."
 
     po_norm = _normalize_po_token(po_no)
     df = _df()
@@ -1521,7 +1673,7 @@ def check_po_month_arrival(query: str) -> str:
         else ("po_number" if "po_number" in df.columns else None)
     )
     if not po_col:
-        return "PO column not found in the dataset."
+        return "No PO column (po_number_multiple or po_number) found in the dataset."
 
     # match rows where normalized PO token is present in the multi-value cell
     mask = df[po_col].apply(lambda cell: _po_in_cell(cell, po_norm))
@@ -1532,7 +1684,12 @@ def check_po_month_arrival(query: str) -> str:
     # ensure datetime for required fields
     date_cols = [
         c
-        for c in ["ata_dp", "predictive_eta_fd", "revised_eta_fd", "eta_fd"]
+        for c in [
+            "ata_dp",
+            "revised_eta",
+            "delivery_date_to_consignee",
+            "empty_container_return_date",
+        ]
         if c in matches.columns
     ]
     if date_cols:
@@ -1543,70 +1700,93 @@ def check_po_month_arrival(query: str) -> str:
     first = pd.Timestamp(today.year, today.month, 1)
     last_day = first + pd.DateOffset(months=1) - pd.Timedelta(days=1)
 
-    # 1) If any ata_dp exists -> already arrived
-    if "ata_dp" in matches.columns and matches["ata_dp"].notna().any():
-        arrived_rows = matches[matches["ata_dp"].notna()].copy()
-        # pick earliest or show min as the arrival confirmation
-        ata_min = arrived_rows["ata_dp"].min()
-        if pd.notna(ata_min):
-            dt_str = (
-                ata_min.strftime("%Y-%m-%d")
-                if hasattr(ata_min, "strftime")
-                else str(ata_min)
-            )
-            return f"Yes, PO {po_no} has already arrived on {dt_str}."
-        return f"Yes, PO {po_no} has already arrived."
+    # Process each matching row
+    results = []
+    for idx, row in matches.iterrows():
+        ata_dp = row.get("ata_dp")
+        revised_eta = row.get("revised_eta")
+        delivery_date = row.get("delivery_date_to_consignee")
+        return_date = row.get("empty_container_return_date")
+        container = row.get("container_number", "N/A")
 
-    # 2) Not arrived yet -> use NVL(predictive_eta_fd, revised_eta_fd, eta_fd)
-    # build next_eta_fd
-    next_eta = pd.Series(pd.NaT, index=matches.index, dtype="datetime64[ns]")
-    for c in ["predictive_eta_fd", "revised_eta_fd", "eta_fd"]:
-        if c in matches.columns:
-            next_eta = next_eta.fillna(matches[c])
-    matches["_next_eta_fd"] = next_eta
+        # 1) If ata_dp is not null -> PO has arrived at discharge port
+        if pd.notna(ata_dp):
+            # Check if delivered
+            if pd.notna(delivery_date) or pd.notna(return_date):
+                # PO is delivered - find latest delivery date
+                delivery_dates = []
+                if pd.notna(delivery_date):
+                    delivery_dates.append(delivery_date)
+                if pd.notna(return_date):
+                    delivery_dates.append(return_date)
 
-    pending = matches[matches["_next_eta_fd"].notna()].copy()
-    if pending.empty:
-        return f"No ETA FD available for PO {po_no}."
+                final_delivery = max(delivery_dates)
+                results.append(
+                    {
+                        "container": container,
+                        "status": "delivered",
+                        "ata_dp": (
+                            ata_dp.strftime("%Y-%m-%d") if pd.notna(ata_dp) else None
+                        ),
+                        "delivery_date": (
+                            final_delivery.strftime("%Y-%m-%d")
+                            if pd.notna(final_delivery)
+                            else None
+                        ),
+                        "message": f"Container {container}: PO {po_no} has been delivered on {final_delivery.strftime('%Y-%m-%d')}.",
+                    }
+                )
+            else:
+                # PO arrived at discharge port but not yet delivered
+                results.append(
+                    {
+                        "container": container,
+                        "status": "arrived_not_delivered",
+                        "ata_dp": (
+                            ata_dp.strftime("%Y-%m-%d") if pd.notna(ata_dp) else None
+                        ),
+                        "message": f"Container {container}: PO {po_no} has arrived at discharge port on {ata_dp.strftime('%Y-%m-%d')} but not yet delivered.",
+                    }
+                )
 
-    within = pending["_next_eta_fd"] <= last_day
-    if within.any():
-        eta_pick = pending.loc[within, "_next_eta_fd"].min()
-        eta_str = (
-            eta_pick.strftime("%Y-%m-%d")
-            if hasattr(eta_pick, "strftime")
-            else str(eta_pick)
-        )
-        # include containers if present
-        conts = (
-            pending.loc[within, "container_number"]
-            .dropna()
-            .astype(str)
-            .unique()
-            .tolist()
-            if "container_number" in pending.columns
-            else []
-        )
-        cont_str = f" Containers: {', '.join(conts)}." if conts else ""
-        return f"Yes, PO {po_no} can arrive by {eta_str} (on or before month end {last_day.strftime('%Y-%m-%d')}).{cont_str}"
-    else:
-        eta_pick = pending["_next_eta_fd"].min()
-        eta_str = (
-            eta_pick.strftime("%Y-%m-%d")
-            if hasattr(eta_pick, "strftime")
-            else str(eta_pick)
-        )
-        conts = (
-            pending.loc[pending["_next_eta_fd"] == eta_pick, "container_number"]
-            .dropna()
-            .astype(str)
-            .unique()
-            .tolist()
-            if "container_number" in pending.columns
-            else []
-        )
-        cont_str = f" Containers: {', '.join(conts)}." if conts else ""
-        return f"No, PO {po_no} is expected on {eta_str} (after month end {last_day.strftime('%Y-%m-%d')}).{cont_str}"
+        # 2) If ata_dp is null -> PO is scheduled to arrive
+        else:
+            if pd.notna(revised_eta):
+                scheduled_arrival = revised_eta
+                within_month = scheduled_arrival <= last_day
+
+                results.append(
+                    {
+                        "container": container,
+                        "status": "scheduled",
+                        "revised_eta": scheduled_arrival.strftime("%Y-%m-%d"),
+                        "within_month": within_month,
+                        "message": f"Container {container}: PO {po_no} is scheduled to arrive on {scheduled_arrival.strftime('%Y-%m-%d')} "
+                        + (
+                            f"(within this month ending {last_day.strftime('%Y-%m-%d')})."
+                            if within_month
+                            else f"(after this month ending {last_day.strftime('%Y-%m-%d')})."
+                        ),
+                    }
+                )
+            else:
+                results.append(
+                    {
+                        "container": container,
+                        "status": "no_eta",
+                        "message": f"Container {container}: PO {po_no} has no ETA information available.",
+                    }
+                )
+
+    if not results:
+        return f"No status information available for PO {po_no}."
+
+    # Format response
+    response_lines = []
+    for result in results:
+        response_lines.append(result["message"])
+
+    return "\n".join(response_lines)
 
 
 #    ...existing code...
@@ -13898,6 +14078,173 @@ def get_cargo_ready_date(query: str) -> str:
     return result_dict
 
 
+def get_container_rail_transport_status(
+    query: str, consignee_code: str = None, **kwargs
+) -> str:
+    """
+    Check if a container is being moved via rail transport.
+
+    Business Logic:
+    - If ANY of these columns is NOT NULL, the container is moving via rail:
+      * rail_load_dp_date (Rail loading date at discharge port)
+      * rail_departure_dp_date (Rail departure date from discharge port)
+      * rail_arrival_destination_date (Rail arrival date at final destination)
+
+    Supports queries like:
+    - "Will container UETU4079469 be moved via rail?"
+    - "Is container ABCD1234567 moving by rail?"
+    - "Check rail transport for container WXYZ9876543"
+    - "Does container TCLU4703170 use rail?"
+    - "Rail status for MSBU4522691"
+
+    Returns:
+    - Confirmation if container uses rail transport with relevant dates
+    - Message if container does NOT use rail transport
+    - Error message if container not found
+    """
+
+    # Extract container number from query
+    container_no = extract_container_number(query)
+    if not container_no:
+        return "Please specify a valid container number to check rail transport status."
+
+    try:
+        logger.info(
+            f"[get_container_rail_transport_status] Query: {query!r}, Container: {container_no}"
+        )
+    except:
+        pass
+
+    # Load data with consignee filtering
+    df = _df()
+    if df.empty:
+        return "No data available for your authorized consignees."
+
+    # Apply additional consignee filter if provided
+    if consignee_code and "consignee_code_multiple" in df.columns:
+        codes = [c.strip() for c in str(consignee_code).split(",") if c.strip()]
+        if codes:
+            mask = pd.Series(False, index=df.index)
+            for code in codes:
+                mask |= (
+                    df["consignee_code_multiple"]
+                    .astype(str)
+                    .str.contains(code, na=False)
+                )
+            df = df[mask].copy()
+
+    if df.empty:
+        return "No data found for the provided consignee codes."
+
+    # Normalize container number for matching
+    clean_cont = clean_container_number(container_no)
+    cont_col_norm = (
+        df["container_number"].astype(str).str.replace(r"[^A-Z0-9]", "", regex=True)
+    )
+
+    # Find matching container (exact match first, then contains)
+    identifier_mask = cont_col_norm == clean_cont
+    if not identifier_mask.any():
+        identifier_mask = (
+            df["container_number"]
+            .astype(str)
+            .str.contains(container_no, case=False, na=False)
+        )
+
+    matches = df[identifier_mask].copy()
+
+    if matches.empty:
+        return f"No data found for container {container_no} for your authorized consignees."
+
+    # Take first matching row if multiple matches
+    row = matches.iloc[0]
+
+    # Check rail-related columns
+    rail_columns = [
+        "rail_load_dp_date",
+        "rail_departure_dp_date",
+        "rail_arrival_destination_date",
+    ]
+
+    # Ensure these columns exist in the dataset
+    available_rail_cols = [col for col in rail_columns if col in df.columns]
+
+    if not available_rail_cols:
+        return "Rail transport information is not available in the dataset."
+
+    # Parse rail dates
+    matches = ensure_datetime(matches, available_rail_cols)
+    row = matches.iloc[0]
+
+    # Check if any rail date is not null
+    rail_dates = {}
+    uses_rail = False
+
+    for col in available_rail_cols:
+        if col in row.index:
+            date_value = row[col]
+            if pd.notna(date_value):
+                uses_rail = True
+                # Format date for display
+                if hasattr(date_value, "strftime"):
+                    rail_dates[col] = date_value.strftime("%Y-%m-%d")
+                else:
+                    rail_dates[col] = str(date_value)
+
+    # Build response
+    if uses_rail:
+        response_lines = [
+            f"Yes, container {container_no} IS being moved via RAIL transport."
+        ]
+        response_lines.append("")
+        response_lines.append("Rail Transport Details:")
+
+        if "rail_load_dp_date" in rail_dates:
+            response_lines.append(
+                f"  • Rail Loading at Discharge Port: {rail_dates['rail_load_dp_date']} Discharge Port: {row['discharge_port']}"
+            )
+
+        if "rail_departure_dp_date" in rail_dates:
+            response_lines.append(
+                f"  • Rail Departure from Discharge Port: {rail_dates['rail_departure_dp_date']} Discharge Port: {row['discharge_port']}"
+            )
+
+        if "rail_arrival_destination_date" in rail_dates:
+            response_lines.append(
+                f"  • Rail Arrival at Final Destination: {rail_dates['rail_arrival_destination_date']} Final Destination: {row['final_destination']}"
+            )
+
+        # Add additional context if available
+        # additional_info = []
+        # if "discharge_port" in row.index and pd.notna(row["discharge_port"]):
+        #     additional_info.append(f"Discharge Port: {row['discharge_port']}")
+
+        # if "final_destination" in row.index and pd.notna(row["final_destination"]):
+        #     additional_info.append(f"Final Destination: {row['final_destination']}")
+
+        # if "po_number_multiple" in row.index and pd.notna(row["po_number_multiple"]):
+        #     additional_info.append(f"PO Number: {row['po_number_multiple']}")
+
+        # if additional_info:
+        #     response_lines.append("")
+        #     response_lines.append("Additional Information:")
+        #     for info in additional_info:
+        #         response_lines.append(f"  • {info}")
+
+        return "\n".join(response_lines)
+
+    else:
+        response = (
+            f"No, container {container_no} is NOT being moved via rail transport."
+        )
+
+        # Add transport mode if available
+        if "transport_mode" in row.index and pd.notna(row["transport_mode"]):
+            response += f"\nTransport Mode: {row['transport_mode']}"
+
+        return response
+
+
 # ------------------------------------------------------------------
 # TOOLS list – must be at module level, not inside any function!
 # ------------------------------------------------------------------
@@ -14675,6 +15022,38 @@ TOOLS = [
             "\n"
             "DO NOT use 'Get Delayed Containers' for ETD delay queries (that tool is for arrival delays).\n"
             "DO NOT use 'Get Containers Departed From Load Port' for delay analysis (that tool is for departure listing).\n"
+        ),
+    ),
+    Tool(
+        name="Get Container Rail Transport Status",
+        func=get_container_rail_transport_status,
+        return_direct=True,
+        description=(
+            "PRIMARY TOOL for checking if a container is being transported via RAIL.\n"
+            "\n"
+            "Use this tool when query asks about:\n"
+            "- Rail transport: 'Will container X be moved via rail?', 'Is container Y moving by rail?'\n"
+            "- Rail status: 'Check rail transport for container Z', 'Does container use rail?'\n"
+            "- Rail movement: 'Rail status for container', 'Container moving on rail?'\n"
+            "\n"
+            "Detection logic:\n"
+            "- Checks rail_load_dp_date (Rail loading at discharge port)\n"
+            "- Checks rail_departure_dp_date (Rail departure from discharge port)\n"
+            "- Checks rail_arrival_destination_date (Rail arrival at final destination)\n"
+            "- If ANY of these dates is NOT NULL → container uses rail transport\n"
+            "\n"
+            "Supported input formats:\n"
+            "- Container number: 'Will container UETU4079469 be moved via rail?'\n"
+            "- Direct query: 'Is ABCD1234567 moving by rail?'\n"
+            "- Status check: 'Check rail transport for WXYZ9876543'\n"
+            "\n"
+            "Returns:\n"
+            "- Confirmation if container uses rail (Yes/No)\n"
+            "- Rail transport dates (loading, departure, arrival)\n"
+            "- Additional context: discharge_port, final_destination, PO number\n"
+            "- Transport mode if rail is not used\n"
+            "\n"
+            "Keywords: rail, train, railway, rail transport, rail movement, via rail, by rail\n"
         ),
     ),
 ]
