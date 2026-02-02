@@ -2980,8 +2980,13 @@ def get_delayed_containers_not_arrived(question: str = None, **kwargs) -> str:
                     port_code = potential_code
 
         if not port_code:
+            # Enhanced pattern to match various phrasings:
+            # - "arriving in Los Angeles", "arriving at Los Angeles"
+            # - "heading to Los Angeles", "going to Los Angeles"
+            # - "at Los Angeles", "in Los Angeles", "from Los Angeles"
+            # - "delayed to Los Angeles", "late to Los Angeles"
             m_name = re.search(
-                r"\b(?:AT|IN|FROM|ARRIVING)\s+([A-Z][A-Z\s\.\-]{3,}?)(?:\s+BUT\s+|\s+AND\s+|,|\?|\.$|\s*$)",
+                r"\b(?:ARRIVING\s+(?:IN|AT|TO)|HEADING\s+TO|GOING\s+TO|DELAYED\s+TO|LATE\s+(?:TO|AND\s+HEADING\s+TO)|AT|IN|FROM|TO)\s+([A-Z][A-Z\s\.\-]{3,}?)(?:\s+ARE\s+|\s+BUT\s+|\s+AND\s+|,|\?|\.$|\s*$)",
                 q_up,
             )
             if m_name:
