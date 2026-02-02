@@ -4470,3 +4470,717 @@ db
 2026-01-29 16:00:47,840 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which pos will be shipped in coming 20 days?'
 2026-01-29 16:00:50,769 - shipping_chatbot - INFO - [get_upcoming_pos] Period: next 20 days, Dates: 2026-01-29 to 2026-02-17
 2026-01-29 16:00:50,900 - shipping_chatbot - INFO - [get_upcoming_pos] Returning 200 PO records
+2026-01-29 17:43:59,979 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-29 17:43:59,979 - shipping_chatbot - INFO - Agent created with 58 tools
+2026-01-29 17:43:59,979 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-29 17:47:08,061 - shipping_chatbot - INFO - User_Query: Which POs will be shipped in coming 20 days?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-29 17:47:08,061 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which POs will be shipped in coming 20 days?', length: 44
+2026-01-29 17:47:08,061 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which pos will be shipped in coming 20 days?'
+2026-01-29 17:47:08,061 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-29 17:47:23,934 - shipping_chatbot - INFO - Fetched 19277 rows
+2026-01-29 17:47:23,938 - shipping_chatbot - INFO - Starting preprocessing on 19277 rows
+2026-01-29 17:47:24,062 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-29 17:47:24,894 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-29 17:47:25,177 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-29 17:47:26,279 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-29 17:47:26,283 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-29 17:47:26,283 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-29 17:47:26,337 - shipping_chatbot - INFO - Pre-processing finished - 19277 rows remain
+2026-01-29 17:47:29,076 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Query: 'POs will be shipped in coming 20 days', consignee_code: None
+2026-01-29 17:47:29,076 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Time window: 2026-01-29 to 2026-02-18 (20 days)
+2026-01-29 17:47:29,151 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Loaded 12779 rows after consignee filtering
+2026-01-29 17:47:29,152 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Identifier type: PO, column: po_number_multiple
+2026-01-29 17:47:29,160 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] After ETD window filter: 157 rows
+2026-01-29 17:47:29,162 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] After optional filters: 157 rows, filters: []
+2026-01-29 17:47:29,164 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Returning 157 records
+2026-01-30 10:27:10,061 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-30 10:27:10,061 - shipping_chatbot - INFO - Agent created with 58 tools
+2026-01-30 10:27:10,061 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-30 14:23:46,021 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-30 14:23:46,021 - shipping_chatbot - INFO - Agent created with 58 tools
+2026-01-30 14:23:46,021 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-30 15:33:49,730 - shipping_chatbot - INFO - User_Query: Which POs will be shipped in coming 20 days?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-30 15:33:49,738 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which POs will be shipped in coming 20 days?', length: 44
+2026-01-30 15:33:49,739 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which pos will be shipped in coming 20 days?'
+2026-01-30 15:33:49,739 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-30 15:37:15,635 - shipping_chatbot - INFO - Fetched 19218 rows
+2026-01-30 15:37:15,647 - shipping_chatbot - INFO - Starting preprocessing on 19218 rows
+2026-01-30 15:37:15,935 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-30 15:37:18,186 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-30 15:37:18,942 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-30 15:37:21,200 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-30 15:37:21,207 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-30 15:37:21,207 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-30 15:37:21,359 - shipping_chatbot - INFO - Pre-processing finished - 19218 rows remain
+2026-01-30 15:37:24,800 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Query: 'POs will be shipped in coming 20 days', consignee_code: None
+2026-01-30 15:37:24,807 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Time window: 2026-01-30 to 2026-02-19 (20 days)
+2026-01-30 15:37:24,981 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Loaded 12760 rows after consignee filtering
+2026-01-30 15:37:24,981 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Identifier type: PO, column: po_number_multiple
+2026-01-30 15:37:24,996 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] After ETD window filter: 161 rows
+2026-01-30 15:37:25,000 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] After optional filters: 161 rows, filters: []
+2026-01-30 15:37:25,009 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Returning 161 records
+2026-01-30 15:40:06,207 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-30 15:40:06,207 - shipping_chatbot - INFO - Agent created with 58 tools
+2026-01-30 15:40:06,207 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-01-30 15:40:15,516 - shipping_chatbot - INFO - User_Query: Which POs will be shipped in coming 20 days?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-30 15:40:15,518 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which POs will be shipped in coming 20 days?', length: 44
+2026-01-30 15:40:15,518 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which pos will be shipped in coming 20 days?'
+2026-01-30 15:40:15,518 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-01-30 15:44:23,613 - shipping_chatbot - INFO - Fetched 19218 rows
+2026-01-30 15:44:23,613 - shipping_chatbot - INFO - Starting preprocessing on 19218 rows
+2026-01-30 15:44:23,747 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-01-30 15:44:24,590 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-01-30 15:44:24,864 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-01-30 15:44:25,605 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-01-30 15:44:25,606 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-01-30 15:44:25,606 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-01-30 15:44:25,657 - shipping_chatbot - INFO - Pre-processing finished - 19218 rows remain
+2026-01-30 15:44:29,206 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Query: 'POs will be shipped in coming 20 days', consignee_code: None
+2026-01-30 15:44:29,208 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Time window: 2026-01-30 to 2026-02-19 (20 days)
+2026-01-30 15:44:29,285 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Loaded 12760 rows after consignee filtering
+2026-01-30 15:44:29,285 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Identifier type: PO, column: po_number_multiple
+2026-01-30 15:44:29,289 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] After ETD window filter: 161 rows
+2026-01-30 15:44:29,291 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] After optional filters: 161 rows, filters: []
+2026-01-30 15:44:29,296 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Returning 161 records
+2026-01-30 15:48:09,948 - shipping_chatbot - INFO - User_Query: Has my container JXLU6398308 left the origin port?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-01-30 15:48:09,949 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Has my container JXLU6398308 left the origin port?', length: 50
+2026-01-30 15:48:09,950 - shipping_chatbot - INFO - [DEBUG] q_lower: 'has my container jxlu6398308 left the origin port?'
+2026-01-30 15:48:18,567 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted: container=JXLU6398308, po=None, obl=JXLU6398308
+2026-01-30 15:48:18,575 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted load_port: 'None'
+2026-01-30 15:48:18,590 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Time window: 2026-01-30 00:00:00 to 2026-02-05 00:00:00 (next 7 days (default))
+2026-01-30 15:48:18,736 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] After date filter: 0 rows matched
+2026-01-30 16:16:52,182 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-01-30 16:16:52,182 - shipping_chatbot - INFO - Agent created with 58 tools
+2026-01-30 16:16:52,182 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-02-02 09:12:20,528 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-02-02 09:12:20,529 - shipping_chatbot - INFO - Agent created with 58 tools
+2026-02-02 09:12:20,529 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-02-02 09:28:33,281 - shipping_chatbot - INFO - User_Query: Which POs will be shipped in coming 20 days?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-02-02 09:28:33,281 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which POs will be shipped in coming 20 days?', length: 44
+2026-02-02 09:28:33,281 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which pos will be shipped in coming 20 days?'
+2026-02-02 09:28:33,281 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-02-02 09:28:46,433 - shipping_chatbot - INFO - Fetched 19218 rows
+2026-02-02 09:28:46,435 - shipping_chatbot - INFO - Starting preprocessing on 19218 rows
+2026-02-02 09:28:46,520 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-02-02 09:28:46,996 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-02-02 09:28:47,159 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-02-02 09:28:47,707 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-02-02 09:28:47,709 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-02-02 09:28:47,711 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-02-02 09:28:47,733 - shipping_chatbot - INFO - Pre-processing finished - 19218 rows remain
+2026-02-02 09:28:50,492 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Query: 'POs will be shipped in coming 20 days', consignee_code: None
+2026-02-02 09:28:50,492 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Time window: 2026-02-02 to 2026-02-22 (20 days)
+2026-02-02 09:28:50,542 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Loaded 12760 rows after consignee filtering
+2026-02-02 09:28:50,542 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Identifier type: PO, column: po_number_multiple
+2026-02-02 09:28:50,542 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] After ETD window filter: 54 rows
+2026-02-02 09:28:50,542 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] After optional filters: 54 rows, filters: []
+2026-02-02 09:28:50,542 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Returning 54 records
+2026-02-02 09:30:43,796 - shipping_chatbot - INFO - User_Query: Which POs will be shipped in coming 10 days?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-02-02 09:30:43,798 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which POs will be shipped in coming 10 days?', length: 44
+2026-02-02 09:30:43,800 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which pos will be shipped in coming 10 days?'
+2026-02-02 09:30:46,878 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Query: 'POs will be shipped in coming 10 days', consignee_code: None
+2026-02-02 09:30:46,878 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Time window: 2026-02-02 to 2026-02-12 (10 days)
+2026-02-02 09:30:46,939 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Loaded 12760 rows after consignee filtering
+2026-02-02 09:30:46,939 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Identifier type: PO, column: po_number_multiple
+2026-02-02 09:30:46,952 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] After ETD window filter: 54 rows
+2026-02-02 09:30:46,952 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] After optional filters: 54 rows, filters: []
+2026-02-02 09:30:46,958 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Returning 54 records
+2026-02-02 09:33:19,375 - shipping_chatbot - INFO - User_Query: Which POs will be shipped in today?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-02-02 09:33:19,376 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which POs will be shipped in today?', length: 35
+2026-02-02 09:33:19,377 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which pos will be shipped in today?'
+2026-02-02 09:33:21,818 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Query: 'POs will be shipped today', consignee_code: None
+2026-02-02 09:33:21,818 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Time window: 2026-02-02 to 2026-02-09 (7 days)
+2026-02-02 09:33:21,901 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Loaded 12760 rows after consignee filtering
+2026-02-02 09:33:21,901 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Identifier type: PO, column: po_number_multiple
+2026-02-02 09:33:21,901 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] After ETD window filter: 53 rows
+2026-02-02 09:33:21,901 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] After optional filters: 53 rows, filters: []
+2026-02-02 09:33:21,901 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Returning 53 records
+2026-02-02 09:34:24,865 - shipping_chatbot - INFO - User_Query: Which POs will be shipped today?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-02-02 09:34:24,866 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which POs will be shipped today?', length: 32
+2026-02-02 09:34:24,866 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which pos will be shipped today?'
+2026-02-02 09:34:28,184 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Query: 'POs will be shipped today', consignee_code: None
+2026-02-02 09:34:28,184 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Time window: 2026-02-02 to 2026-02-09 (7 days)
+2026-02-02 09:34:28,249 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Loaded 12760 rows after consignee filtering
+2026-02-02 09:34:28,251 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Identifier type: PO, column: po_number_multiple
+2026-02-02 09:34:28,253 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] After ETD window filter: 53 rows
+2026-02-02 09:34:28,253 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] After optional filters: 53 rows, filters: []
+2026-02-02 09:34:28,253 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Returning 53 records
+2026-02-02 09:40:56,745 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-02-02 09:40:56,745 - shipping_chatbot - INFO - Agent created with 58 tools
+2026-02-02 09:40:56,745 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-02-02 09:41:12,113 - shipping_chatbot - INFO - User_Query: Which POs will be shipped today?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-02-02 09:41:12,113 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which POs will be shipped today?', length: 32
+2026-02-02 09:41:12,113 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which pos will be shipped today?'
+2026-02-02 09:41:12,113 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-02-02 09:41:28,003 - shipping_chatbot - INFO - Fetched 19218 rows
+2026-02-02 09:41:28,009 - shipping_chatbot - INFO - Starting preprocessing on 19218 rows
+2026-02-02 09:41:28,120 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-02-02 09:41:29,069 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-02-02 09:41:29,363 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-02-02 09:41:30,172 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-02-02 09:41:30,172 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-02-02 09:41:30,172 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-02-02 09:41:30,213 - shipping_chatbot - INFO - Pre-processing finished - 19218 rows remain
+2026-02-02 09:41:33,003 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Query: 'POs will be shipped today', consignee_code: None
+2026-02-02 09:41:33,003 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] 'Today' query detected: 2026-02-02 only
+2026-02-02 09:41:33,070 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Loaded 12760 rows after consignee filtering
+2026-02-02 09:41:33,070 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Identifier type: PO, column: po_number_multiple
+2026-02-02 09:41:33,070 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] After ETD window filter: 18 rows
+2026-02-02 09:41:33,070 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] After optional filters: 18 rows, filters: []
+2026-02-02 09:41:33,070 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Returning 18 records
+2026-02-02 09:43:37,913 - shipping_chatbot - INFO - User_Query: Which POs will be shipped in coming 20 days?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-02-02 09:43:37,913 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which POs will be shipped in coming 20 days?', length: 44
+2026-02-02 09:43:37,913 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which pos will be shipped in coming 20 days?'
+2026-02-02 09:43:41,274 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Query: 'POs will be shipped in coming 20 days', consignee_code: None
+2026-02-02 09:43:41,274 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Time window: 2026-02-02 to 2026-02-22 (20 days)
+2026-02-02 09:43:41,358 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Loaded 12760 rows after consignee filtering
+2026-02-02 09:43:41,359 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Identifier type: PO, column: po_number_multiple
+2026-02-02 09:43:41,363 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] After ETD window filter: 54 rows
+2026-02-02 09:43:41,363 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] After optional filters: 54 rows, filters: []
+2026-02-02 09:43:41,365 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Returning 54 records
+2026-02-02 09:45:19,347 - shipping_chatbot - INFO - User_Query: Which POs will be shipped in coming this month?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-02-02 09:45:19,348 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which POs will be shipped in coming this month?', length: 47
+2026-02-02 09:45:19,348 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which pos will be shipped in coming this month?'
+2026-02-02 09:45:22,398 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Query: 'POs will be shipped in coming this month', consignee_code: None
+2026-02-02 09:45:22,398 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Time window: 2026-02-02 to 2026-02-09 (7 days)
+2026-02-02 09:45:22,474 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Loaded 12760 rows after consignee filtering
+2026-02-02 09:45:22,475 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Identifier type: PO, column: po_number_multiple
+2026-02-02 09:45:22,478 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] After ETD window filter: 53 rows
+2026-02-02 09:45:22,478 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] After optional filters: 53 rows, filters: []
+2026-02-02 09:45:22,480 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Returning 53 records
+2026-02-02 09:48:19,597 - shipping_chatbot - INFO - User_Query: Which POs will be shipped this month?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-02-02 09:48:19,597 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which POs will be shipped this month?', length: 37
+2026-02-02 09:48:19,597 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which pos will be shipped this month?'
+2026-02-02 09:48:22,209 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Query: 'POs will be shipped this month', consignee_code: None
+2026-02-02 09:48:22,211 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Time window: 2026-02-02 to 2026-02-09 (7 days)
+2026-02-02 09:48:22,283 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Loaded 12760 rows after consignee filtering
+2026-02-02 09:48:22,284 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Identifier type: PO, column: po_number_multiple
+2026-02-02 09:48:22,286 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] After ETD window filter: 53 rows
+2026-02-02 09:48:22,286 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] After optional filters: 53 rows, filters: []
+2026-02-02 09:48:22,288 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Returning 53 records
+2026-02-02 09:50:59,260 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-02-02 09:50:59,260 - shipping_chatbot - INFO - Agent created with 58 tools
+2026-02-02 09:50:59,260 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-02-02 09:55:47,538 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-02-02 09:55:47,538 - shipping_chatbot - INFO - Agent created with 58 tools
+2026-02-02 09:55:47,538 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-02-02 09:55:51,653 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-02-02 09:55:51,653 - shipping_chatbot - INFO - Agent created with 58 tools
+2026-02-02 09:55:51,653 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-02-02 09:57:37,975 - shipping_chatbot - INFO - User_Query: Which POs will be shipped this month?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-02-02 09:57:37,975 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which POs will be shipped this month?', length: 37
+2026-02-02 09:57:37,975 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which pos will be shipped this month?'
+2026-02-02 09:57:37,975 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-02-02 09:57:51,082 - shipping_chatbot - INFO - Fetched 19218 rows
+2026-02-02 09:57:51,086 - shipping_chatbot - INFO - Starting preprocessing on 19218 rows
+2026-02-02 09:57:51,166 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-02-02 09:57:51,641 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-02-02 09:57:51,804 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-02-02 09:57:52,341 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-02-02 09:57:52,343 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-02-02 09:57:52,343 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-02-02 09:57:52,371 - shipping_chatbot - INFO - Pre-processing finished - 19218 rows remain
+2026-02-02 09:57:54,937 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Query: 'POs will be shipped this month', consignee_code: None
+2026-02-02 09:57:54,945 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Adjusted start_date to today (2026-02-02) for future shipments
+2026-02-02 09:57:54,945 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Time window from parse_time_period: 2026-02-02 to 2026-02-28 (this month)
+2026-02-02 09:57:55,005 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Loaded 12760 rows after consignee filtering
+2026-02-02 09:57:55,005 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Identifier type: PO, column: po_number_multiple
+2026-02-02 09:57:55,005 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] After ETD window filter: 54 rows
+2026-02-02 09:57:55,005 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] After optional filters: 54 rows, filters: []
+2026-02-02 09:57:55,005 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Returning 54 records
+2026-02-02 09:58:18,387 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-02-02 09:58:18,387 - shipping_chatbot - INFO - Agent created with 58 tools
+2026-02-02 09:58:18,387 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-02-02 09:58:22,133 - shipping_chatbot - INFO - User_Query: Which POs will be shipped this month?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-02-02 09:58:22,133 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which POs will be shipped this month?', length: 37
+2026-02-02 09:58:22,133 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which pos will be shipped this month?'
+2026-02-02 09:58:22,133 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-02-02 09:58:34,076 - shipping_chatbot - INFO - Fetched 19218 rows
+2026-02-02 09:58:34,076 - shipping_chatbot - INFO - Starting preprocessing on 19218 rows
+2026-02-02 09:58:34,179 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-02-02 09:58:34,939 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-02-02 09:58:35,212 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-02-02 09:58:36,151 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-02-02 09:58:36,155 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-02-02 09:58:36,155 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-02-02 09:58:36,194 - shipping_chatbot - INFO - Pre-processing finished - 19218 rows remain
+2026-02-02 09:58:38,655 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Query: 'POs will be shipped this month', consignee_code: None
+2026-02-02 09:58:38,672 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Adjusted start_date to today (2026-02-02) for future shipments
+2026-02-02 09:58:38,672 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Time window from parse_time_period: 2026-02-02 to 2026-02-28 (this month)
+2026-02-02 09:58:38,732 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Loaded 12760 rows after consignee filtering
+2026-02-02 09:58:38,732 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Identifier type: PO, column: po_number_multiple
+2026-02-02 09:58:38,732 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] After ETD window filter: 54 rows
+2026-02-02 09:58:38,736 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] After optional filters: 54 rows, filters: []
+2026-02-02 09:58:38,737 - shipping_chatbot - INFO - [get_upcoming_shipments_by_etd] Returning 54 records
+2026-02-02 10:49:10,127 - shipping_chatbot - INFO - User_Query: Has my container JXLU6398308 left the origin port?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-02-02 10:49:10,127 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Has my container JXLU6398308 left the origin port?', length: 50
+2026-02-02 10:49:10,129 - shipping_chatbot - INFO - [DEBUG] q_lower: 'has my container jxlu6398308 left the origin port?'
+2026-02-02 10:49:14,693 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted: container=JXLU6398308, po=None, obl=JXLU6398308
+2026-02-02 10:49:14,697 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted load_port: 'None'
+2026-02-02 10:49:14,697 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Time window: 2026-02-02 00:00:00 to 2026-02-08 00:00:00 (next 7 days (default))
+2026-02-02 10:49:14,846 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] After date filter: 0 rows matched
+2026-02-02 10:49:28,836 - shipping_chatbot - INFO - Router: Set consignee codes ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392'] for query: Has my container JXLU6398308 left the origin port?
+2026-02-02 10:49:28,934 - shipping_chatbot - INFO - Consignee filtering validated: 12760 rows for codes ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-02-02 10:49:43,082 - shipping_chatbot - INFO - User_Query: Has my container JXLU6398308 left the origin port?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-02-02 10:49:43,082 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Has my container JXLU6398308 left the origin port?', length: 50
+2026-02-02 10:49:43,082 - shipping_chatbot - INFO - [DEBUG] q_lower: 'has my container jxlu6398308 left the origin port?'
+2026-02-02 10:49:48,252 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted: container=JXLU6398308, po=None, obl=JXLU6398308
+2026-02-02 10:49:48,252 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted load_port: 'None'
+2026-02-02 10:49:48,253 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Time window: 2026-02-02 00:00:00 to 2026-02-08 00:00:00 (next 7 days (default))
+2026-02-02 10:49:48,361 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] After date filter: 0 rows matched
+2026-02-02 11:05:31,467 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-02-02 11:05:31,467 - shipping_chatbot - INFO - Agent created with 58 tools
+2026-02-02 11:05:31,467 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-02-02 11:05:41,461 - shipping_chatbot - INFO - User_Query: Has my container JXLU6398308 left the origin port?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-02-02 11:05:41,461 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Has my container JXLU6398308 left the origin port?', length: 50
+2026-02-02 11:05:41,465 - shipping_chatbot - INFO - [DEBUG] q_lower: 'has my container jxlu6398308 left the origin port?'
+2026-02-02 11:05:41,467 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-02-02 11:06:24,596 - shipping_chatbot - INFO - Fetched 19218 rows
+2026-02-02 11:06:24,600 - shipping_chatbot - INFO - Starting preprocessing on 19218 rows
+2026-02-02 11:06:24,711 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-02-02 11:06:25,523 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-02-02 11:06:25,775 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-02-02 11:06:26,629 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-02-02 11:06:26,635 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-02-02 11:06:26,637 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-02-02 11:06:26,686 - shipping_chatbot - INFO - Pre-processing finished - 19218 rows remain
+2026-02-02 11:06:32,400 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Query: 'container JXLU6398308', is_departure_status_query: False
+2026-02-02 11:06:32,416 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted: container=JXLU6398308, po=None, obl=JXLU6398308
+2026-02-02 11:06:32,419 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted load_port: 'None'
+2026-02-02 11:06:32,422 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Time window: 2026-02-02 00:00:00 to 2026-02-08 00:00:00 (next 7 days (default))
+2026-02-02 11:06:32,516 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Container filter: 1 rows matched
+2026-02-02 11:06:32,533 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] After date filter: 0 rows matched
+2026-02-02 11:06:57,884 - shipping_chatbot - INFO - User_Query: Has my container JXLU6398308 left the origin port?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-02-02 11:06:57,884 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Has my container JXLU6398308 left the origin port?', length: 50
+2026-02-02 11:06:57,884 - shipping_chatbot - INFO - [DEBUG] q_lower: 'has my container jxlu6398308 left the origin port?'
+2026-02-02 11:07:04,271 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Query: 'container JXLU6398308', is_departure_status_query: False
+2026-02-02 11:07:04,271 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted: container=JXLU6398308, po=None, obl=JXLU6398308
+2026-02-02 11:07:04,271 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted load_port: 'None'
+2026-02-02 11:07:04,271 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Time window: 2026-02-02 00:00:00 to 2026-02-08 00:00:00 (next 7 days (default))
+2026-02-02 11:07:04,388 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Container filter: 1 rows matched
+2026-02-02 11:07:04,403 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] After date filter: 0 rows matched
+2026-02-02 11:07:15,366 - shipping_chatbot - INFO - [get_containers_still_at_load_port] Code match 'USLAX': 1 rows
+2026-02-02 11:07:17,682 - shipping_chatbot - INFO - Router: Set consignee codes ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392'] for query: Has my container JXLU6398308 left the origin port?
+2026-02-02 11:07:17,840 - shipping_chatbot - INFO - Consignee filtering validated: 12760 rows for codes ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-02-02 11:07:21,745 - shipping_chatbot - INFO - User_Query: Has my container JXLU6398308 left the origin port?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-02-02 11:07:21,747 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Has my container JXLU6398308 left the origin port?', length: 50
+2026-02-02 11:07:21,747 - shipping_chatbot - INFO - [DEBUG] q_lower: 'has my container jxlu6398308 left the origin port?'
+2026-02-02 11:07:25,371 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Query: 'container JXLU6398308', is_departure_status_query: False
+2026-02-02 11:07:25,374 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted: container=JXLU6398308, po=None, obl=JXLU6398308
+2026-02-02 11:07:25,374 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted load_port: 'None'
+2026-02-02 11:07:25,374 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Time window: 2026-02-02 00:00:00 to 2026-02-08 00:00:00 (next 7 days (default))
+2026-02-02 11:07:25,509 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Container filter: 1 rows matched
+2026-02-02 11:07:25,522 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] After date filter: 0 rows matched
+2026-02-02 11:10:41,530 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-02-02 11:10:41,532 - shipping_chatbot - INFO - Agent created with 58 tools
+2026-02-02 11:10:41,532 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-02-02 11:13:19,943 - shipping_chatbot - INFO - User_Query: Has my container JXLU6398308 left the origin port?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-02-02 11:13:19,943 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Has my container JXLU6398308 left the origin port?', length: 50
+2026-02-02 11:13:19,945 - shipping_chatbot - INFO - [DEBUG] q_lower: 'has my container jxlu6398308 left the origin port?'
+2026-02-02 11:13:19,946 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-02-02 11:13:33,441 - shipping_chatbot - INFO - Fetched 19218 rows
+2026-02-02 11:13:33,445 - shipping_chatbot - INFO - Starting preprocessing on 19218 rows
+2026-02-02 11:13:33,593 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-02-02 11:13:34,775 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-02-02 11:13:35,160 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-02-02 11:13:36,365 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-02-02 11:13:36,380 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-02-02 11:13:36,383 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-02-02 11:13:36,472 - shipping_chatbot - INFO - Pre-processing finished - 19218 rows remain
+2026-02-02 11:13:43,028 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted: container=JXLU6398308, po=None, obl=JXLU6398308
+2026-02-02 11:13:43,036 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Extracted load_port: 'None'
+2026-02-02 11:13:43,044 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] Time window: 2026-02-02 00:00:00 to 2026-02-08 00:00:00 (next 7 days (default))
+2026-02-02 11:13:43,172 - shipping_chatbot - INFO - [get_containers_departed_from_load_port] After date filter: 0 rows matched
+2026-02-02 11:17:26,294 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-02-02 11:17:26,294 - shipping_chatbot - INFO - Agent created with 58 tools
+2026-02-02 11:17:26,294 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-02-02 11:20:50,763 - shipping_chatbot - INFO - User_Query: Has my container JXLU6398308 left the origin port?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-02-02 11:20:50,763 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Has my container JXLU6398308 left the origin port?', length: 50
+2026-02-02 11:20:50,763 - shipping_chatbot - INFO - [DEBUG] q_lower: 'has my container jxlu6398308 left the origin port?'
+2026-02-02 11:20:50,763 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-02-02 11:21:10,593 - shipping_chatbot - INFO - Fetched 19218 rows
+2026-02-02 11:21:10,598 - shipping_chatbot - INFO - Starting preprocessing on 19218 rows
+2026-02-02 11:21:10,702 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-02-02 11:21:11,378 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-02-02 11:21:11,641 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-02-02 11:21:12,438 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-02-02 11:21:12,440 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-02-02 11:21:12,444 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-02-02 11:21:12,494 - shipping_chatbot - INFO - Pre-processing finished - 19218 rows remain
+2026-02-02 11:26:22,512 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-02-02 11:26:22,518 - shipping_chatbot - INFO - Agent created with 58 tools
+2026-02-02 11:26:22,518 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-02-02 11:27:19,182 - shipping_chatbot - INFO - User_Query: Has my container JXLU6398308 left the origin port?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-02-02 11:27:19,182 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Has my container JXLU6398308 left the origin port?', length: 50
+2026-02-02 11:27:19,182 - shipping_chatbot - INFO - [DEBUG] q_lower: 'has my container jxlu6398308 left the origin port?'
+2026-02-02 11:27:19,188 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-02-02 11:27:40,171 - shipping_chatbot - INFO - Fetched 19218 rows
+2026-02-02 11:27:40,179 - shipping_chatbot - INFO - Starting preprocessing on 19218 rows
+2026-02-02 11:27:40,336 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-02-02 11:27:41,314 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-02-02 11:27:41,552 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-02-02 11:27:42,699 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-02-02 11:27:42,703 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-02-02 11:27:42,705 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-02-02 11:27:42,787 - shipping_chatbot - INFO - Pre-processing finished - 19218 rows remain
+2026-02-02 11:43:11,359 - shipping_chatbot - INFO - User_Query: Show total shipments delivered in the last 15 days., c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-02-02 11:43:11,359 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Show total shipments delivered in the last 15 days.', length: 51
+2026-02-02 11:43:11,359 - shipping_chatbot - INFO - [DEBUG] q_lower: 'show total shipments delivered in the last 15 days.'
+2026-02-02 11:43:16,707 - shipping_chatbot - INFO - Processing natural language query: Count total shipments where delivery_date_to_consignee is within the last 15 days
+2026-02-02 11:43:22,193 - shipping_chatbot - ERROR - Failed to process natural language query: 1 validation error for SQLDatabaseToolkit
+db
+  instance of SQLDatabase expected (type=type_error.arbitrary_type; expected_arbitrary_type=SQLDatabase)
+Traceback (most recent call last):
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\agents\tools.py", line 10296, in sql_query_tool
+    sql_agent = initialize_sql_agent()
+                ^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\agents\azure_agent.py", line 100, in initialize_sql_agent
+    sql_agent_executor = create_sql_agent(
+                         ^^^^^^^^^^^^^^^^^
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\venv\Lib\site-packages\langchain_community\agent_toolkits\sql\base.py", line 139, in create_sql_agent
+    toolkit = toolkit or SQLDatabaseToolkit(llm=llm, db=db)  # type: ignore[arg-type]
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\venv\Lib\site-packages\pydantic\v1\main.py", line 347, in __init__
+    raise validation_error
+pydantic.v1.error_wrappers.ValidationError: 1 validation error for SQLDatabaseToolkit
+db
+  instance of SQLDatabase expected (type=type_error.arbitrary_type; expected_arbitrary_type=SQLDatabase)
+2026-02-02 11:45:21,214 - shipping_chatbot - INFO - User_Query: Show total shipments delivered in the last 15 days., c_codes: ['0000866']
+2026-02-02 11:45:21,214 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Show total shipments delivered in the last 15 days.', length: 51
+2026-02-02 11:45:21,214 - shipping_chatbot - INFO - [DEBUG] q_lower: 'show total shipments delivered in the last 15 days.'
+2026-02-02 11:46:01,511 - shipping_chatbot - INFO - User_Query: Show total shipments delivered in the last 15 days., c_codes: ['0000866']
+2026-02-02 11:46:01,511 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Show total shipments delivered in the last 15 days.', length: 51
+2026-02-02 11:46:01,511 - shipping_chatbot - INFO - [DEBUG] q_lower: 'show total shipments delivered in the last 15 days.'
+2026-02-02 11:46:06,125 - shipping_chatbot - INFO - Processing natural language query: Count total shipments where delivery_date_to_consignee is within the last 15 days
+2026-02-02 11:46:11,512 - shipping_chatbot - ERROR - Failed to process natural language query: 1 validation error for SQLDatabaseToolkit
+db
+  instance of SQLDatabase expected (type=type_error.arbitrary_type; expected_arbitrary_type=SQLDatabase)
+Traceback (most recent call last):
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\agents\tools.py", line 10296, in sql_query_tool
+    sql_agent = initialize_sql_agent()
+                ^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\agents\azure_agent.py", line 100, in initialize_sql_agent
+    sql_agent_executor = create_sql_agent(
+                         ^^^^^^^^^^^^^^^^^
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\venv\Lib\site-packages\langchain_community\agent_toolkits\sql\base.py", line 139, in create_sql_agent
+    toolkit = toolkit or SQLDatabaseToolkit(llm=llm, db=db)  # type: ignore[arg-type]
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\venv\Lib\site-packages\pydantic\v1\main.py", line 347, in __init__
+    raise validation_error
+pydantic.v1.error_wrappers.ValidationError: 1 validation error for SQLDatabaseToolkit
+db
+  instance of SQLDatabase expected (type=type_error.arbitrary_type; expected_arbitrary_type=SQLDatabase)
+2026-02-02 11:46:14,194 - shipping_chatbot - INFO - [get_containers_at_dp_not_fd] Query: 'containers delivered in the last 15 days'
+2026-02-02 11:46:14,277 - shipping_chatbot - INFO - [get_containers_at_dp_not_fd] Loaded 2074 rows
+2026-02-02 11:46:14,295 - shipping_chatbot - INFO - [get_containers_at_dp_not_fd] Found 109 containers at DP but not at FD
+2026-02-02 12:21:51,173 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-02-02 12:21:51,173 - shipping_chatbot - INFO - Agent created with 58 tools
+2026-02-02 12:21:51,173 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-02-02 12:22:00,409 - shipping_chatbot - INFO - User_Query: Show total shipments delivered in the last 15 days., c_codes: ['0000866']
+2026-02-02 12:22:00,409 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Show total shipments delivered in the last 15 days.', length: 51
+2026-02-02 12:22:00,417 - shipping_chatbot - INFO - [DEBUG] q_lower: 'show total shipments delivered in the last 15 days.'
+2026-02-02 12:22:00,417 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-02-02 12:22:16,991 - shipping_chatbot - INFO - Fetched 19218 rows
+2026-02-02 12:22:17,002 - shipping_chatbot - INFO - Starting preprocessing on 19218 rows
+2026-02-02 12:22:17,167 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-02-02 12:22:18,179 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-02-02 12:22:18,535 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-02-02 12:22:19,312 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-02-02 12:22:19,312 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-02-02 12:22:19,312 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-02-02 12:22:19,378 - shipping_chatbot - INFO - Pre-processing finished - 19218 rows remain
+2026-02-02 12:22:23,511 - shipping_chatbot - INFO - [analyze_data_with_pandas] Query: 'Count total shipments with delivery_date_to_consignee in the last 15 days'
+2026-02-02 12:22:23,524 - shipping_chatbot - INFO - [analyze_data_with_pandas] Time period: 2026-01-19 00:00:00 to 2026-02-02 00:00:00 (last 15 days)
+2026-02-02 12:29:21,070 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-02-02 12:29:21,074 - shipping_chatbot - INFO - Agent created with 58 tools
+2026-02-02 12:29:21,074 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-02-02 12:30:03,890 - shipping_chatbot - INFO - User_Query: Show total shipments delivered in the last 15 days., c_codes: ['0000866']
+2026-02-02 12:30:03,890 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Show total shipments delivered in the last 15 days.', length: 51
+2026-02-02 12:30:03,890 - shipping_chatbot - INFO - [DEBUG] q_lower: 'show total shipments delivered in the last 15 days.'
+2026-02-02 12:30:03,890 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-02-02 12:30:43,204 - shipping_chatbot - INFO - Fetched 19218 rows
+2026-02-02 12:30:43,220 - shipping_chatbot - INFO - Starting preprocessing on 19218 rows
+2026-02-02 12:30:43,373 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-02-02 12:30:44,303 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-02-02 12:30:44,639 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-02-02 12:30:45,382 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-02-02 12:30:45,382 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-02-02 12:30:45,382 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-02-02 12:30:45,424 - shipping_chatbot - INFO - Pre-processing finished - 19218 rows remain
+2026-02-02 12:30:48,953 - shipping_chatbot - INFO - Processing natural language query: total shipments delivered in the last 15 days
+2026-02-02 12:30:52,268 - shipping_chatbot - ERROR - Failed to process natural language query: 1 validation error for SQLDatabaseToolkit
+db
+  instance of SQLDatabase expected (type=type_error.arbitrary_type; expected_arbitrary_type=SQLDatabase)
+Traceback (most recent call last):
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\agents\tools.py", line 10541, in sql_query_tool
+    sql_agent = initialize_sql_agent()
+                ^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\agents\azure_agent.py", line 100, in initialize_sql_agent
+    sql_agent_executor = create_sql_agent(
+                         ^^^^^^^^^^^^^^^^^
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\venv\Lib\site-packages\langchain_community\agent_toolkits\sql\base.py", line 139, in create_sql_agent
+    toolkit = toolkit or SQLDatabaseToolkit(llm=llm, db=db)  # type: ignore[arg-type]
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\venv\Lib\site-packages\pydantic\v1\main.py", line 347, in __init__
+    raise validation_error
+pydantic.v1.error_wrappers.ValidationError: 1 validation error for SQLDatabaseToolkit
+db
+  instance of SQLDatabase expected (type=type_error.arbitrary_type; expected_arbitrary_type=SQLDatabase)
+2026-02-02 12:31:12,005 - shipping_chatbot - INFO - Router: Set consignee codes ['0000866'] for query: Show total shipments delivered in the last 15 days.
+2026-02-02 12:31:12,114 - shipping_chatbot - INFO - Consignee filtering validated: 2074 rows for codes ['0000866']
+2026-02-02 12:31:12,130 - shipping_chatbot - INFO - Router: Upcoming arrivals route for query: Show total shipments delivered in the last 15 days.
+2026-02-02 12:31:12,138 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: last 15 days, Dates: 2026-01-19 to 2026-02-02, is_past=False
+2026-02-02 12:31:12,281 - shipping_chatbot - INFO - [get_upcoming_arrivals] Extracted 46 known port codes from dataset
+2026-02-02 12:31:12,281 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample known codes: ['USAJJ', 'USDFW', 'USMJB', 'USATL', 'USDAL', 'USBNA', 'CAVAN', 'USTCN', 'USSPX', 'DENSS', 'USLBA', 'USMIA', 'USTIW', 'USNYC', 'USSAV', 'CNXMN', 'USJFK', 'CAPRR', 'USHOU', 'USEWR']
+2026-02-02 12:31:12,281 - shipping_chatbot - INFO - [get_upcoming_arrivals] Checking for port code after preposition in query: 'SHOW TOTAL SHIPMENTS DELIVERED IN THE LAST 15 DAYS.'
+2026-02-02 12:31:12,281 - shipping_chatbot - INFO - [get_upcoming_arrivals] prep_code_match found: False
+2026-02-02 12:31:26,905 - shipping_chatbot - INFO - User_Query: Show total shipments delivered in the last 15 days., c_codes: ['0000866']
+2026-02-02 12:31:26,906 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Show total shipments delivered in the last 15 days.', length: 51
+2026-02-02 12:31:26,906 - shipping_chatbot - INFO - [DEBUG] q_lower: 'show total shipments delivered in the last 15 days.'
+2026-02-02 12:31:30,225 - shipping_chatbot - INFO - [analyze_data_with_pandas] Query: 'total shipments delivered in the last 15 days'
+2026-02-02 12:31:30,225 - shipping_chatbot - INFO - [analyze_data_with_pandas] Time period: 2026-01-19 00:00:00 to 2026-02-02 00:00:00 (last 15 days)
+2026-02-02 12:31:30,225 - shipping_chatbot - INFO - [analyze_data_with_pandas] Initial dataset: 2074 rows
+2026-02-02 12:31:30,225 - shipping_chatbot - INFO - [analyze_data_with_pandas] Action detected: delivered, Date column: delivery_date_to_consignee
+2026-02-02 12:31:30,225 - shipping_chatbot - INFO - [analyze_data_with_pandas] Date column 'delivery_date_to_consignee': 1601 non-null values before filter
+2026-02-02 12:31:30,225 - shipping_chatbot - INFO - [analyze_data_with_pandas] After time filter on delivery_date_to_consignee: 44 rows (filtered from 2026-01-19 to 2026-02-02)
+2026-02-02 12:36:21,000 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-02-02 12:36:21,000 - shipping_chatbot - INFO - Agent created with 58 tools
+2026-02-02 12:36:21,000 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-02-02 12:36:27,125 - shipping_chatbot - INFO - User_Query: Show total shipments delivered in the last 15 days., c_codes: ['0000866']
+2026-02-02 12:36:27,125 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Show total shipments delivered in the last 15 days.', length: 51
+2026-02-02 12:36:27,125 - shipping_chatbot - INFO - [DEBUG] q_lower: 'show total shipments delivered in the last 15 days.'
+2026-02-02 12:36:27,125 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-02-02 12:36:44,059 - shipping_chatbot - INFO - Fetched 19218 rows
+2026-02-02 12:36:44,063 - shipping_chatbot - INFO - Starting preprocessing on 19218 rows
+2026-02-02 12:36:44,186 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-02-02 12:36:45,053 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-02-02 12:36:45,321 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-02-02 12:36:46,160 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-02-02 12:36:46,162 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-02-02 12:36:46,162 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-02-02 12:36:46,193 - shipping_chatbot - INFO - Pre-processing finished - 19218 rows remain
+2026-02-02 12:36:48,996 - shipping_chatbot - INFO - Processing natural language query: total shipments delivered in the last 15 days
+2026-02-02 12:36:52,066 - shipping_chatbot - ERROR - Failed to process natural language query: 1 validation error for SQLDatabaseToolkit
+db
+  instance of SQLDatabase expected (type=type_error.arbitrary_type; expected_arbitrary_type=SQLDatabase)
+Traceback (most recent call last):
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\agents\tools.py", line 10595, in sql_query_tool
+    sql_agent = initialize_sql_agent()
+                ^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\agents\azure_agent.py", line 100, in initialize_sql_agent
+    sql_agent_executor = create_sql_agent(
+                         ^^^^^^^^^^^^^^^^^
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\venv\Lib\site-packages\langchain_community\agent_toolkits\sql\base.py", line 139, in create_sql_agent
+    toolkit = toolkit or SQLDatabaseToolkit(llm=llm, db=db)  # type: ignore[arg-type]
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\venv\Lib\site-packages\pydantic\v1\main.py", line 347, in __init__
+    raise validation_error
+pydantic.v1.error_wrappers.ValidationError: 1 validation error for SQLDatabaseToolkit
+db
+  instance of SQLDatabase expected (type=type_error.arbitrary_type; expected_arbitrary_type=SQLDatabase)
+2026-02-02 12:36:53,937 - shipping_chatbot - INFO - Processing natural language query: count of shipments where actual time of arrival at discharge port (ata_dp) is within the last 15 days from today
+2026-02-02 12:36:57,252 - shipping_chatbot - ERROR - Failed to process natural language query: 1 validation error for SQLDatabaseToolkit
+db
+  instance of SQLDatabase expected (type=type_error.arbitrary_type; expected_arbitrary_type=SQLDatabase)
+Traceback (most recent call last):
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\agents\tools.py", line 10595, in sql_query_tool
+    sql_agent = initialize_sql_agent()
+                ^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\agents\azure_agent.py", line 100, in initialize_sql_agent
+    sql_agent_executor = create_sql_agent(
+                         ^^^^^^^^^^^^^^^^^
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\venv\Lib\site-packages\langchain_community\agent_toolkits\sql\base.py", line 139, in create_sql_agent
+    toolkit = toolkit or SQLDatabaseToolkit(llm=llm, db=db)  # type: ignore[arg-type]
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\chatbot16012026\StlnkWebNprdChatV2\venv\Lib\site-packages\pydantic\v1\main.py", line 347, in __init__
+    raise validation_error
+pydantic.v1.error_wrappers.ValidationError: 1 validation error for SQLDatabaseToolkit
+db
+  instance of SQLDatabase expected (type=type_error.arbitrary_type; expected_arbitrary_type=SQLDatabase)
+2026-02-02 12:36:58,198 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: last 15 days, Dates: 2026-01-19 to 2026-02-02, is_past=False
+2026-02-02 12:36:58,270 - shipping_chatbot - INFO - [get_upcoming_arrivals] Extracted 46 known port codes from dataset
+2026-02-02 12:36:58,270 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample known codes: ['USCMH', 'USIAH', 'USWOS', 'USCHI', 'USLBA', 'USSAN', 'USLAX', 'USMIA', 'USMJB', 'USORD', 'CNXMN', 'USMEM', 'USSAV', 'USNYC', 'CAVAN', 'USPDX', 'HKHKG', 'USLGB', 'USHIB', 'USAJJ']
+2026-02-02 12:36:58,271 - shipping_chatbot - INFO - [get_upcoming_arrivals] Checking for port code after preposition in query: 'CONTAINERS ARRIVED IN LAST 15 DAYS'
+2026-02-02 12:36:58,272 - shipping_chatbot - INFO - [get_upcoming_arrivals] prep_code_match found: False
+2026-02-02 12:37:01,477 - shipping_chatbot - INFO - User_Query: Show total shipments delivered in the last 15 days., c_codes: ['0000866']
+2026-02-02 12:37:01,479 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Show total shipments delivered in the last 15 days.', length: 51
+2026-02-02 12:37:01,479 - shipping_chatbot - INFO - [DEBUG] q_lower: 'show total shipments delivered in the last 15 days.'
+2026-02-02 12:37:02,724 - shipping_chatbot - INFO - [analyze_data_with_pandas] Query: 'Count total shipments with delivery_date_to_consignee in the last 15 days'
+2026-02-02 12:37:02,726 - shipping_chatbot - INFO - [analyze_data_with_pandas] Time period: 2026-01-19 00:00:00 to 2026-02-02 00:00:00 (last 15 days)
+2026-02-02 12:37:02,727 - shipping_chatbot - INFO - [analyze_data_with_pandas] Initial dataset: 2074 rows
+2026-02-02 12:37:02,727 - shipping_chatbot - INFO - [analyze_data_with_pandas] Action detected: delivered, Date column: delivery_date_to_consignee
+2026-02-02 12:37:02,730 - shipping_chatbot - INFO - [analyze_data_with_pandas] Date column 'delivery_date_to_consignee': 1601 non-null values before filter
+2026-02-02 12:37:02,731 - shipping_chatbot - INFO - [analyze_data_with_pandas] After time filter on delivery_date_to_consignee: 44 rows (filtered from 2026-01-19 to 2026-02-02)
+2026-02-02 12:37:02,734 - shipping_chatbot - INFO - [analyze_data_with_pandas] Returning 44 detailed records
+2026-02-02 12:47:10,652 - shipping_chatbot - INFO - User_Query: Which containers are ready for delivery to my warehouse in next 7days?., c_codes: ['0000866']
+2026-02-02 12:47:10,652 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers are ready for delivery to my warehouse in next 7days?.', length: 71
+2026-02-02 12:47:10,652 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers are ready for delivery to my warehouse in next 7days?.'
+2026-02-02 12:47:13,759 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: next 7 days, Dates: 2026-02-02 to 2026-02-08, is_past=False
+2026-02-02 12:47:13,890 - shipping_chatbot - INFO - [get_upcoming_arrivals] Extracted 46 known port codes from dataset
+2026-02-02 12:47:13,890 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample known codes: ['USCMH', 'USIAH', 'USWOS', 'USCHI', 'USLBA', 'USSAN', 'USLAX', 'USMIA', 'USMJB', 'USORD', 'CNXMN', 'USMEM', 'USSAV', 'USNYC', 'CAVAN', 'USPDX', 'HKHKG', 'USLGB', 'USHIB', 'USAJJ']
+2026-02-02 12:47:13,890 - shipping_chatbot - INFO - [get_upcoming_arrivals] Checking for port code after preposition in query: 'CONTAINERS ARRIVING AT FINAL DESTINATION IN NEXT 7 DAYS'
+2026-02-02 12:47:13,890 - shipping_chatbot - INFO - [get_upcoming_arrivals] prep_code_match found: True
+2026-02-02 12:47:13,890 - shipping_chatbot - INFO - [get_upcoming_arrivals] Matched port code: FINAL
+2026-02-02 12:47:13,890 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found port code after preposition: FINAL
+2026-02-02 12:47:13,890 - shipping_chatbot - INFO - [get_upcoming_arrivals] Is FINAL in known_codes? False
+2026-02-02 12:47:13,890 - shipping_chatbot - WARNING - [get_upcoming_arrivals] ✗ Port code 'FINAL' found in query but NO MATCHES in dataset! This port code may not exist in the data for this consignee. location_found will remain False.
+2026-02-02 12:47:13,907 - shipping_chatbot - WARNING - [get_upcoming_arrivals] Query contains port code 'FINAL' but no matches found in dataset. Returning empty result instead of all containers.
+2026-02-02 12:47:37,982 - shipping_chatbot - INFO - User_Query: Which containers are ready for delivery to my warehouse in next 7 days?., c_codes: ['0000866']
+2026-02-02 12:47:37,982 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers are ready for delivery to my warehouse in next 7 days?.', length: 72
+2026-02-02 12:47:37,983 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers are ready for delivery to my warehouse in next 7 days?.'
+2026-02-02 12:47:40,865 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: next 7 days, Dates: 2026-02-02 to 2026-02-08, is_past=False
+2026-02-02 12:47:41,047 - shipping_chatbot - INFO - [get_upcoming_arrivals] Extracted 46 known port codes from dataset
+2026-02-02 12:47:41,047 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample known codes: ['USCMH', 'USIAH', 'USWOS', 'USCHI', 'USLBA', 'USSAN', 'USLAX', 'USMIA', 'USMJB', 'USORD', 'CNXMN', 'USMEM', 'USSAV', 'USNYC', 'CAVAN', 'USPDX', 'HKHKG', 'USLGB', 'USHIB', 'USAJJ']
+2026-02-02 12:47:41,047 - shipping_chatbot - INFO - [get_upcoming_arrivals] Checking for port code after preposition in query: 'CONTAINERS ARRIVING AT FINAL DESTINATION IN NEXT 7 DAYS'
+2026-02-02 12:47:41,047 - shipping_chatbot - INFO - [get_upcoming_arrivals] prep_code_match found: True
+2026-02-02 12:47:41,047 - shipping_chatbot - INFO - [get_upcoming_arrivals] Matched port code: FINAL
+2026-02-02 12:47:41,047 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found port code after preposition: FINAL
+2026-02-02 12:47:41,047 - shipping_chatbot - INFO - [get_upcoming_arrivals] Is FINAL in known_codes? False
+2026-02-02 12:47:41,064 - shipping_chatbot - WARNING - [get_upcoming_arrivals] ✗ Port code 'FINAL' found in query but NO MATCHES in dataset! This port code may not exist in the data for this consignee. location_found will remain False.
+2026-02-02 12:47:41,064 - shipping_chatbot - WARNING - [get_upcoming_arrivals] Query contains port code 'FINAL' but no matches found in dataset. Returning empty result instead of all containers.
+2026-02-02 12:48:35,491 - shipping_chatbot - INFO - User_Query: Which containers are ready for delivery to my warehouse in next 7 days?., c_codes: ['0000866']
+2026-02-02 12:48:35,493 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers are ready for delivery to my warehouse in next 7 days?.', length: 72
+2026-02-02 12:48:35,493 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers are ready for delivery to my warehouse in next 7 days?.'
+2026-02-02 12:48:38,528 - shipping_chatbot - INFO - [get_upcoming_arrivals] Period: next 7 days, Dates: 2026-02-02 to 2026-02-08, is_past=False
+2026-02-02 12:48:38,681 - shipping_chatbot - INFO - [get_upcoming_arrivals] Extracted 46 known port codes from dataset
+2026-02-02 12:48:38,681 - shipping_chatbot - INFO - [get_upcoming_arrivals] Sample known codes: ['USCMH', 'USIAH', 'USWOS', 'USCHI', 'USLBA', 'USSAN', 'USLAX', 'USMIA', 'USMJB', 'USORD', 'CNXMN', 'USMEM', 'USSAV', 'USNYC', 'CAVAN', 'USPDX', 'HKHKG', 'USLGB', 'USHIB', 'USAJJ']
+2026-02-02 12:48:38,681 - shipping_chatbot - INFO - [get_upcoming_arrivals] Checking for port code after preposition in query: 'CONTAINERS ARRIVING AT FINAL DESTINATION IN NEXT 7 DAYS'
+2026-02-02 12:48:38,682 - shipping_chatbot - INFO - [get_upcoming_arrivals] prep_code_match found: True
+2026-02-02 12:48:38,682 - shipping_chatbot - INFO - [get_upcoming_arrivals] Matched port code: FINAL
+2026-02-02 12:48:38,682 - shipping_chatbot - INFO - [get_upcoming_arrivals] Found port code after preposition: FINAL
+2026-02-02 12:48:38,682 - shipping_chatbot - INFO - [get_upcoming_arrivals] Is FINAL in known_codes? False
+2026-02-02 12:48:38,691 - shipping_chatbot - WARNING - [get_upcoming_arrivals] ✗ Port code 'FINAL' found in query but NO MATCHES in dataset! This port code may not exist in the data for this consignee. location_found will remain False.
+2026-02-02 12:48:38,692 - shipping_chatbot - WARNING - [get_upcoming_arrivals] Query contains port code 'FINAL' but no matches found in dataset. Returning empty result instead of all containers.
+2026-02-02 12:50:07,270 - shipping_chatbot - INFO - User_Query: Can you show me the containers that are delayed by 7 days and arriving at Los Angeles?, c_codes: ['0000866']
+2026-02-02 12:50:07,270 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Can you show me the containers that are delayed by 7 days and arriving at Los Angeles?', length: 86
+2026-02-02 12:50:07,270 - shipping_chatbot - INFO - [DEBUG] q_lower: 'can you show me the containers that are delayed by 7 days and arriving at los angeles?'
+2026-02-02 12:50:10,382 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Query: 'containers delayed by 7 days arriving at USLAX'
+2026-02-02 12:50:10,519 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Loaded 2074 rows (consignee filter: applied)
+2026-02-02 12:50:10,522 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Found 53 containers not arrived with passed ETA
+2026-02-02 12:50:10,533 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Delay filter: == 7 days
+2026-02-02 12:50:10,536 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] After delay filter: 0 containers (threshold: == 7 days)
+2026-02-02 12:52:04,752 - shipping_chatbot - INFO - User_Query: Please provide a list of containers delayed by 7 days for Los Angeles arrivals.?, c_codes: ['0000866']
+2026-02-02 12:52:04,753 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Please provide a list of containers delayed by 7 days for Los Angeles arrivals.?', length: 80
+2026-02-02 12:52:04,753 - shipping_chatbot - INFO - [DEBUG] q_lower: 'please provide a list of containers delayed by 7 days for los angeles arrivals.?'
+2026-02-02 12:52:07,991 - shipping_chatbot - INFO - [get_delayed_containers] Query: 'containers delayed by 7 days at USLAX'
+2026-02-02 12:52:08,099 - shipping_chatbot - INFO - [get_delayed_containers] Loaded 2074 rows (consignee filter: applied)
+2026-02-02 12:52:08,108 - shipping_chatbot - INFO - [get_delayed_containers] Delay filter: == 7 days
+2026-02-02 12:52:08,111 - shipping_chatbot - INFO - [get_delayed_containers] Port filter: code=USLAX, name=None, before_filter=2 rows
+2026-02-02 12:52:08,111 - shipping_chatbot - INFO - [get_delayed_containers] Port filter applied: after_filter=0 rows
+2026-02-02 12:55:26,576 - shipping_chatbot - INFO - User_Query: Can you show me the containers that are delayed by 7 days and arriving at Los Angeles?, c_codes: ['0000866']
+2026-02-02 12:55:26,576 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Can you show me the containers that are delayed by 7 days and arriving at Los Angeles?', length: 86
+2026-02-02 12:55:26,576 - shipping_chatbot - INFO - [DEBUG] q_lower: 'can you show me the containers that are delayed by 7 days and arriving at los angeles?'
+2026-02-02 12:55:29,659 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Query: 'containers delayed by 7 days arriving at USLAX'
+2026-02-02 12:55:29,714 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Loaded 2074 rows (consignee filter: applied)
+2026-02-02 12:55:29,714 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Found 53 containers not arrived with passed ETA
+2026-02-02 12:55:29,714 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Delay filter: == 7 days
+2026-02-02 12:55:29,714 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] After delay filter: 0 containers (threshold: == 7 days)
+2026-02-02 12:55:48,642 - shipping_chatbot - INFO - User_Query: Can you show me the containers that are delayed by 3 days and arriving at Los Angeles?, c_codes: ['0000866']
+2026-02-02 12:55:48,642 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Can you show me the containers that are delayed by 3 days and arriving at Los Angeles?', length: 86
+2026-02-02 12:55:48,642 - shipping_chatbot - INFO - [DEBUG] q_lower: 'can you show me the containers that are delayed by 3 days and arriving at los angeles?'
+2026-02-02 12:55:51,849 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Query: 'containers delayed by 3 days arriving at USLAX'
+2026-02-02 12:55:51,917 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Loaded 2074 rows (consignee filter: applied)
+2026-02-02 12:55:51,917 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Found 53 containers not arrived with passed ETA
+2026-02-02 12:55:51,917 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Delay filter: == 3 days
+2026-02-02 12:55:51,917 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] After delay filter: 0 containers (threshold: == 3 days)
+2026-02-02 12:59:38,090 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-02-02 12:59:38,090 - shipping_chatbot - INFO - Agent created with 58 tools
+2026-02-02 12:59:38,090 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-02-02 13:00:15,061 - shipping_chatbot - INFO - User_Query: Please provide a list of containers delayed by 7 days for Los Angeles arrivals., c_codes: ['0000866']
+2026-02-02 13:00:15,061 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Please provide a list of containers delayed by 7 days for Los Angeles arrivals.', length: 79
+2026-02-02 13:00:15,061 - shipping_chatbot - INFO - [DEBUG] q_lower: 'please provide a list of containers delayed by 7 days for los angeles arrivals.'
+2026-02-02 13:00:15,061 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-02-02 13:00:29,241 - shipping_chatbot - INFO - Fetched 19218 rows
+2026-02-02 13:00:29,241 - shipping_chatbot - INFO - Starting preprocessing on 19218 rows
+2026-02-02 13:00:29,358 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-02-02 13:00:30,271 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-02-02 13:00:30,504 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-02-02 13:00:31,458 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-02-02 13:00:31,464 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-02-02 13:00:31,464 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-02-02 13:00:31,524 - shipping_chatbot - INFO - Pre-processing finished - 19218 rows remain
+2026-02-02 13:00:34,374 - shipping_chatbot - INFO - [get_delayed_containers] Query: 'containers delayed by 7 days at USLAX'
+2026-02-02 13:00:34,438 - shipping_chatbot - INFO - [get_delayed_containers] Loaded 2074 rows (consignee filter: applied)
+2026-02-02 13:00:34,445 - shipping_chatbot - INFO - [get_delayed_containers] Delay filter: == 7 days
+2026-02-02 13:00:34,446 - shipping_chatbot - INFO - [get_delayed_containers] Port filter: code=USLAX, name=None, before_filter=2 rows
+2026-02-02 13:00:34,447 - shipping_chatbot - INFO - [get_delayed_containers] Port filter applied: after_filter=0 rows
+2026-02-02 14:18:52,737 - shipping_chatbot - INFO - User_Query: Which containers are running 7 days late and heading to Los Angeles?, c_codes: ['0000866']
+2026-02-02 14:18:52,737 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers are running 7 days late and heading to Los Angeles?', length: 68
+2026-02-02 14:18:52,737 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers are running 7 days late and heading to los angeles?'
+2026-02-02 14:18:55,696 - shipping_chatbot - INFO - [get_delayed_containers] Query: 'containers delayed by 7 days at USLAX'
+2026-02-02 14:18:55,769 - shipping_chatbot - INFO - [get_delayed_containers] Loaded 2074 rows (consignee filter: applied)
+2026-02-02 14:18:55,774 - shipping_chatbot - INFO - [get_delayed_containers] Delay filter: == 7 days
+2026-02-02 14:18:55,774 - shipping_chatbot - INFO - [get_delayed_containers] Port filter: code=USLAX, name=None, before_filter=2 rows
+2026-02-02 14:18:55,778 - shipping_chatbot - INFO - [get_delayed_containers] Port filter applied: after_filter=0 rows
+2026-02-02 14:21:32,804 - shipping_chatbot - INFO - User_Query: Kindly share containers that are delayed by 7 days with destination Los Angeles., c_codes: ['0000866']
+2026-02-02 14:21:32,804 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Kindly share containers that are delayed by 7 days with destination Los Angeles.', length: 80
+2026-02-02 14:21:32,804 - shipping_chatbot - INFO - [DEBUG] q_lower: 'kindly share containers that are delayed by 7 days with destination los angeles.'
+2026-02-02 14:21:35,601 - shipping_chatbot - INFO - [get_delayed_containers] Query: 'containers delayed by 7 days at USLAX'
+2026-02-02 14:21:35,678 - shipping_chatbot - INFO - [get_delayed_containers] Loaded 2074 rows (consignee filter: applied)
+2026-02-02 14:21:35,678 - shipping_chatbot - INFO - [get_delayed_containers] Delay filter: == 7 days
+2026-02-02 14:21:35,692 - shipping_chatbot - INFO - [get_delayed_containers] Port filter: code=USLAX, name=None, before_filter=2 rows
+2026-02-02 14:21:35,695 - shipping_chatbot - INFO - [get_delayed_containers] Port filter applied: after_filter=0 rows
+2026-02-02 14:21:54,635 - shipping_chatbot - INFO - Router: Set consignee codes ['0000866'] for query: Kindly share containers that are delayed by 7 days with destination Los Angeles.
+2026-02-02 14:21:54,718 - shipping_chatbot - INFO - Consignee filtering validated: 2074 rows for codes ['0000866']
+2026-02-02 14:21:54,718 - shipping_chatbot - INFO - Router: Delayed containers route for query: Kindly share containers that are delayed by 7 days with destination Los Angeles.
+2026-02-02 14:21:54,718 - shipping_chatbot - INFO - [get_delayed_containers] Query: 'Kindly share containers that are delayed by 7 days with destination Los Angeles.'
+2026-02-02 14:21:54,804 - shipping_chatbot - INFO - [get_delayed_containers] Loaded 2074 rows (consignee filter: applied)
+2026-02-02 14:21:54,810 - shipping_chatbot - INFO - [get_delayed_containers] Delay filter: == 7 days
+2026-02-02 14:21:54,811 - shipping_chatbot - INFO - [get_delayed_containers] Port filter: code=KINDLY, name=None, before_filter=2 rows
+2026-02-02 14:21:54,813 - shipping_chatbot - INFO - [get_delayed_containers] Port filter applied: after_filter=0 rows
+2026-02-02 14:22:01,060 - shipping_chatbot - INFO - User_Query: Kindly share containers that are delayed by 7 days with destination Los Angeles., c_codes: ['0000866']
+2026-02-02 14:22:01,060 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Kindly share containers that are delayed by 7 days with destination Los Angeles.', length: 80
+2026-02-02 14:22:01,060 - shipping_chatbot - INFO - [DEBUG] q_lower: 'kindly share containers that are delayed by 7 days with destination los angeles.'
+2026-02-02 14:22:03,617 - shipping_chatbot - INFO - [get_delayed_containers] Query: 'containers delayed by 7 days at USLAX'
+2026-02-02 14:22:03,686 - shipping_chatbot - INFO - [get_delayed_containers] Loaded 2074 rows (consignee filter: applied)
+2026-02-02 14:22:03,692 - shipping_chatbot - INFO - [get_delayed_containers] Delay filter: == 7 days
+2026-02-02 14:22:03,694 - shipping_chatbot - INFO - [get_delayed_containers] Port filter: code=USLAX, name=None, before_filter=2 rows
+2026-02-02 14:22:03,696 - shipping_chatbot - INFO - [get_delayed_containers] Port filter applied: after_filter=0 rows
+2026-02-02 14:23:59,297 - shipping_chatbot - INFO - User_Query: Kindly share containers that are delayed by 7 days with destination Los Angeles., c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-02-02 14:23:59,297 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Kindly share containers that are delayed by 7 days with destination Los Angeles.', length: 80
+2026-02-02 14:23:59,297 - shipping_chatbot - INFO - [DEBUG] q_lower: 'kindly share containers that are delayed by 7 days with destination los angeles.'
+2026-02-02 14:24:02,309 - shipping_chatbot - INFO - [get_delayed_containers] Query: 'containers delayed by 7 days at USLAX'
+2026-02-02 14:24:02,418 - shipping_chatbot - INFO - [get_delayed_containers] Loaded 12760 rows (consignee filter: applied)
+2026-02-02 14:24:02,442 - shipping_chatbot - INFO - [get_delayed_containers] Delay filter: == 7 days
+2026-02-02 14:24:02,445 - shipping_chatbot - INFO - [get_delayed_containers] Port filter: code=USLAX, name=None, before_filter=131 rows
+2026-02-02 14:24:02,445 - shipping_chatbot - INFO - [get_delayed_containers] Port filter applied: after_filter=5 rows
+2026-02-02 14:25:53,197 - shipping_chatbot - INFO - User_Query: Can you show me the containers that are delayed by 7 days and arriving at Los Angeles?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-02-02 14:25:53,197 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Can you show me the containers that are delayed by 7 days and arriving at Los Angeles?', length: 86
+2026-02-02 14:25:53,197 - shipping_chatbot - INFO - [DEBUG] q_lower: 'can you show me the containers that are delayed by 7 days and arriving at los angeles?'
+2026-02-02 14:25:56,387 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Query: 'containers delayed by 7 days arriving at USLAX'
+2026-02-02 14:25:56,460 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Loaded 12760 rows (consignee filter: applied)
+2026-02-02 14:25:56,460 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Found 1487 containers not arrived with passed ETA
+2026-02-02 14:25:56,460 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Delay filter: == 7 days
+2026-02-02 14:25:56,468 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] After delay filter: 13 containers (threshold: == 7 days)
+2026-02-02 14:25:56,468 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Port filter: code=USLAX, name=None, before_filter=13 rows
+2026-02-02 14:25:56,469 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Port filter applied: after_filter=0 rows
+2026-02-02 14:25:58,559 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Query: 'containers delayed by exactly 7 days arriving at USLAX'
+2026-02-02 14:25:58,619 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Loaded 12760 rows (consignee filter: applied)
+2026-02-02 14:25:58,622 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Found 1487 containers not arrived with passed ETA
+2026-02-02 14:25:58,625 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Delay filter: == 7 days
+2026-02-02 14:25:58,625 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] After delay filter: 13 containers (threshold: == 7 days)
+2026-02-02 14:25:58,626 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Port filter: code=USLAX, name=None, before_filter=13 rows
+2026-02-02 14:25:58,626 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Port filter applied: after_filter=0 rows
+2026-02-02 14:28:19,257 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-02-02 14:28:19,257 - shipping_chatbot - INFO - Agent created with 58 tools
+2026-02-02 14:28:19,257 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-02-02 14:32:53,625 - shipping_chatbot - INFO - User_Query: Which containers are running 7 days late and heading to Los Angeles?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-02-02 14:32:53,627 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers are running 7 days late and heading to Los Angeles?', length: 68
+2026-02-02 14:32:53,627 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers are running 7 days late and heading to los angeles?'
+2026-02-02 14:32:53,631 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-02-02 14:33:08,196 - shipping_chatbot - INFO - Fetched 19218 rows
+2026-02-02 14:33:08,200 - shipping_chatbot - INFO - Starting preprocessing on 19218 rows
+2026-02-02 14:33:08,307 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-02-02 14:33:08,857 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-02-02 14:33:09,040 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-02-02 14:33:09,645 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-02-02 14:33:09,645 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-02-02 14:33:09,645 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-02-02 14:33:09,683 - shipping_chatbot - INFO - Pre-processing finished - 19218 rows remain
+2026-02-02 14:33:13,047 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Query: 'containers delayed by 7 days arriving at USLAX'
+2026-02-02 14:33:13,153 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Loaded 12760 rows (consignee filter: applied)
+2026-02-02 14:33:13,161 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Found 1487 containers not arrived with passed ETA
+2026-02-02 14:33:13,166 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Delay filter: == 7 days
+2026-02-02 14:33:13,168 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] After delay filter: 13 containers (threshold: == 7 days)
+2026-02-02 14:33:13,169 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Port filter: code=USLAX, name=None, before_filter=13 rows
+2026-02-02 14:33:13,173 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Port filter applied: after_filter=0 rows
