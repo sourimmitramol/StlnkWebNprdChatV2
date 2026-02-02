@@ -5184,3 +5184,102 @@ db
 2026-02-02 14:33:13,168 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] After delay filter: 13 containers (threshold: == 7 days)
 2026-02-02 14:33:13,169 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Port filter: code=USLAX, name=None, before_filter=13 rows
 2026-02-02 14:33:13,173 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Port filter applied: after_filter=0 rows
+2026-02-02 14:46:50,823 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-02-02 14:46:50,824 - shipping_chatbot - INFO - Agent created with 58 tools
+2026-02-02 14:46:50,824 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-02-02 14:47:15,759 - shipping_chatbot - INFO - User_Query: Which containers are running 7 days late and heading to Los Angeles?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-02-02 14:47:15,759 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers are running 7 days late and heading to Los Angeles?', length: 68
+2026-02-02 14:47:15,759 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers are running 7 days late and heading to los angeles?'
+2026-02-02 14:47:15,759 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-02-02 14:47:31,183 - shipping_chatbot - INFO - Fetched 19218 rows
+2026-02-02 14:47:31,199 - shipping_chatbot - INFO - Starting preprocessing on 19218 rows
+2026-02-02 14:47:31,287 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-02-02 14:47:31,899 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-02-02 14:47:32,149 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-02-02 14:47:32,801 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-02-02 14:47:32,801 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-02-02 14:47:32,801 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-02-02 14:47:32,837 - shipping_chatbot - INFO - Pre-processing finished - 19218 rows remain
+2026-02-02 14:47:35,981 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Query: 'containers delayed by 7 days arriving at USLAX'
+2026-02-02 14:47:36,031 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Loaded 12760 rows (consignee filter: applied)
+2026-02-02 14:47:36,031 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Found 1487 containers not arrived with passed ETA
+2026-02-02 14:47:36,048 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Delay filter: == 7 days
+2026-02-02 14:47:36,050 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] After delay filter: 13 containers (threshold: == 7 days)
+2026-02-02 14:47:36,051 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Port filter: code=USLAX, name=None, before_filter=13 rows
+2026-02-02 14:47:36,053 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Port filter applied: after_filter=0 rows
+2026-02-02 14:47:38,432 - shipping_chatbot - INFO - [get_delayed_containers] Query: 'containers delayed by 7 days at USLAX'
+2026-02-02 14:47:38,499 - shipping_chatbot - INFO - [get_delayed_containers] Loaded 12760 rows (consignee filter: applied)
+2026-02-02 14:47:38,499 - shipping_chatbot - INFO - [get_delayed_containers] Delay filter: == 7 days
+2026-02-02 14:47:38,499 - shipping_chatbot - INFO - [get_delayed_containers] Port filter: code=USLAX, name=None, before_filter=131 rows
+2026-02-02 14:47:38,512 - shipping_chatbot - INFO - [get_delayed_containers] Port filter applied: after_filter=5 rows
+2026-02-02 14:48:09,075 - shipping_chatbot - INFO - User_Query: Which containers are running 7 days late and heading to Los Angeles?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-02-02 14:48:09,077 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers are running 7 days late and heading to Los Angeles?', length: 68
+2026-02-02 14:48:09,077 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers are running 7 days late and heading to los angeles?'
+2026-02-02 14:48:12,135 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Query: 'containers delayed by 7 days arriving at USLAX'
+2026-02-02 14:48:12,253 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Loaded 12760 rows (consignee filter: applied)
+2026-02-02 14:48:12,253 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Found 1487 containers not arrived with passed ETA
+2026-02-02 14:48:12,263 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Delay filter: == 7 days
+2026-02-02 14:48:12,265 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] After delay filter: 13 containers (threshold: == 7 days)
+2026-02-02 14:48:12,266 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Port filter: code=USLAX, name=None, before_filter=13 rows
+2026-02-02 14:48:12,270 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Port filter applied: after_filter=0 rows
+2026-02-02 16:19:15,703 - shipping_chatbot - INFO - User_Query: Could you tell me which containers arriving at Los Angeles are delayed by 7 days?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-02-02 16:19:15,703 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Could you tell me which containers arriving at Los Angeles are delayed by 7 days?', length: 81
+2026-02-02 16:19:15,703 - shipping_chatbot - INFO - [DEBUG] q_lower: 'could you tell me which containers arriving at los angeles are delayed by 7 days?'
+2026-02-02 16:19:19,221 - shipping_chatbot - INFO - [get_delayed_containers] Query: 'containers delayed by 7 days arriving at USLAX'
+2026-02-02 16:19:19,354 - shipping_chatbot - INFO - [get_delayed_containers] Loaded 12760 rows (consignee filter: applied)
+2026-02-02 16:19:19,380 - shipping_chatbot - INFO - [get_delayed_containers] Delay filter: == 7 days
+2026-02-02 16:19:19,385 - shipping_chatbot - INFO - [get_delayed_containers] Port filter: code=USLAX, name=None, before_filter=131 rows
+2026-02-02 16:19:19,389 - shipping_chatbot - INFO - [get_delayed_containers] Port filter applied: after_filter=5 rows
+2026-02-02 16:30:16,342 - shipping_chatbot - INFO - User_Query: Which containers are running 7 days late and heading to Los Angeles?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-02-02 16:30:16,344 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers are running 7 days late and heading to Los Angeles?', length: 68
+2026-02-02 16:30:16,344 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers are running 7 days late and heading to los angeles?'
+2026-02-02 16:30:19,672 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Query: 'containers delayed by 7 days arriving at USLAX'
+2026-02-02 16:30:19,821 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Loaded 12760 rows (consignee filter: applied)
+2026-02-02 16:30:19,821 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Found 1487 containers not arrived with passed ETA
+2026-02-02 16:30:19,838 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Delay filter: == 7 days
+2026-02-02 16:30:19,840 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] After delay filter: 13 containers (threshold: == 7 days)
+2026-02-02 16:30:19,840 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Port filter: code=USLAX, name=None, before_filter=13 rows
+2026-02-02 16:30:19,847 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Port filter applied: after_filter=0 rows
+2026-02-02 16:30:20,935 - shipping_chatbot - INFO - [get_delayed_containers] Query: 'containers delayed by 7 days at USLAX'
+2026-02-02 16:30:21,073 - shipping_chatbot - INFO - [get_delayed_containers] Loaded 12760 rows (consignee filter: applied)
+2026-02-02 16:30:21,090 - shipping_chatbot - INFO - [get_delayed_containers] Delay filter: == 7 days
+2026-02-02 16:30:21,101 - shipping_chatbot - INFO - [get_delayed_containers] Port filter: code=USLAX, name=None, before_filter=131 rows
+2026-02-02 16:30:21,106 - shipping_chatbot - INFO - [get_delayed_containers] Port filter applied: after_filter=5 rows
+2026-02-02 16:30:49,314 - shipping_chatbot - INFO - AzureChatOpenAI ready
+2026-02-02 16:30:49,314 - shipping_chatbot - INFO - Agent created with 58 tools
+2026-02-02 16:30:49,314 - shipping_chatbot - INFO - Agent ready for HTTP requests
+2026-02-02 16:30:52,179 - shipping_chatbot - INFO - User_Query: Which containers are running 7 days late and heading to Los Angeles?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-02-02 16:30:52,179 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers are running 7 days late and heading to Los Angeles?', length: 68
+2026-02-02 16:30:52,179 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers are running 7 days late and heading to los angeles?'
+2026-02-02 16:30:52,181 - shipping_chatbot - INFO - Downloading shipment CSV from Azure Blob Storage
+2026-02-02 16:31:09,142 - shipping_chatbot - INFO - Fetched 19218 rows
+2026-02-02 16:31:09,145 - shipping_chatbot - INFO - Starting preprocessing on 19218 rows
+2026-02-02 16:31:09,338 - shipping_chatbot - INFO - Removed 0 duplicate rows
+2026-02-02 16:31:10,454 - shipping_chatbot - INFO - Converted 31 date columns to datetime format
+2026-02-02 16:31:10,785 - shipping_chatbot - INFO - Normalized 6 'multiple' columns
+2026-02-02 16:31:11,843 - shipping_chatbot - INFO - Added `delay_days` column with FIXED logic
+2026-02-02 16:31:11,845 - shipping_chatbot - INFO - Added `actual_transit_days` column
+2026-02-02 16:31:11,847 - shipping_chatbot - INFO - Added `estimated_transit_days` column
+2026-02-02 16:31:11,895 - shipping_chatbot - INFO - Pre-processing finished - 19218 rows remain
+2026-02-02 16:31:15,486 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Query: 'containers delayed by 7 days arriving at USLAX'
+2026-02-02 16:31:15,621 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Loaded 12760 rows (consignee filter: applied)
+2026-02-02 16:31:15,625 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Found 1487 containers not arrived with passed ETA
+2026-02-02 16:31:15,634 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Delay filter: == 7 days
+2026-02-02 16:31:15,637 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] After delay filter: 13 containers (threshold: == 7 days)
+2026-02-02 16:31:15,638 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Port filter: code=USLAX, name=None, before_filter=13 rows
+2026-02-02 16:31:15,640 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Port filter applied: after_filter=0 rows
+2026-02-02 16:31:16,648 - shipping_chatbot - INFO - [get_delayed_containers] Query: 'containers delayed by 7 days at USLAX'
+2026-02-02 16:31:16,773 - shipping_chatbot - INFO - [get_delayed_containers] Loaded 12760 rows (consignee filter: applied)
+2026-02-02 16:31:16,804 - shipping_chatbot - INFO - [get_delayed_containers] Delay filter: == 7 days
+2026-02-02 16:31:16,808 - shipping_chatbot - INFO - [get_delayed_containers] Port filter: code=USLAX, name=None, before_filter=131 rows
+2026-02-02 16:31:16,812 - shipping_chatbot - INFO - [get_delayed_containers] Port filter applied: after_filter=5 rows
+2026-02-02 16:31:42,467 - shipping_chatbot - INFO - User_Query: Which containers are running 1 days late and heading to Los Angeles?, c_codes: ['0000866', '0001363', '0001389', '0001540', '0001615', '0001660', '0001665', '0002565', '0002566', '0002569', '0002679', '0002907', '0002990', '0003235', '0003427', '0003717', '0003905', '0004932', '0004991', '0005052', '0005053', '0005056', '0005171', '0005172', '0005176', '0005177', '0005178', '0005179', '0005180', '0006360', '0006804', '0008579', '0008756', '0009633', '0012041', '0013505', '0015526', '0021103', '0021472', '0023453', '0025833', '0027113', '0028662', '0028664', '0029594', '0030961', '0030962', '0033522', '0033523', '0037359', '0037360', '0037361', '0037364', '0046854', '0047055', '0047302', '0047650', '0048392']
+2026-02-02 16:31:42,467 - shipping_chatbot - INFO - [DEBUG] Received question type: <class 'str'>, value: 'Which containers are running 1 days late and heading to Los Angeles?', length: 68
+2026-02-02 16:31:42,467 - shipping_chatbot - INFO - [DEBUG] q_lower: 'which containers are running 1 days late and heading to los angeles?'
+2026-02-02 16:31:45,293 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Query: 'containers delayed by 1 days arriving at USLAX'
+2026-02-02 16:31:45,426 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Loaded 12760 rows (consignee filter: applied)
+2026-02-02 16:31:45,428 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Found 1487 containers not arrived with passed ETA
+2026-02-02 16:31:45,428 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Delay filter: == 1 days
+2026-02-02 16:31:45,437 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] After delay filter: 60 containers (threshold: == 1 days)
+2026-02-02 16:31:45,438 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Port filter: code=USLAX, name=None, before_filter=60 rows
+2026-02-02 16:31:45,441 - shipping_chatbot - INFO - [get_delayed_containers_not_arrived] Port filter applied: after_filter=27 rows
