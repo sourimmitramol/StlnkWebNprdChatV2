@@ -21,8 +21,9 @@ from agents.tools import (  # Add the missing functions
     get_delayed_pos, get_eta_for_booking, get_eta_for_po, get_field_info,
     get_hot_upcoming_arrivals, get_load_port_for_container,
     get_po_transit_analysis, get_upcoming_arrivals, get_upcoming_bls,
-    get_upcoming_pos, get_vessel_info, get_weekly_status_changes,
-    lookup_keyword, sql_query_tool, vector_search_tool)
+    get_upcoming_pos, get_upcoming_shipments_by_etd, get_vessel_info,
+    get_weekly_status_changes, lookup_keyword, sql_query_tool,
+    vector_search_tool)
 from utils.logger import logger
 
 
