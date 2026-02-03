@@ -828,11 +828,12 @@ def parse_time_period(query: str) -> tuple[pd.Timestamp, pd.Timestamp, str]:
 
                 logger = logging.getLogger(__name__)
                 logger.info(
-                    f"[parse_time_period] Matched 'on/at {single_date_match.group(1)}': {target_date.strftime('%Y-%m-%d')}"
+                    f"[parse_time_period] Matched 'on/at {single_date_match.group(1)}': {target_date.strftime('%Y-%b-%d')}"
                 )
             except:
                 pass
-            return target_date, target_date, f"on {target_date.strftime('%Y-%m-%d')}"
+            # return target_date, target_date, f"on {target_date.strftime('%Y-%m-%d')}"
+            return target_date, target_date, f"on {target_date.strftime('%Y-%b-%d')}"
 
     # ========================================================================
     # HIGHEST PRIORITY: Relative date patterns (today, yesterday, etc.)
