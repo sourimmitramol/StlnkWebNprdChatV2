@@ -2068,7 +2068,7 @@ def get_container_milestones(input_str: str) -> str:
             {
                 "event": event,
                 "location": None if pd.isna(location) else location,
-                "date": dt.strftime("%Y-%m-%d"),
+                "date": dt.strftime("%Y-%b-%d"),
                 "_dt": dt,
                 "_rank": rank,
             }
@@ -2108,7 +2108,7 @@ def safe_date(v):
         dt = pd.to_datetime(v, errors="coerce")
         if pd.isna(dt):
             return None
-        return dt.strftime("%Y-%m-%d")  # ✅ consistent ISO format
+        return dt.strftime("%Y-%b-%d")  # ✅ consistent ISO format
     except Exception:
         return str(v)
 
@@ -6925,6 +6925,7 @@ def get_shipped_quantity(
         "po_number_multiple",
         "shipped_quantity",
         "detailed_cargo_quantity",
+        "cargo_weight",
         # "load_port",
         # "discharge_port",
         # "etd_lp",
@@ -10932,6 +10933,8 @@ def get_carrier_for_po(query: str) -> str:
     Find final_carrier_name for a PO.
     Accepts queries like "who is carrier for PO 5500009022" or "5500009022" or alphanumeric POs (e.g. 7196461A).
     Looks up PO in po_number_multiple (comma-separated) or po_number and returns final_carrier_name and container.
+    Returns: list[dict] with ALL containers associated with the PO, including po_number, container_number,
+             final_carrier_name, and other relevant fields.
     """
     # try helper extractor first, fallback to generic alnum token (6-12 chars)
     po = extract_po_number(query)
@@ -10957,7 +10960,27 @@ def get_carrier_for_po(query: str) -> str:
     if matches.empty:
         return f"No data found for PO {po}."
 
-    # if many matches, pick the most-relevant by latest date among common date columns
+    # Prepare output columns
+    output_cols = [
+        "container_number",
+        po_col,
+        "final_carrier_name",
+        "load_port",
+        "discharge_port",
+        "etd_lp",
+        "eta_dp",
+        "revised_eta",
+        "consignee_code_multiple",
+        "transport_mode",
+    ]
+
+    # Filter to only include columns that exist
+    available_cols = [col for col in output_cols if col in matches.columns]
+
+    # Return ALL matching containers (not just the latest one)
+    result_df = matches[available_cols].copy()
+
+    # Sort by latest date for better ordering
     date_priority = [
         "revised_eta",
         "eta_dp",
@@ -10966,29 +10989,34 @@ def get_carrier_for_po(query: str) -> str:
         "etd_lp",
         "etd_flp",
     ]
-    available_date_cols = [c for c in date_priority if c in matches.columns]
+    available_date_cols = [c for c in date_priority if c in result_df.columns]
     if available_date_cols:
-        matches = ensure_datetime(matches, available_date_cols)
-        # compute max date per row (NaT -> ignored)
-        matches["_row_max_date"] = matches[available_date_cols].max(axis=1)
-        # choose row with latest date (rows with all NaT get Timestamp.min)
-        matches["_row_max_date"] = matches["_row_max_date"].fillna(pd.Timestamp.min)
-        chosen = matches.sort_values("_row_max_date", ascending=False).iloc[0]
-        matches = matches.drop(columns=["_row_max_date"], errors="ignore")
-    else:
-        chosen = matches.iloc[0]
+        result_df = ensure_datetime(result_df, available_date_cols)
+        # compute max date per row for sorting
+        result_df["_row_max_date"] = result_df[available_date_cols].max(axis=1)
+        result_df["_row_max_date"] = result_df["_row_max_date"].fillna(pd.Timestamp.min)
+        result_df = result_df.sort_values("_row_max_date", ascending=False)
+        result_df = result_df.drop(columns=["_row_max_date"], errors="ignore")
 
-    container = chosen.get("container_number", "<unknown>")
-    carrier = None
-    if "final_carrier_name" in chosen.index and pd.notnull(
-        chosen["final_carrier_name"]
-    ):
-        carrier = str(chosen["final_carrier_name"]).strip()
+    # Format date columns
+    date_columns = ["etd_lp", "eta_dp", "revised_eta"]
+    for date_col in date_columns:
+        if date_col in result_df.columns:
+            if pd.api.types.is_datetime64_any_dtype(result_df[date_col]):
+                result_df[date_col] = result_df[date_col].apply(
+                    lambda x: x.strftime("%Y-%m-%d") if pd.notna(x) else None
+                )
 
-    if carrier:
-        return f"The carrier for PO {po} (container {container}) is {carrier}."
+    # Limit to reasonable number of records
+    result_df = result_df.head(200)
+
+    # Convert to dict
+    result_dict = result_df.to_dict(orient="records")
+
+    if result_dict:
+        return result_dict
     else:
-        return f"Carrier (final_carrier_name) not found for PO {po} (container {container})."
+        return f"Carrier information not found for PO {po}."
 
 
 def is_po_hot(query: str, as_records: bool = False) -> str:
@@ -13983,18 +14011,20 @@ def get_bulk_container_transit_analysis(query: str) -> str:
 
 def get_cargo_ready_date(query: str) -> str:
     """
-    Get cargo ready date information for PO numbers, containers, or other filters.
+    Get cargo ready date information for PO numbers, containers, Ocean BLs, or other filters.
 
     Accepts queries like:
     - "Cargo ready date for PO#5302982894"
     - "What is the cargo ready date for PO 5302982894?"
     - "Show cargo ready date for container ABCD1234567"
+    - "Cargo ready date for OBL MEDUKE520904"
     - "Cargo ready dates for supplier ABC"
     - "Cargo ready dates arriving next week"
 
     Supports filtering by:
     - PO number (single or multiple)
     - Container number
+    - Ocean BL number (OBL)
     - Supplier/shipper name
     - Discharge port
     - Load port
@@ -14155,6 +14185,23 @@ def get_cargo_ready_date(query: str) -> str:
             filters_applied.append(f"Container: {container_norm}")
 
     # ------------------------------------------------------------------
+    # 2a. Extract and filter by Ocean BL number
+    # ------------------------------------------------------------------
+    ocean_bl = extract_ocean_bl_number(query)
+    if ocean_bl:
+        ocean_bl_norm = ocean_bl.upper().strip()
+        if "ocean_bl_no_multiple" in result_df.columns:
+            # ocean_bl_no_multiple contains comma-separated values
+            mask = (
+                result_df["ocean_bl_no_multiple"]
+                .astype(str)
+                .str.upper()
+                .str.contains(re.escape(ocean_bl_norm), na=False)
+            )
+            result_df = result_df[mask]
+            filters_applied.append(f"Ocean BL: {ocean_bl_norm}")
+
+    # ------------------------------------------------------------------
     # 3. Filter by supplier/shipper name (fuzzy match)
     # ------------------------------------------------------------------
     supplier_keywords = ["supplier", "shipper", "vendor", "from"]
@@ -14199,10 +14246,12 @@ def get_cargo_ready_date(query: str) -> str:
         start_date, end_date, period_desc = parse_time_period(query)
 
         # Check if query is about cargo ready date within a time range
-        if any(
-            keyword in query.lower()
-            for keyword in ["next", "last", "within", "in", "during", "between"]
-        ):
+        # Use word boundaries to avoid matching "in" within words like "container"
+        query_lower = query.lower()
+        date_keywords_pattern = r"\b(next|last|within|in|during|between)\b"
+        has_date_keywords = bool(re.search(date_keywords_pattern, query_lower))
+
+        if has_date_keywords:
             if start_date and end_date:
                 start_dt = pd.Timestamp(start_date).normalize()
                 end_dt = pd.Timestamp(end_date).normalize()
@@ -15191,16 +15240,19 @@ TOOLS = [
             "- CRD queries: 'show CRD for container ABCD1234567', 'cargo readiness date for PO X'\n"
             "- When cargo became ready: 'when was cargo ready for PO 5302982894'\n"
             "- Cargo preparation date: 'cargo preparation date for shipment X'\n"
+            "- Ocean BL queries: 'cargo ready date for OBL MEDUKE520904', 'CRD for ocean bl MEDUKE520904'\n"
             "\n"
             "Supported input formats:\n"
             "- PO number: 'cargo ready date for PO 5302982894', 'CRD for 5302982894', 'PO#5302982894 cargo ready'\n"
             "- Container: 'cargo ready date for container ABCD1234567'\n"
+            "- Ocean BL: 'cargo ready date for OBL MEDUKE520904', 'CRD for ocean bl MEDUKE520904'\n"
             "- Supplier: 'cargo ready dates from supplier ABC'\n"
             "- Multiple filters: 'cargo ready dates for POs arriving next week at USNYC'\n"
             "\n"
             "Supports filtering by:\n"
             "- PO number (single or multiple, comma-separated)\n"
             "- Container number\n"
+            "- Ocean BL number (OBL)\n"
             "- Supplier/shipper/vendor name\n"
             "- Discharge port (destination)\n"
             "- Load port (origin)\n"
@@ -15211,6 +15263,7 @@ TOOLS = [
             "Examples:\n"
             "- 'Cargo ready date for PO#5302982894' → Returns cargo_ready_date for PO 5302982894\n"
             "- 'What is CRD for PO 5302982894' → Returns cargo ready date info\n"
+            "- 'Cargo ready date for OBL MEDUKE520904' → Returns cargo_ready_date for Ocean BL MEDUKE520904\n"
             "- 'Show cargo ready dates for supplier ACME' → Returns all CRDs from ACME\n"
             "- 'Cargo ready dates for containers arriving next week' → Returns CRDs with ETA filter\n"
             "- 'When was cargo ready for container MSBU4522691' → Returns CRD for that container\n"
@@ -15341,7 +15394,12 @@ TOOLS = [
     Tool(
         name="Get Carrier For PO",
         func=get_carrier_for_po,
-        description="Find the final_carrier_name for a PO (matches po_number_multiple / po_number). Use queries like 'who is carrier for PO 5500009022' or '5500009022'.",
+        return_direct=True,
+        description=(
+            "Find the final_carrier_name for a PO (matches po_number_multiple / po_number).\n"
+            "Use queries like 'who is carrier for PO 5500009022' or '5500009022' or 'carrier for purchase order 5302967849'.\n"
+            "Returns: list[dict] with container_number, po_number_multiple, final_carrier_name, load_port, discharge_port, ETD, ETA, consignee, transport_mode."
+        ),
     ),
     Tool(
         name="Is PO Hot",
