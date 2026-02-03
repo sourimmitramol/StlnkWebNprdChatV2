@@ -1,9 +1,50 @@
+# Python
 __pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+
+# IDE
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
+
+# Environment Variables
 .env
-venv/
-cache/
+.env.local
+
+# Logs
+*.log
 app.log
+logs/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
 shipment_blob.db
+
+# Cache
+cache/
+.cache/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
 run_app.ps1
