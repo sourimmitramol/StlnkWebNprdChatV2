@@ -2068,7 +2068,7 @@ def get_container_milestones(input_str: str) -> str:
             {
                 "event": event,
                 "location": None if pd.isna(location) else location,
-                "date": dt.strftime("%Y-%b-%d"),
+                "date": dt.strftime("%Y-%m-%d"),
                 "_dt": dt,
                 "_rank": rank,
             }
@@ -2108,7 +2108,7 @@ def safe_date(v):
         dt = pd.to_datetime(v, errors="coerce")
         if pd.isna(dt):
             return None
-        return dt.strftime("%Y-%b-%d")  # ✅ consistent ISO format
+        return dt.strftime("%Y-%m-%d")  # ✅ consistent ISO format
     except Exception:
         return str(v)
 
@@ -2540,7 +2540,9 @@ def get_delayed_containers(question: str = None, **kwargs) -> str:
         return "No arrived containers found."
 
     # 5.5) **HOT CONTAINER FILTER** - Check if query mentions "hot"
-    is_hot_query = bool(re.search(r"\bhot\b", query, re.IGNORECASE))
+    is_hot_query = bool(re.search(r"\bhot\b", query, re.IGNORECASE)) or bool(
+        re.search(r"\bHot\b", query, re.IGNORECASE)
+    )
     if is_hot_query:
         hot_flag_cols = [
             c for c in df_arrived.columns if "hot_container_flag" in c.lower()
@@ -2665,8 +2667,11 @@ def get_delayed_containers(question: str = None, **kwargs) -> str:
 
         # If no parentheses, try to extract standalone port code (5-6 uppercase letters/numbers)
         # This handles cases like "at USBNA" where agent converts port names to codes
+        # CRITICAL: Only match if preceded by port-related keywords to avoid false positives like "PLEASE"
         if not port_code:
-            m_standalone = re.search(r"\b([A-Z]{2}[A-Z0-9]{3,4})\b", q_up)
+            m_standalone = re.search(
+                r"\b(?:AT|IN|FROM|TO|PORT)\s+([A-Z]{2}[A-Z0-9]{3,4})\b", q_up
+            )
             if m_standalone:
                 potential_code = m_standalone.group(1).strip().upper()
                 # Verify it looks like a port code (2 letters + 3-4 alphanumeric)
