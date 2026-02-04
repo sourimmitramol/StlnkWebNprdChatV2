@@ -156,14 +156,9 @@ def route_query(query: str, consignee_codes: list = None) -> str:
         if "eta" in q and (po_no or re.search(r"\bpo\b", q)):
             return get_eta_for_po(query)
 
-        # ========== PRIORITY 1: Handle port/location queries ==========
-        if any(
-            phrase in q
-            for phrase in ["list containers from", "containers from", "from port"]
-        ):
-            return get_arrivals_by_port(query)
-
-        # ========== PRIORITY 2: Handle delay queries ==========
+        # ========== PRIORITY 1.5: Handle delay queries EARLY (before port checks) ==========
+        # CRITICAL: Check for delay queries BEFORE port/location checks to prevent
+        # "please" being interpreted as a port name
         # Check if query is about delayed containers arriving/expected at a port (not yet arrived)
         # Look for patterns: "delayed...arriving at", "delayed...which are arriving", "delayed...at [PORT]"
         is_delayed_not_arrived_query = (
@@ -194,6 +189,14 @@ def route_query(query: str, consignee_codes: list = None) -> str:
             # because get_delayed_containers has built-in hot filtering
             logger.info(f"Router: Delayed containers route for query: {query}")
             return get_delayed_containers(query)
+
+        # ========== PRIORITY 2: Handle port/location queries ==========
+        # ========== PRIORITY 2: Handle port/location queries ==========
+        if any(
+            phrase in q
+            for phrase in ["list containers from", "containers from", "from port"]
+        ):
+            return get_arrivals_by_port(query)
 
         # ========== PRIORITY 2.5: Handle "arrived at DP but not at FD" queries ==========
         # Check for queries about containers that reached discharge port but not delivered
