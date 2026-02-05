@@ -11,15 +11,17 @@ from agents.tools import (  # Add the missing functions
     get_bl_transit_analysis, get_blob_sql_engine, get_booking_details,
     get_bulk_container_transit_analysis, get_container_carrier,
     get_container_etd, get_container_milestones,
-    get_container_transit_analysis, get_containers_arriving_soon,
+    get_container_rail_transport_status, get_container_transit_analysis,
+    get_containers_arriving_soon, get_containers_at_dp_not_fd,
     get_containers_by_carrier, get_containers_by_etd_window,
     get_containers_departed_from_load_port,
     get_containers_departing_from_load_port, get_containers_missed_planned_etd,
     get_containers_PO_OBL_by_supplier, get_containers_still_at_load_port,
-    get_delayed_containers, get_delayed_pos, get_eta_for_booking,
-    get_eta_for_po, get_field_info, get_hot_upcoming_arrivals,
-    get_load_port_for_container, get_po_transit_analysis,
-    get_upcoming_arrivals, get_upcoming_bls, get_upcoming_pos, get_vessel_info,
+    get_delayed_containers, get_delayed_containers_not_arrived,
+    get_delayed_pos, get_eta_for_booking, get_eta_for_po, get_field_info,
+    get_hot_upcoming_arrivals, get_load_port_for_container,
+    get_po_transit_analysis, get_upcoming_arrivals, get_upcoming_bls,
+    get_upcoming_pos, get_upcoming_shipments_by_etd, get_vessel_info,
     get_weekly_status_changes, lookup_keyword, sql_query_tool,
     vector_search_tool)
 from utils.logger import logger
@@ -154,18 +156,66 @@ def route_query(query: str, consignee_codes: list = None) -> str:
         if "eta" in q and (po_no or re.search(r"\bpo\b", q)):
             return get_eta_for_po(query)
 
-        # ========== PRIORITY 1: Handle port/location queries ==========
+        # ========== PRIORITY 1.5: Handle delay queries EARLY (before port checks) ==========
+        # CRITICAL: Check for delay queries BEFORE port/location checks to prevent
+        # "please" being interpreted as a port name
+        # Check if query is about delayed containers arriving/expected at a port (not yet arrived)
+        # Look for patterns: "delayed...arriving at", "delayed...which are arriving", "delayed...at [PORT]"
+        is_delayed_not_arrived_query = (
+            ("delay" in q or "late" in q or "overdue" in q)
+            and "days" in q
+            and (
+                "arriving at" in q
+                or "arriving in" in q
+                or "which are arriving" in q
+                or re.search(r"arriving\s+at\s+\w+", q)
+                or re.search(
+                    r"delayed.*at\s+[A-Z]{2,}", query
+                )  # "delayed...at SHANGHAI"
+            )
+        )
+
+        if is_delayed_not_arrived_query:
+            # This is for containers delayed but not yet arrived
+            logger.info(
+                f"Router: Delayed containers not arrived route for query: {query}"
+            )
+            return get_delayed_containers_not_arrived(query)
+        elif (
+            "delay" in q or "late" in q or "overdue" in q or "missed" in q
+        ) and "days" in q:
+            # This is for containers that already arrived late
+            # CRITICAL: This handles "hot containers delayed by X days" queries
+            # because get_delayed_containers has built-in hot filtering
+            logger.info(f"Router: Delayed containers route for query: {query}")
+            return get_delayed_containers(query)
+
+        # ========== PRIORITY 2: Handle port/location queries ==========
+        # ========== PRIORITY 2: Handle port/location queries ==========
         if any(
             phrase in q
             for phrase in ["list containers from", "containers from", "from port"]
         ):
             return get_arrivals_by_port(query)
 
-        # ========== PRIORITY 2: Handle delay queries ==========
-        if (
-            "delay" in q or "late" in q or "overdue" in q or "missed" in q
-        ) and "days" in q:
-            return get_delayed_containers(query)
+        # ========== PRIORITY 2.5: Handle "arrived at DP but not at FD" queries ==========
+        # Check for queries about containers that reached discharge port but not delivered
+        is_dp_not_fd_query = (
+            ("arrived" in q or "reached" in q)
+            and ("dp" in q or "discharge port" in q or "discharge" in q)
+            and ("not" in q or "not yet" in q or "waiting" in q)
+            and (
+                "fd" in q
+                or "final destination" in q
+                or "delivered" in q
+                or "delivery" in q
+                or "consignee" in q
+            )
+        )
+
+        if is_dp_not_fd_query:
+            logger.info(f"Router: Containers at DP not FD route for query: {query}")
+            return get_containers_at_dp_not_fd(query)
 
         # ========== PRIORITY 3: Handle carrier queries (NEW - SPECIFIC) ==========
         # Questions 15, 16, 17, 18: Carrier queries for PO/Container/OBL
@@ -173,8 +223,25 @@ def route_query(query: str, consignee_codes: list = None) -> str:
             return get_container_carrier(query)
 
         # ========== PRIORITY 4: Hot containers routing ==========
-        if "hot container" in q or "hot containers" in q:
+        # NOTE: Queries with "hot" + delay thresholds ("delayed by X days")
+        # are handled by PRIORITY 2 above, not here
+        if (
+            ("hot container" in q or "hot containers" in q)
+            and "delay" not in q
+            and "late" not in q
+        ):
             return get_hot_containers(query)
+        elif "hot container" in q or "hot containers" in q:
+            # If hot + delay/late without specific day threshold, use get_hot_containers
+            # Check if there's a specific day threshold
+            has_day_threshold = re.search(r"\d+\s+days?", query, re.IGNORECASE)
+            if has_day_threshold:
+                logger.info(
+                    f"Router: Hot containers with delay threshold -> get_delayed_containers for query: {query}"
+                )
+                return get_delayed_containers(query)
+            else:
+                return get_hot_containers(query)
 
         # ========== PRIORITY 5: Container status queries ==========
         if any(
@@ -335,7 +402,53 @@ def route_query(query: str, consignee_codes: list = None) -> str:
             return get_bulk_container_transit_analysis(query)
 
         # ========== PRIORITY 13: Upcoming arrivals ==========
-        if ("arriving" in q or "arrive" in q) and ("next" in q or "coming" in q):
+        # Enhanced detection for arrival queries with dates, locations, or timeframes
+        has_arrival_keyword = any(kw in q for kw in ["arriving", "arrive", "arrival"])
+        has_time_keyword = any(
+            kw in q
+            for kw in [
+                "next",
+                "coming",
+                "upcoming",
+                "within",
+                "in jan",
+                "in feb",
+                "in mar",
+                "in apr",
+                "in may",
+                "in jun",
+                "in jul",
+                "in aug",
+                "in sep",
+                "in oct",
+                "in nov",
+                "in dec",
+                "this month",
+                "last month",
+                "this week",
+                "last week",
+                "today",
+                "tomorrow",
+                "days",
+            ]
+        )
+        has_going_to = "going to" in q or "scheduled to" in q or "scheduled for" in q
+        has_location_pattern = re.search(
+            r"\b(?:to|at|in)\s+[A-Z][A-Za-z\s,\.]+(?:,\s*[A-Z]{2})?\b",
+            query,
+            re.IGNORECASE,
+        )
+
+        # Route to get_upcoming_arrivals if:
+        # 1. Has arrival keyword + time keyword
+        # 2. Has "going to" + location
+        # 3. Has location pattern + date/month
+        if (
+            (has_arrival_keyword and has_time_keyword)
+            or (has_going_to and (has_location_pattern or has_time_keyword))
+            or (has_location_pattern and has_time_keyword)
+        ):
+            logger.info(f"Router: Upcoming arrivals route for query: {query}")
             return get_upcoming_arrivals(query)
 
         # ========== PRIORITY 14: Question 7 - General field info (MOVED TO END) ==========
