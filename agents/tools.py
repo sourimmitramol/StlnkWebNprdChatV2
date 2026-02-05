@@ -3096,10 +3096,18 @@ def get_containers_at_dp_not_fd(question: str = None, **kwargs) -> str:
     - "Which containers have reached discharge port but not delivered"
     - "Containers at port waiting for delivery"
     - "Shipments reached DP but not FD"
+    **EXAMPLE DATE/RANGE QUERIES (examples only; any date/range works):**
+    - "containers arrived at dp but not in fd between 2025-12-01 and 2026-01-25"
+    - "containers arrived at dp but not in fd from 12/01/2025 to 01/25/2026"
+    - "containers arrived at dp but not in fd in Dec 2025"
+    - "containers arrived at dp but not in fd last 30 days"
+    - "containers arrived at dp but not in fd this month"
 
     Logic:
     1. Container reached DP if: ata_dp exists OR derived_ata_dp < today
     2. Container NOT delivered to FD if: empty_container_return_date is null AND delivery_date_to_consignee is null
+    3. Optional: if the question includes a date or date range, keep only those whose DP arrival date
+       falls within that range. Any date/range in the question can be used.
 
     Returns list[dict] with: container_number, ata_dp, derived_ata_dp, discharge_port,
                             consignee_code_multiple, po_number_multiple, status
@@ -3108,8 +3116,11 @@ def get_containers_at_dp_not_fd(question: str = None, **kwargs) -> str:
 
     import pandas as pd
 
+    query = (question or "").strip()
+    query_lower = query.lower()
+
     try:
-        logger.info(f"[get_containers_at_dp_not_fd] Query: {question!r}")
+        logger.info(f"[get_containers_at_dp_not_fd] Query: {query!r}")
     except Exception:
         pass
 
@@ -3137,12 +3148,18 @@ def get_containers_at_dp_not_fd(question: str = None, **kwargs) -> str:
         if col in df.columns:
             df[col] = pd.to_datetime(df[col], errors="coerce")
 
+    # -----------------------
+    # Step 1: "Reached DP"
+    # -----------------------
     # 1. Identify shipments that reached DP
     # Condition: ata_dp not null OR derived_ata_dp < today
     reached_dp_condition = df["ata_dp"].notna() | (
         df["derived_ata_dp"].notna() & (df["derived_ata_dp"] < today)
     )
 
+    # -----------------------
+    # Step 2: "Not Delivered to FD"
+    # -----------------------
     # 2. Identify shipments NOT delivered to FD
     # Condition: empty_container_return_date is null AND delivery_date_to_consignee is null
     not_delivered_fd_condition = (
@@ -3150,6 +3167,9 @@ def get_containers_at_dp_not_fd(question: str = None, **kwargs) -> str:
         & df["delivery_date_to_consignee"].isna()
     )
 
+    # -----------------------
+    # Step 3: Combine both rules
+    # -----------------------
     # 3. Combine conditions
     final_condition = reached_dp_condition & not_delivered_fd_condition
 
@@ -3166,6 +3186,133 @@ def get_containers_at_dp_not_fd(question: str = None, **kwargs) -> str:
     if result.empty:
         return "No containers found that have arrived at discharge port but not yet delivered to final destination."
 
+    # -----------------------
+    # Optional date filter (if user asked for a date or date range)
+    # -----------------------
+    # We avoid regex here by using simple keyword hints + lightweight token parsing
+    # and then delegate the actual range building to parse_time_period().
+    def _has_date_hint(text: str) -> bool:
+        if not text:
+            return False
+
+        month_words = {
+            "jan",
+            "january",
+            "feb",
+            "february",
+            "mar",
+            "march",
+            "apr",
+            "april",
+            "may",
+            "jun",
+            "june",
+            "jul",
+            "july",
+            "aug",
+            "august",
+            "sep",
+            "sept",
+            "september",
+            "oct",
+            "october",
+            "nov",
+            "november",
+            "dec",
+            "december",
+        }
+        relative_words = {
+            "today",
+            "tomorrow",
+            "yesterday",
+            "next",
+            "last",
+            "this",
+            "week",
+            "month",
+            "year",
+            "between",
+            "from",
+            "to",
+            "in",
+            "during",
+        }
+
+        if any(w in text for w in month_words | relative_words):
+            return True
+
+        # Quick signal for numeric dates (e.g., 2025-12-31 or 12/31/2025)
+        if any(ch.isdigit() for ch in text) and ("/" in text or "-" in text):
+            return True
+
+        # Fuzzy parse short token windows without regex (e.g., "Dec 2025")
+        clean = text.translate(
+            str.maketrans(
+                {
+                    ",": " ",
+                    ".": " ",
+                    ";": " ",
+                    ":": " ",
+                    "(": " ",
+                    ")": " ",
+                }
+            )
+        )
+        tokens = [t for t in clean.split() if t]
+        max_window = 3
+        for i in range(len(tokens)):
+            for j in range(i + 1, min(len(tokens), i + max_window) + 1):
+                candidate = " ".join(tokens[i:j])
+                parsed = pd.to_datetime(candidate, errors="coerce")
+                if pd.notna(parsed):
+                    return True
+
+        return False
+
+    if _has_date_hint(query_lower):
+        try:
+            from agents.prompts import (format_date_for_display,
+                                        parse_time_period)
+
+            start_date, end_date, period_desc = parse_time_period(query)
+
+            # Use actual DP arrival date if available; otherwise fall back to derived_ata_dp.
+            if "ata_dp" in result.columns and "derived_ata_dp" in result.columns:
+                result["dp_arrival_date"] = result["ata_dp"].fillna(
+                    result["derived_ata_dp"]
+                )
+            elif "ata_dp" in result.columns:
+                result["dp_arrival_date"] = result["ata_dp"]
+            elif "derived_ata_dp" in result.columns:
+                result["dp_arrival_date"] = result["derived_ata_dp"]
+            else:
+                result["dp_arrival_date"] = pd.NaT
+
+            # Keep rows whose DP arrival date falls inside the requested period (inclusive)
+            date_mask = (result["dp_arrival_date"] >= start_date) & (
+                result["dp_arrival_date"] <= end_date
+            )
+            result = result[date_mask].copy()
+
+            try:
+                logger.info(
+                    f"[get_containers_at_dp_not_fd] Date filter applied: {period_desc} "
+                    f"({format_date_for_display(start_date)} to {format_date_for_display(end_date)}). "
+                    f"Remaining rows: {len(result)}"
+                )
+            except Exception:
+                pass
+        except Exception as e:
+            try:
+                logger.warning(
+                    f"[get_containers_at_dp_not_fd] Failed to parse date range: {e}"
+                )
+            except Exception:
+                pass
+
+        if result.empty:
+            return "No containers found at discharge port (not delivered) within the specified date range."
+
     # Sort by arrival date (most recent first)
     if "ata_dp" in result.columns:
         result = result.sort_values("ata_dp", ascending=False, na_position="last")
@@ -3173,12 +3320,13 @@ def get_containers_at_dp_not_fd(question: str = None, **kwargs) -> str:
     # Select output columns
     out_cols = [
         "container_number",
-        "ata_dp",
-        "revised_eta",
         "discharge_port",
-        "consignee_code_multiple",
+        "ata_dp",
+        "eta_fd",
+        "revised_eta_fd",
         "po_number_multiple",
         "ocean_bl_no_multiple",
+        "consignee_code_multiple",
     ]
 
     # Only include columns that exist
@@ -3196,7 +3344,9 @@ def get_containers_at_dp_not_fd(question: str = None, **kwargs) -> str:
             out[dcol] = out[dcol].dt.strftime("%Y-%m-%d")
 
     # Add status column for clarity
-    out["current_status"] = "At Discharge Port - Awaiting Final Delivery"
+    out["current_status"] = (
+        f"At Discharge Port - Awaiting Final Delivery within {start_date} {end_date}"
+    )
 
     return out.where(pd.notnull(out), None).to_dict(orient="records")
 
