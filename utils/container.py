@@ -105,3 +105,39 @@ def extract_ocean_bl_number(text: str) -> Optional[str]:
     # If a BL is purely numeric, the user MUST prefix it with "BL" or "Bill of lading" to distinguish from PO.
 
     return None
+
+
+def extract_supplier_vendor_name(text: str) -> Optional[str]:
+    """
+    Detect a supplier/vendor name in free-form text.
+    Handles:
+        - "supplier ABC Corporation"
+        - "vendor XYZ Ltd"
+        - "from Acme Industries"
+        - "shipper Global Logistics"
+    Returns the extracted name (cleaned and title-cased) or None.
+    """
+    if not text:
+        return None
+
+    patterns = [
+        r"supplier\s+(?:name\s+)?(?:is\s+)?([A-Za-z0-9\s\.,&\-']+?)(?:\s+(?:for|with|has|is|on|in|at|,)|$)",
+        r"vendor\s+(?:name\s+)?(?:is\s+)?([A-Za-z0-9\s\.,&\-']+?)(?:\s+(?:for|with|has|is|on|in|at|,)|$)",
+        r"from\s+(?:supplier\s+)?(?:vendor\s+)?([A-Za-z0-9\s\.,&\-']+?)(?:\s+(?:for|with|has|is|on|in|at|,)|$)",
+        r"shipper\s+(?:name\s+)?(?:is\s+)?([A-Za-z0-9\s\.,&\-']+?)(?:\s+(?:for|with|has|is|on|in|at|,)|$)",
+    ]
+
+    for pat in patterns:
+        m = re.search(pat, text, flags=re.IGNORECASE)
+        if m:
+            # Extract and clean the name
+            name = m.group(1).strip()
+            # Remove trailing punctuation
+            name = re.sub(r"[,.\s]+$", "", name)
+            # Clean up extra whitespace
+            name = re.sub(r"\s+", " ", name)
+            # Return if valid length (at least 2 characters)
+            if len(name) >= 2:
+                return name.title()
+
+    return None
