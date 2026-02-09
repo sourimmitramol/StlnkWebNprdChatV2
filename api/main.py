@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from agents.azure_agent import initialize_azure_agent
 from agents.router import route_query
+from agents.memory_manager import memory_manager
 from agents.tools import get_cargo_ready_date  # Add this
 from agents.tools import get_hot_containers  # Add this
 from agents.tools import (_df, analyze_data_with_pandas,
@@ -141,16 +142,21 @@ def check_container_authorization(
 @app.post("/ask")
 def ask(body: QueryWithConsigneeBody):
     q = body.question.strip()
+    session_id = body.session_id  # Get session_id from request
     # consignee_codes = [c.strip() for c in body.consignee_code.split(",") if c.strip()]
     consignee_codes = list(
         dict.fromkeys(c.strip() for c in body.consignee_code.split(",") if c.strip())
     )
     # print(consignee_codes)
-    logger.info(f"User_Query: {q}, c_codes: {consignee_codes}")
+    logger.info(f"User_Query: {q}, c_codes: {consignee_codes}, session: {session_id}")
     logger.info(
         f"[DEBUG] Received question type: {type(q)}, value: {q!r}, length: {len(q)}"
     )
 
+    # Get or create memory for this session
+    memory = memory_manager.get_memory(session_id)
+    memory_manager.set_consignee_context(session_id, consignee_codes)
+    
     if not q:
         raise HTTPException(status_code=400, detail="Empty question")
 
@@ -179,11 +185,15 @@ def ask(body: QueryWithConsigneeBody):
         for word in greetings
     ):
         logger.info(f"[DEBUG] Matched greeting pattern")
+        response_text = "Hello! I'm MCS AI, your shipping assistant. How can I help you today?"
+        # Save to memory for direct responses
+        memory.save_context({"input": q}, {"output": response_text})
         return {
-            "response": "Hello! I'm MCS AI, your shipping assistant. How can I help you today?",
+            "response": response_text,
             "observation": [],
             "table": [],
             "mode": "direct",
+            "session_id": session_id,
         }
 
     # Thanks - ONLY match if it's a standalone thank you message, NOT part of shipping query
@@ -205,21 +215,27 @@ def ask(body: QueryWithConsigneeBody):
         kw in q_lower for kw in shipping_keywords
     ):
         logger.info(f"[DEBUG] Matched thanks pattern (no shipping keywords)")
+        response_text = "You're very welcome! Always happy to help. – MCS AI"
+        memory.save_context({"input": q}, {"output": response_text})
         return {
-            "response": "You're very welcome! Always happy to help. – MCS AI",
+            "response": response_text,
             "observation": [],
             "table": [],
             "mode": "direct",
+            "session_id": session_id,
         }
 
     # How are you
     if "how are you" in q_lower or "how r u" in q_lower or "how are u" in q_lower:
         logger.info(f"[DEBUG] Matched 'how are you' pattern")
+        response_text = "I'm doing great, thanks for asking! How can I assist you with your shipping needs today?"
+        memory.save_context({"input": q}, {"output": response_text})
         return {
-            "response": "I'm doing great, thanks for asking! How can I assist you with your shipping needs today?",
+            "response": response_text,
             "observation": [],
             "table": [],
             "mode": "direct",
+            "session_id": session_id,
         }
 
     # Who are you
@@ -230,11 +246,14 @@ def ask(body: QueryWithConsigneeBody):
         or "what's your name" in q_lower
     ):
         logger.info(f"[DEBUG] Matched 'who are you' pattern")
+        response_text = "I'm MCS AI, your AI-powered shipping assistant. I can help you track containers, POs, and more."
+        memory.save_context({"input": q}, {"output": response_text})
         return {
-            "response": "I'm MCS AI, your AI-powered shipping assistant. I can help you track containers, POs, and more.",
+            "response": response_text,
             "observation": [],
             "table": [],
             "mode": "direct",
+            "session_id": session_id,
         }
 
     # Farewells
@@ -250,11 +269,14 @@ def ask(body: QueryWithConsigneeBody):
             "good bye",
         ]
     ):
+        response_text = "Goodbye! Have a wonderful day ahead. – MCS AI"
+        memory.save_context({"input": q}, {"output": response_text})
         return {
-            "response": "Goodbye! Have a wonderful day ahead. – MCS AI",
+            "response": response_text,
             "observation": [],
             "table": [],
             "mode": "direct",
+            "session_id": session_id,
         }
 
     # Get the DataFrame from blob storage
@@ -266,7 +288,14 @@ def ask(body: QueryWithConsigneeBody):
     authorized_df = filter_by_consignee(df, consignee_codes)
 
     if authorized_df.empty:
-        return {"response": "No data found.", "table": [], "mode": "agent"}
+        response_text = "No data found."
+        memory.save_context({"input": q}, {"output": response_text})
+        return {
+            "response": response_text,
+            "table": [],
+            "mode": "agent",
+            "session_id": session_id,
+        }
 
     # Extract container numbers from the query if present
     container_pattern = r"(?:container(?:s)?\s+(?:number(?:s)?)?(?:\s+is|\s+are)?\s+)?([A-Z]{4}\d{7}(?:\s*,\s*[A-Z]{4}\d{7})*)"
@@ -282,7 +311,14 @@ def ask(body: QueryWithConsigneeBody):
             df, requested_containers, consignee_codes
         )
         if not is_authorized:
-            return {"response": "No data found.", "table": [], "mode": "agent"}
+            response_text = "No data found."
+            memory.save_context({"input": q}, {"output": response_text})
+            return {
+                "response": response_text,
+                "table": [],
+                "mode": "agent",
+                "session_id": session_id,
+            }
 
     # ---------- NEW: helper to pull milestone Observation ----------
     # Include actual tool names and normalize to lowercase for matching.
@@ -337,11 +373,44 @@ def ask(body: QueryWithConsigneeBody):
 
         threading.current_thread().consignee_codes = consignee_codes
 
+        # Get conversation history from memory and add as context
+        chat_history = memory.load_memory_variables({}).get("chat_history", [])
+        
+        # Build query with context from memory if history exists
+        if chat_history:
+            # Format last 2 exchanges (4 messages) for context
+            context_parts = []
+            for msg in chat_history[-4:]:
+                # Handle different message formats (BaseMessage, tuple, or dict)
+                if hasattr(msg, 'type') and hasattr(msg, 'content'):
+                    role = "User" if msg.type == "human" else "Assistant"
+                    content = msg.content
+                elif isinstance(msg, tuple) and len(msg) >= 2:
+                    role = "User" if msg[0] == "human" else "Assistant"
+                    content = msg[1]
+                else:
+                    continue
+                context_parts.append(f"{role}: {content}")
+            
+            if context_parts:
+                context_str = "\n".join(context_parts)
+                query_with_context = f"[Previous conversation for context:\n{context_str}]\n\nCurrent question: {q}"
+            else:
+                query_with_context = q
+        else:
+            query_with_context = q
+
         try:
-            # Pass clean query without consignee codes to prevent routing confusion
-            result = AGENT.invoke({"input": q})
+            # Pass query with context to existing agent
+            result = AGENT.invoke({"input": query_with_context})
         except TypeError:
-            result = AGENT.invoke({"input": q})
+            result = AGENT.invoke({"input": query_with_context})
+
+        # Save the original question and response to memory
+        if isinstance(result, dict) and "output" in result:
+            output_text = result.get("output", "")
+            if isinstance(output_text, str):
+                memory.save_context({"input": q}, {"output": output_text})
 
         # Clear the context after use
         if hasattr(threading.current_thread(), "consignee_codes"):
@@ -428,6 +497,7 @@ def ask(body: QueryWithConsigneeBody):
                         "observation": sanitize_response(msg),
                         "table": containers,  # Container details as table
                         "mode": "router-fallback",
+                        "session_id": session_id,
                     }
 
             # Default string response
@@ -437,6 +507,7 @@ def ask(body: QueryWithConsigneeBody):
                 "observation": sanitize_response(fallback_str),
                 "table": [],
                 "mode": "router-fallback",
+                "session_id": session_id,
             }
         # --------------------------------------------------------------------
 
@@ -560,6 +631,7 @@ def ask(body: QueryWithConsigneeBody):
             "observation": observation,  # explicit field for clients that need it
             "table": table_data,
             "mode": "agent",
+            "session_id": session_id,
         }
 
     except Exception as exc:
@@ -605,6 +677,7 @@ def ask(body: QueryWithConsigneeBody):
                         "observation": "Fallback response due to agent error",
                         "table": containers,  # Container details as table
                         "mode": "router-fallback",
+                        "session_id": session_id,
                     }
 
             # Default string response
@@ -614,6 +687,7 @@ def ask(body: QueryWithConsigneeBody):
                 "observation": "Fallback response due to agent error",
                 "table": [],
                 "mode": "router-fallback",
+                "session_id": session_id,
             }
         except Exception as fallback_exc:
             logger.error(f"Router fallback also failed: {fallback_exc}")
@@ -939,3 +1013,42 @@ def ask(body: QueryWithConsigneeBody):
 #         except Exception as fallback_exc:
 #             logger.error(f"Router fallback also failed: {fallback_exc}")
 #             raise HTTPException(status_code=500, detail=f"Agent failed: {exc}")
+
+
+# ----------------------------------------------------------------------
+# Session Management Endpoints
+# ----------------------------------------------------------------------
+@app.post("/session/clear")
+def clear_session(session_id: str):
+    """Clear conversation memory for a specific session"""
+    success = memory_manager.clear_session(session_id)
+    if success:
+        return {
+            "message": "Session cleared successfully",
+            "session_id": session_id,
+        }
+    else:
+        return {
+            "message": "Session not found or already cleared",
+            "session_id": session_id,
+        }
+
+
+@app.get("/session/info/{session_id}")
+def get_session_info(session_id: str):
+    """Get information about a specific session"""
+    info = memory_manager.get_session_info(session_id)
+    if info:
+        return info
+    else:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+
+@app.get("/sessions/count")
+def get_active_sessions():
+    """Get count of active sessions"""
+    count = memory_manager.get_active_sessions_count()
+    return {
+        "active_sessions": count,
+        "message": f"There are {count} active session(s)",
+    }
