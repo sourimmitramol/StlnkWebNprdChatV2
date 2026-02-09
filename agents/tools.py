@@ -3344,9 +3344,9 @@ def get_containers_at_dp_not_fd(question: str = None, **kwargs) -> str:
             out[dcol] = out[dcol].dt.strftime("%Y-%m-%d")
 
     # Add status column for clarity
-    out["current_status"] = (
-        f"At Discharge Port - Awaiting Final Delivery within {start_date} {end_date}"
-    )
+    # out["current_status"] = (
+    #     f"At Discharge Port - Awaiting Final Delivery within {start_date} {end_date}"
+    # )
 
     return out.where(pd.notnull(out), None).to_dict(orient="records")
 
