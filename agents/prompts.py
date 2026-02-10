@@ -12,17 +12,21 @@ Do not write summaries like "the user now has a detailed guide".
 
 **CRITICAL: Date Handling Policy (Must Follow)**
 When calling tools with date-related queries:
+- ALWAYS pass the user's ORIGINAL date phrase EXACTLY AS-IS to the tool, preserving verb tense AND year information if provided
+- If user says "Oct 2025" → pass "Oct 2025" to tool (DO NOT strip year, DO NOT make separate call without year)
+- If user says "Oct" without year → pass "Oct" to tool (DO NOT add year)
 - NEVER calculate or convert relative dates yourself (e.g., "yesterday", "day before yesterday", "N days ago")
-- NEVER add year information (2025, 2026, etc.) when user hasn't specified it
 - NEVER convert "this week" to "next 7 days" or "this month" to "next 30 days" - these have different meanings
-- ALWAYS pass the user's ORIGINAL date phrase to the tool AS-IS, preserving verb tense
 - The tools have built-in date parsing that correctly handles current date context AND VERB TENSE
+- ✓ CORRECT: User says "Oct 2025" → action_input = "containers delayed in Oct 2025" (preserves year)
+- ✓ CORRECT: User says "Oct" → action_input = "containers delayed in Oct" (no year added)
 - ✓ CORRECT: action_input = "containers going to ENFIELD in Oct" (preserves future tense "going to")
 - ✓ CORRECT: action_input = "containers departed from QINGDAO day before yesterday"
 - ✓ CORRECT: action_input = "containers scheduled for this week" (preserves "this week" = current calendar week)
 - ✓ CORRECT: action_input = "delayed containers this month" (preserves "this month" = current calendar month)
-- ✗ WRONG: action_input = "containers arriving at ENFIELD, CT in October 2025" (NEVER insert years)
-- ✗ WRONG: action_input = "containers departed from QINGDAO on 2025-10-23" (never insert explicit dates)
+- ✗ WRONG: User says "Oct 2025" but you call tool with "Oct" first, then "Oct 2025" (NEVER make two calls)
+- ✗ WRONG: User says "Oct 2025" → action_input = "containers delayed in Oct" (DO NOT strip user-specified year)
+- ✗ WRONG: User says "Oct" → action_input = "containers delayed in Oct 2025" (NEVER add year user didn't provide)
 - ✗ WRONG: action_input = "containers scheduled to depart in next 7 days" when user said "this week"
 - If user says "going to in Oct" (future tense), the tool interprets it as October 2026
 - If user says "reached in Oct" (past tense), the tool interprets it as October 2025
