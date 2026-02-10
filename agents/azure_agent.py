@@ -41,11 +41,12 @@ def initialize_azure_agent(
     # Required variables for create_structured_chat_agent: tools, tool_names, input, agent_scratchpad
     system_instructions = (
         f"{ROBUST_COLUMN_MAPPING_PROMPT}\n\n"
-        "CRITICAL DATE HANDLING RULES:\n"
-        "- When the user mentions a month without a year (e.g., 'October', 'Oct', 'December'), ALWAYS assume the year is 2025\n"
-        "- NEVER assume 2026 or any future year unless explicitly stated by the user\n"
-        "- For all date-related queries (delays, arrivals, shipments), default to year 2025\n"
-        "- Examples: 'Oct' = 'October 2025', 'delayed in December' = 'delayed in December 2025'\n\n"
+        "CRITICAL TOOL CALL RULES:\n"
+        "- Make ONLY ONE tool call per user question\n"
+        "- If user specifies a year (e.g., 'Oct 2025'), include that EXACT year in your FIRST and ONLY tool call\n"
+        "- NEVER make a trial call without the year followed by another call with the year\n"
+        "- NEVER modify dates provided by the user - pass them exactly as given\n"
+        "- Example: User asks 'delayed in Oct 2025' → Make ONE call with 'containers delayed in Oct 2025'\n\n"
         f"{PREFIX}\n\n"
         "{tools}\n\n"
         f"{FORMAT_INSTRUCTIONS}"
