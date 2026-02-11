@@ -442,7 +442,7 @@ def get_hot_upcoming_arrivals(query: str = None, consignee_code: str = None, **k
             # Name heuristic: "at/to/in/from <proper name>" (only with location context)
             # More restrictive: name should be capitalized and reasonably port-like
             m_name = re.search(
-                r"\b(?:at|to|from|via)\s+([A-Z][A-Za-z\s\.\-']{3,25})\b(?:\s+port|\s+location|$)",
+                r"\b(?:at|to|from|via)\s+([A-Z][A-Za-z\s\.\-']{3,25})\b",
                 text,
                 flags=re.IGNORECASE,
             )
@@ -4453,6 +4453,143 @@ def get_hot_containers(
                 logger.warning(f"[get_hot_containers] Failed to parse time period: {e}")
             except:
                 pass
+
+    if hot_df.empty:
+        return f"No hot containers found for the specified criteria."
+
+    # -----------------------
+    # Location/Port filtering (NEW - matches get_hot_upcoming_arrivals logic)
+    # -----------------------
+    port_cols = [
+        c for c in ["discharge_port", "vehicle_arrival_lcn"] if c in hot_df.columns
+    ]
+
+    def _extract_loc_code_or_name(text: str):
+        # Prefer explicit "NAME(CODE)"
+        m_paren = re.search(r"([A-Z0-9 ,\.\-']+?)\s*\(([A-Z0-9]{2,6})\)", text.upper())
+        if m_paren:
+            return m_paren.group(2).strip(), m_paren.group(1).strip()
+
+        # Code-only token (3–6 alnum) heuristic - ONLY if query has location keywords
+        location_keywords = r"\b(?:port|location|at|to|from|via|arriving|departure|destination|discharge)\b"
+        has_location_context = bool(re.search(location_keywords, text, re.IGNORECASE))
+
+        if has_location_context:
+            tokens = re.findall(r"\b[A-Z0-9]{3,6}\b", text.upper())
+            stop = {
+                "NEXT",
+                "DAYS",
+                "DAY",
+                "HOT",
+                "ETA",
+                "ATA",
+                "ETD",
+                "WITHIN",
+                "UPCOMING",
+                "ARRIVE",
+                "ARRIVING",
+                "ARRIVALS",
+                "CONTAINER",
+                "CONTAINERS",
+                "FOR",
+                "USER",
+                "CONSIGNEE",
+                "CODE",
+                "SEA",
+                "AIR",
+                "ROAD",
+                "RAIL",
+                "COURIER",
+                "WHAT",
+                "ARE",
+                "THE",
+                "SHOW",
+                "LIST",
+                "GET",
+                "GIVE",
+                "TELL",
+                "KNOW",
+                "LET",
+                "ME",
+                "MY",
+                "ALL",
+                "ANY",
+                "SOME",
+                "FROM",
+                "TO",
+                "IN",
+                "AT",
+                "ON",
+                "BY",
+                "WITH",
+                "THIS",
+                "THAT",
+                "WEEK",
+                "MONTH",
+                "YEAR",
+                "TODAY",
+                "NOW",
+                "SOON",
+                "LATER",
+                "VIA",
+                "PORT",
+                "LOCATION",
+                "DESTINATION",
+                "DISCHARGE",
+                "DEPARTURE",
+            }
+            for t in tokens:
+                if t not in stop and not t.isdigit():
+                    return t, None
+
+            # Name heuristic: "at/to/in/from <proper name>" (only with location context)
+            m_name = re.search(
+                r"\b(?:at|to|from|via)\s+([A-Z][A-Za-z\s\.\-']{3,25})\b",
+                text,
+                flags=re.IGNORECASE,
+            )
+            if m_name:
+                name_candidate = m_name.group(1).strip()
+                # Exclude common time/direction words
+                if name_candidate.upper() not in {
+                    "NEXT",
+                    "THIS",
+                    "THAT",
+                    "EVERY",
+                    "EACH",
+                }:
+                    return None, name_candidate
+
+        return None, None
+
+    loc_code, loc_name = _extract_loc_code_or_name(query)
+    if port_cols and (loc_code or loc_name):
+        try:
+            logger.info(
+                f"[get_hot_containers] Location filter: code={loc_code}, name={loc_name}"
+            )
+        except:
+            pass
+
+        if loc_code:
+            code_pat = re.compile(rf"\({re.escape(loc_code)}\)", re.IGNORECASE)
+            mask = pd.Series(False, index=hot_df.index)
+            for c in port_cols:
+                mask |= hot_df[c].astype(str).apply(lambda x: bool(code_pat.search(x)))
+            hot_df = hot_df[mask].copy()
+        else:
+            name_pat = re.compile(re.escape(str(loc_name)), re.IGNORECASE)
+            mask = pd.Series(False, index=hot_df.index)
+            for c in port_cols:
+                mask |= hot_df[c].astype(str).apply(lambda x: bool(name_pat.search(x)))
+            hot_df = hot_df[mask].copy()
+
+        try:
+            logger.info(
+                f"[get_hot_containers] After location filter: {len(hot_df)} rows"
+            )
+        except:
+            pass
 
     if hot_df.empty:
         return f"No hot containers found for the specified criteria."
@@ -15507,38 +15644,50 @@ TOOLS = [
     Tool(
         name="Get Hot Upcoming Arrivals",
         func=get_hot_upcoming_arrivals,
-        description="List hot containers (and related POs) arriving within next N days.",
+        description=(
+            "**PRIMARY TOOL FOR HOT CONTAINERS ARRIVING/UPCOMING/FUTURE QUERIES**.\n"
+            "\n"
+            "**CRITICAL**: Use this tool when query contains 'hot' + FUTURE/UPCOMING indicators:\n"
+            "- 'arriving', 'upcoming', 'will arrive', 'next', 'coming', 'future'\n"
+            "- 'hot containers arriving at Los Angeles'\n"
+            "- 'upcoming hot shipments to Rotterdam'\n"
+            "- 'hot containers coming to USNYC'\n"
+            "- 'hot containers in next 7 days'\n"
+            "\n"
+            "Features:\n"
+            "- Returns ONLY hot containers NOT YET ARRIVED (ata_dp is NULL)\n"
+            "- Defaults to next 7 days if no date specified\n"
+            "- Supports location filtering (port code or city name)\n"
+            "- Transport mode filtering (sea, air, road, etc.)\n"
+            "\n"
+            "DO NOT use for:\n"
+            "- General hot container queries without time context → Use 'Get Hot Containers'\n"
+            "- Already arrived hot containers → Use 'Get Hot Containers'\n"
+        ),
     ),
     Tool(
         name="Get Hot Containers",
         func=get_hot_containers,
         description=(
-            "PRIMARY TOOL FOR HOT/PRIORITY CONTAINER ARRIVAL & STATUS QUERIES (NOT DEPARTURES).\n"
+            "Get ALL hot/priority containers (past + future) without arrival restrictions.\n"
             "\n"
-            "**CRITICAL SCOPE**: This tool is for ARRIVAL/STATUS queries ONLY.\n"
-            "DO NOT use for departure queries - use 'Get Containers Departing From Load Port' instead.\n"
+            "**CRITICAL**: DO NOT use if query has 'arriving', 'upcoming', 'next', 'coming' → Use 'Get Hot Upcoming Arrivals' instead.\n"
             "\n"
-            "Use this tool when query mentions 'hot' + ARRIVAL/STATUS context:\n"
+            "Use this tool for:\n"
             "- Generic: 'Show my hot containers', 'List all priority shipments'\n"
-            "- Arrivals: 'hot containers arriving at Rotterdam', 'urgent shipments at USNYC'\n"
             "- Status: 'hot containers that have arrived', 'priority shipments already reached'\n"
-            "- Delays: 'hot containers delayed by 3 days', 'priority shipments late'\n"
+            "- Historical: 'hot containers from June to September', 'hot containers in July 2025'\n"
+            "- Delays: 'hot containers delayed by 3 days', 'late hot shipments'\n"
             "\n"
-            "DO NOT USE for departure queries like:\n"
-            "- 'hot containers departing from Shanghai' → Use 'Get Containers Departing From Load Port'\n"
-            "- 'hot containers leaving QINGDAO' → Use 'Get Containers Departing From Load Port'\n"
-            "- 'priority shipments scheduled to depart' → Use 'Get Containers Departing From Load Port'\n"
+            "DO NOT USE for:\n"
+            "- ARRIVING/UPCOMING queries → Use 'Get Hot Upcoming Arrivals'\n"
+            "- DEPARTURE queries → Use 'Get Containers Departing From Load Port'\n"
             "\n"
-            "Keywords that indicate DEPARTURES (use other tool):\n"
-            "- depart, departing, leave, leaving, sail, sailing, scheduled to depart, will depart\n"
-            "- 'from load port', 'from origin', 'from Shanghai/QINGDAO/etc.'\n"
-            "\n"
-            "This tool handles:\n"
-            "- Filters to ONLY hot_container_flag = TRUE\n"
-            "- Delay calculations for late arrivals\n"
-            "- Port filtering for discharge/arrival ports\n"
+            "Features:\n"
+            "- Returns ALL hot containers (past arrivals + future + in-transit)\n"
+            "- Location filtering (discharge port)\n"
+            "- Time period filtering (date ranges)\n"
             "- Transport mode filtering\n"
-            "- Arrival status (arrived vs in-transit)\n"
         ),
     ),
     Tool(

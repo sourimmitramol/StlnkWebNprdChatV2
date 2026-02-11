@@ -225,21 +225,34 @@ def route_query(query: str, consignee_codes: list = None) -> str:
         # ========== PRIORITY 4: Hot containers routing ==========
         # NOTE: Queries with "hot" + delay thresholds ("delayed by X days")
         # are handled by PRIORITY 2 above, not here
-        if (
-            ("hot container" in q or "hot containers" in q)
-            and "delay" not in q
-            and "late" not in q
-        ):
-            return get_hot_containers(query)
-        elif "hot container" in q or "hot containers" in q:
-            # If hot + delay/late without specific day threshold, use get_hot_containers
-            # Check if there's a specific day threshold
-            has_day_threshold = re.search(r"\d+\s+days?", query, re.IGNORECASE)
-            if has_day_threshold:
-                logger.info(
-                    f"Router: Hot containers with delay threshold -> get_delayed_containers for query: {query}"
-                )
-                return get_delayed_containers(query)
+        if "hot container" in q or "hot containers" in q:
+            # Check for upcoming/arriving keywords - route to future-only function
+            if any(
+                keyword in q
+                for keyword in [
+                    "arriving",
+                    "upcoming",
+                    "arrive",
+                    "next",
+                    "coming",
+                    "will arrive",
+                ]
+            ):
+                logger.info(f"Router: Hot upcoming arrivals route for query: {query}")
+                return get_hot_upcoming_arrivals(query)
+            # Check for delay/late keywords
+            elif "delay" in q or "late" in q:
+                # If hot + delay/late without specific day threshold, use get_hot_containers
+                # Check if there's a specific day threshold
+                has_day_threshold = re.search(r"\d+\s+days?", query, re.IGNORECASE)
+                if has_day_threshold:
+                    logger.info(
+                        f"Router: Hot containers with delay threshold -> get_delayed_containers for query: {query}"
+                    )
+                    return get_delayed_containers(query)
+                else:
+                    return get_hot_containers(query)
+            # Default: all hot containers (past and future)
             else:
                 return get_hot_containers(query)
 
