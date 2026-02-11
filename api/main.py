@@ -9,8 +9,8 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from agents.azure_agent import initialize_azure_agent
-from agents.router import route_query
 from agents.memory_manager import memory_manager
+from agents.router import route_query
 from agents.tools import get_cargo_ready_date  # Add this
 from agents.tools import get_hot_containers  # Add this
 from agents.tools import (_df, analyze_data_with_pandas,
@@ -156,7 +156,19 @@ def ask(body: QueryWithConsigneeBody):
     # Get or create memory for this session
     memory = memory_manager.get_memory(session_id)
     memory_manager.set_consignee_context(session_id, consignee_codes)
-    
+
+    # STEP 1: Extract entities from current question first (to catch new entities)
+    memory_manager.extract_and_track_entities(session_id, q)
+
+    # STEP 2: Resolve entity references (like "this container" -> "container MSBU4522691")
+    # This will also extract entities from chat history if needed
+    resolved_query = memory_manager.resolve_entity_references(session_id, q)
+    if resolved_query != q:
+        logger.info(f"✅ Entity resolved: '{q}' -> '{resolved_query}'")
+        q = resolved_query  # Use resolved query for all subsequent processing
+    else:
+        logger.debug(f"No entity references found in: '{q}'")
+
     if not q:
         raise HTTPException(status_code=400, detail="Empty question")
 
@@ -185,7 +197,9 @@ def ask(body: QueryWithConsigneeBody):
         for word in greetings
     ):
         logger.info(f"[DEBUG] Matched greeting pattern")
-        response_text = "Hello! I'm MCS AI, your shipping assistant. How can I help you today?"
+        response_text = (
+            "Hello! I'm MCS AI, your shipping assistant. How can I help you today?"
+        )
         # Save to memory for direct responses
         memory.save_context({"input": q}, {"output": response_text})
         return {
@@ -375,14 +389,14 @@ def ask(body: QueryWithConsigneeBody):
 
         # Get conversation history from memory and add as context
         chat_history = memory.load_memory_variables({}).get("chat_history", [])
-        
+
         # Build query with context from memory if history exists
         if chat_history:
             # Format last 2 exchanges (4 messages) for context
             context_parts = []
             for msg in chat_history[-4:]:
                 # Handle different message formats (BaseMessage, tuple, or dict)
-                if hasattr(msg, 'type') and hasattr(msg, 'content'):
+                if hasattr(msg, "type") and hasattr(msg, "content"):
                     role = "User" if msg.type == "human" else "Assistant"
                     content = msg.content
                 elif isinstance(msg, tuple) and len(msg) >= 2:
@@ -391,10 +405,15 @@ def ask(body: QueryWithConsigneeBody):
                 else:
                     continue
                 context_parts.append(f"{role}: {content}")
-            
+
             if context_parts:
                 context_str = "\n".join(context_parts)
-                query_with_context = f"[Previous conversation for context:\n{context_str}]\n\nCurrent question: {q}"
+                # Add note about entity resolution to help agent understand
+                query_with_context = (
+                    f"[Previous conversation for context:\n{context_str}]\n\n"
+                    f"[NOTE: Entity references like 'this container', 'this PO' have already been resolved to actual identifiers]\n\n"
+                    f"Current question: {q}"
+                )
             else:
                 query_with_context = q
         else:
@@ -411,6 +430,9 @@ def ask(body: QueryWithConsigneeBody):
             output_text = result.get("output", "")
             if isinstance(output_text, str):
                 memory.save_context({"input": q}, {"output": output_text})
+                # Extract and track entities from both question and response
+                memory_manager.extract_and_track_entities(session_id, q)
+                memory_manager.extract_and_track_entities(session_id, output_text)
 
         # Clear the context after use
         if hasattr(threading.current_thread(), "consignee_codes"):

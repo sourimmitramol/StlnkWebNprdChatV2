@@ -10,7 +10,7 @@ from agents.tools import (  # Add the missing functions
     check_po_month_arrival, check_transit_status, get_arrivals_by_port,
     get_bl_transit_analysis, get_blob_sql_engine, get_booking_details,
     get_bulk_container_transit_analysis, get_container_carrier,
-    get_container_etd, get_container_milestones,
+    get_container_eta, get_container_etd, get_container_milestones,
     get_container_rail_transport_status, get_container_transit_analysis,
     get_containers_arriving_soon, get_containers_at_dp_not_fd,
     get_containers_by_carrier, get_containers_by_etd_window,

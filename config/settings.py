@@ -46,6 +46,17 @@ class Settings(BaseSettings):
         default="2021-04-30", env="AZURE_SEARCH_API_VERSION"
     )
 
+    # ---------- Pinecone (optional) ----------
+    PINECONE_API_KEY: Optional[str] = Field(default=None, env="PINECONE_API_KEY")
+    PINECONE_ENVIRONMENT: Optional[str] = Field(
+        default=None, env="PINECONE_ENVIRONMENT"
+    )
+    PINECONE_INDEX_NAME: Optional[str] = Field(
+        default="shipment-index", env="PINECONE_INDEX_NAME"
+    )
+    # Vector store selection: 'faiss', 'pinecone', or 'both'
+    VECTOR_STORE_TYPE: str = Field(default="faiss", env="VECTOR_STORE_TYPE")
+
     # ---------- Logging ----------
     LOG_LEVEL: str = Field(default="INFO", env="LOG_LEVEL")
     LOG_FILE: str = Field(default="app.log", env="LOG_FILE")

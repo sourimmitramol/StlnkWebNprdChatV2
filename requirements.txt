@@ -17,6 +17,10 @@ tenacity==8.2.2
 requests==2.32.0
 pydantic-settings==2.0.3
 
+# Vector stores
+pinecone-client==3.0.0
+langchain-pinecone==0.1.0
+
 # Optional extras (dev only)
 pytest==8.3.2
 pytest-cov==5.0.0

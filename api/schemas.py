@@ -1,7 +1,8 @@
 # api/schemas.py
-from pydantic import BaseModel, Field
-from typing import Optional
 import uuid
+from typing import Optional
+
+from pydantic import BaseModel, Field
 
 
 class AskRequest(BaseModel):

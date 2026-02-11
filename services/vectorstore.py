@@ -3,10 +3,16 @@ import logging
 import os
 import time
 from pathlib import Path
-from typing import List
+from typing import List, Optional, Union
 
 import pandas as pd
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+# Import text splitter from the correct package
+try:
+    from langchain_text_splitters import RecursiveCharacterTextSplitter
+except ImportError:
+    from langchain.text_splitter import RecursiveCharacterTextSplitter
+
 from langchain_community.vectorstores import FAISS
 from langchain_openai import AzureOpenAIEmbeddings
 
@@ -31,7 +37,7 @@ def _embeddings() -> AzureOpenAIEmbeddings:
 def _build_index() -> FAISS:
     """
     Build a brand new FAISS index from the shipment dataframe.
-    The routine is batched (50 docs per batch) and respects Azure rate limits.
+    The routine is batched and throttled to respect Azure rate limits.
     """
     logger.info("Creating new FAISS vector store")
     df = get_shipment_df()
@@ -58,18 +64,32 @@ def _build_index() -> FAISS:
 
     embeddings = _embeddings()
 
-    # Optimization: Increase batch size slightly if Azure permits (usually safe up to 16k tokens/req).
-    # 50 rows * 500 chars ~= 25k chars ~= 6k tokens. Safe.
-    batch = 50
-    vectorstore = FAISS.from_texts(chunks[:batch], embeddings)
+    # Use a conservative batch size and delay to avoid hitting
+    # Azure OpenAI embeddings rate limits.
+    # 20 chunks per batch with a 1s pause between batches greatly
+    # reduces the chance of 429s for this one‑time indexing job.
+    batch = 20
+    logger.info(
+        f"Building FAISS index from {len(chunks)} chunks with batch size {batch}"
+    )
 
+    # Initialize vectorstore with the first batch
+    first_batch = chunks[:batch]
+    vectorstore = FAISS.from_texts(first_batch, embeddings)
+
+    # Process remaining batches with throttling
     for i in range(batch, len(chunks), batch):
-        vectorstore.add_texts(chunks[i : i + batch])
-        if i % (batch * 5) == 0:
-            logger.debug(f"Indexed batch {i // batch + 1}/{len(chunks)//batch}")
+        batch_texts = chunks[i : i + batch]
+        vectorstore.add_texts(batch_texts)
 
-        # 0.2s should be sufficient.
-        time.sleep(0.2)
+        batch_num = (i // batch) + 1
+        total_batches = (len(chunks) + batch - 1) // batch
+        logger.info(
+            f"Indexed batch {batch_num}/{total_batches} ({len(batch_texts)} chunks)"
+        )
+
+        # Be gentle with the embeddings endpoint to avoid 429s
+        time.sleep(1.0)
 
     VECTORSTORE_DIR.mkdir(parents=True, exist_ok=True)
     vectorstore.save_local(str(VECTORSTORE_DIR))
@@ -101,3 +121,152 @@ def get_vectorstore() -> FAISS:
         else:
             _vectorstore = _build_index()
     return _vectorstore
+
+
+# ----------------------------------------------------------------------
+# Pinecone Vector Store Support
+# ----------------------------------------------------------------------
+_pinecone_store = None
+
+
+def _build_pinecone_index():
+    """Build or connect to Pinecone index from the shipment dataframe."""
+    try:
+        from langchain_pinecone import PineconeVectorStore
+        from pinecone import Pinecone, ServerlessSpec
+    except ImportError:
+        logger.error(
+            "Pinecone not installed. Install with: pip install pinecone-client langchain-pinecone"
+        )
+        return None
+
+    if not settings.PINECONE_API_KEY or not settings.PINECONE_ENVIRONMENT:
+        logger.warning(
+            "Pinecone credentials not configured. Skipping Pinecone initialization."
+        )
+        return None
+
+    try:
+        logger.info("Initializing Pinecone vector store")
+
+        # Initialize Pinecone
+        pc = Pinecone(api_key=settings.PINECONE_API_KEY)
+
+        index_name = settings.PINECONE_INDEX_NAME
+
+        # Check if index exists, if not create it
+        if index_name not in pc.list_indexes().names():
+            logger.info(f"Creating new Pinecone index: {index_name}")
+            pc.create_index(
+                name=index_name,
+                dimension=1536,  # text-embedding-ada-002 dimension
+                metric="cosine",
+                spec=ServerlessSpec(
+                    cloud="aws", region=settings.PINECONE_ENVIRONMENT or "us-east-1"
+                ),
+            )
+            time.sleep(1)  # Wait for index to be ready
+
+        # Get the shipment data
+        df = get_shipment_df()
+        rows_as_text = [
+            "\n".join(f"{k}: {v}" for k, v in row.items() if str(v).strip())
+            for row in df.fillna("").astype(str).to_dict(orient="records")
+        ]
+
+        splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=100)
+        chunks: List[str] = []
+        for txt in rows_as_text:
+            split_chunks = splitter.split_text(txt)
+            chunks.extend(split_chunks)
+
+        embeddings = _embeddings()
+
+        # Create or update Pinecone vector store
+        vectorstore = PineconeVectorStore.from_texts(
+            texts=chunks, embedding=embeddings, index_name=index_name
+        )
+
+        logger.info(
+            f"Pinecone index '{index_name}' initialized with {len(chunks)} chunks"
+        )
+        return vectorstore
+
+    except Exception as e:
+        logger.error(f"Failed to initialize Pinecone: {e}", exc_info=True)
+        return None
+
+
+def get_pinecone_vectorstore():
+    """Return a cached Pinecone store; builds it on first request."""
+    global _pinecone_store
+    if _pinecone_store is None:
+        _pinecone_store = _build_pinecone_index()
+    return _pinecone_store
+
+
+def get_hybrid_vectorstore():
+    """
+    Get vector store based on configuration.
+    Returns FAISS, Pinecone, or both based on VECTOR_STORE_TYPE setting.
+    Falls back to FAISS if Pinecone is unavailable.
+    """
+    store_type = getattr(settings, "VECTOR_STORE_TYPE", "faiss").lower()
+
+    if store_type == "pinecone":
+        pinecone = get_pinecone_vectorstore()
+        if pinecone:
+            return pinecone
+        else:
+            logger.warning("Pinecone not available, falling back to FAISS")
+            return get_vectorstore()
+    elif store_type == "both":
+        faiss = get_vectorstore()
+        pinecone = get_pinecone_vectorstore()
+        if pinecone:
+            return {"faiss": faiss, "pinecone": pinecone}
+        else:
+            logger.warning("Pinecone not available, using FAISS only")
+            return faiss
+    else:  # default to faiss
+        return get_vectorstore()
+
+
+def search_with_fallback(query: str, k: int = 5) -> List:
+    """
+    Search vector stores with fallback mechanism.
+    Tries FAISS first, falls back to Pinecone if FAISS fails or returns no results.
+    """
+    results = []
+
+    # Try FAISS first
+    try:
+        faiss_store = get_vectorstore()
+        if faiss_store:
+            results = faiss_store.similarity_search(query, k=k)
+            if results:
+                logger.info(f"Found {len(results)} results from FAISS")
+                return results
+            else:
+                logger.info("FAISS returned no results, trying Pinecone fallback")
+    except Exception as e:
+        logger.warning(f"FAISS search failed: {e}")
+
+    # Fallback to Pinecone only if it's configured
+    try:
+        store_type = getattr(settings, "VECTOR_STORE_TYPE", "faiss").lower()
+        if store_type in ["pinecone", "both"]:
+            pinecone_store = get_pinecone_vectorstore()
+            if pinecone_store:
+                results = pinecone_store.similarity_search(query, k=k)
+                if results:
+                    logger.info(
+                        f"Found {len(results)} results from Pinecone (fallback)"
+                    )
+                    return results
+    except Exception as e:
+        logger.warning(f"Pinecone search failed: {e}")
+
+    if not results:
+        logger.warning("No results found from any vector store")
+    return results

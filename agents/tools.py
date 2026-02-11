@@ -2764,7 +2764,7 @@ def get_delayed_containers(question: str = None, **kwargs) -> str:
             out_cols.append(col)
 
     out_cols = [c for c in out_cols if c in result.columns]
-    out = result[out_cols].head(200).copy()
+    out = result[out_cols].head(300).copy()
 
     for dcol in ["eta_dp", "ata_dp"]:
         if dcol in out.columns and pd.api.types.is_datetime64_any_dtype(out[dcol]):
@@ -5096,6 +5096,113 @@ def get_container_etd(query: str) -> str:
 
     # Format date columns (only for actual datetime values)
     for date_col in ["etd_lp", "atd_lp"]:
+        if date_col in combined_results.columns:
+            combined_results[date_col] = combined_results[date_col].apply(
+                lambda x: x.strftime("%Y-%m-%d") if isinstance(x, pd.Timestamp) else x
+            )
+
+    # Return as dict/JSON format like other functions
+    return combined_results.where(pd.notnull(combined_results), None).to_dict(
+        orient="records"
+    )
+
+
+def get_container_eta(query: str) -> str:
+    """
+    Return ETA_DP (Estimated Time of Arrival at Discharge Port), revised_eta, and ATA_DP (Actual Time of Arrival) for specific containers.
+
+    **PRIMARY TOOL FOR CONTAINER ETA QUERIES**
+
+    Use this tool when user asks about:
+    - 'What is the ETA for container X?'
+    - 'When will container Y arrive?'
+    - 'ETA of container Z?'
+    - 'Expected arrival for container A?'
+
+    Returns:
+    - container_number
+    - discharge_port (destination port)
+    - eta_dp (original estimated arrival date)
+    - revised_eta (updated arrival date, if available - PREFERRED)
+    - ata_dp (actual arrival date, if container has arrived)
+
+    Input: Query mentioning one or more container numbers (comma-separated or space-separated).
+    Output: Container number, discharge_port, ETA_DP, revised_eta, and ATA_DP.
+    """
+    # Extract all container numbers using regex pattern
+    container_pattern = re.findall(r"([A-Z]{4}\d{7})", query)
+
+    if not container_pattern:
+        return "Please mention one or more container numbers."
+
+    df = _df()
+
+    # Parse date columns including revised_eta and ATA_DP
+    date_cols = ["eta_dp", "revised_eta", "ata_dp"]
+    for col in date_cols:
+        if col in df.columns:
+            try:
+                df[col] = pd.to_datetime(df[col], errors="coerce")
+            except:
+                pass
+
+    # Create results table with all requested containers
+    results = []
+    for cont in container_pattern:
+        # First try exact match after normalizing
+        norm_cont = cont.upper().strip()
+        mask = df["container_number"].astype(str).str.upper().str.strip() == norm_cont
+        row = df[mask]
+
+        # If no exact match, try contains
+        if row.empty:
+            row = df[
+                df["container_number"]
+                .astype(str)
+                .str.contains(cont, case=False, na=False)
+            ]
+
+        if not row.empty:
+            row = row.iloc[0]
+            # Include discharge_port (destination), eta_dp, revised_eta (preferred), and ata_dp
+            cols = [
+                "container_number",
+                "discharge_port",
+                "eta_dp",
+                "revised_eta",
+                "ata_dp",
+            ]
+            cols = [c for c in cols if c in row.index]
+            single_result = row[cols].to_frame().T
+            results.append(single_result)
+        else:
+            # Create a row with "Not Available" for missing containers
+            missing_row = pd.DataFrame(
+                {
+                    "container_number": [cont],
+                    "discharge_port": ["Not Available"],
+                    "eta_dp": ["Not Available"],
+                    "revised_eta": ["Not Available"],
+                    "ata_dp": ["Not Available"],
+                }
+            )
+            results.append(
+                missing_row[
+                    [
+                        "container_number",
+                        "discharge_port",
+                        "eta_dp",
+                        "revised_eta",
+                        "ata_dp",
+                    ]
+                ]
+            )
+
+    # Combine all results
+    combined_results = pd.concat(results, ignore_index=True)
+
+    # Format date columns (only for actual datetime values)
+    for date_col in ["eta_dp", "revised_eta", "ata_dp"]:
         if date_col in combined_results.columns:
             combined_results[date_col] = combined_results[date_col].apply(
                 lambda x: x.strftime("%Y-%m-%d") if isinstance(x, pd.Timestamp) else x
@@ -10748,20 +10855,23 @@ def get_upcoming_bls(question: str = None, consignee_code: str = None, **kwargs)
 def vector_search_tool(query: str) -> str:
     """
     Search the vector database for relevant shipment information using semantic similarity.
+    Uses FAISS first, falls back to Pinecone if FAISS fails or returns no results.
     Input: Natural language query.
     Output: Top matching records from the vector store.
     """
-    # Get the vectorstore instance
-    vectorstore = get_vectorstore()
-    # Search for top 5 relevant documents
-    results = vectorstore.similarity_search(query, k=5)
+    from services.vectorstore import search_with_fallback
+
+    # Search with automatic fallback to Pinecone if FAISS fails
+    results = search_with_fallback(query, k=5)
+
     if not results:
-        return "No relevant results found in the vector database."
+        return "No relevant results found in any vector database (tried FAISS and Pinecone)."
+
     # Format results for display
     details = "\n\n".join([str(doc.page_content) for doc in results])
     return (
-        f"Thought: Retrieved top results from the vector database using semantic search.\n"
-        f"Final Answer:\n{details}\n"
+        f"Retrieved top {len(results)} results from vector database using semantic search.\n\n"
+        f"{details}\n\n"
         "These results are based on semantic similarity from the vector store."
     )
 
@@ -14386,12 +14496,28 @@ def get_cargo_ready_date(query: str) -> str:
     )
     if port_pattern and "discharge_port" in result_df.columns:
         port_name = port_pattern.group(1).strip()
-        result_df = result_df[
-            result_df["discharge_port"]
-            .astype(str)
-            .str.contains(port_name, case=False, na=False)
+        # Exclude common prepositions that are not port names
+        excluded_words = [
+            "for",
+            "the",
+            "and",
+            "or",
+            "this",
+            "that",
+            "with",
+            "from",
+            "in",
+            "on",
+            "by",
+            "of",
         ]
-        filters_applied.append(f"Port: {port_name}")
+        if port_name.lower() not in excluded_words:
+            result_df = result_df[
+                result_df["discharge_port"]
+                .astype(str)
+                .str.contains(port_name, case=False, na=False)
+            ]
+            filters_applied.append(f"Port: {port_name}")
 
     # ------------------------------------------------------------------
     # 5. Filter by date range (if mentioned in query)
@@ -14431,12 +14557,28 @@ def get_cargo_ready_date(query: str) -> str:
     )
     if load_port_pattern and "load_port" in result_df.columns:
         load_port_name = load_port_pattern.group(1).strip()
-        result_df = result_df[
-            result_df["load_port"]
-            .astype(str)
-            .str.contains(load_port_name, case=False, na=False)
+        # Exclude common prepositions that are not port names
+        excluded_words = [
+            "for",
+            "the",
+            "and",
+            "or",
+            "this",
+            "that",
+            "with",
+            "from",
+            "in",
+            "on",
+            "by",
+            "of",
         ]
-        filters_applied.append(f"Load port: {load_port_name}")
+        if load_port_name.lower() not in excluded_words:
+            result_df = result_df[
+                result_df["load_port"]
+                .astype(str)
+                .str.contains(load_port_name, case=False, na=False)
+            ]
+            filters_applied.append(f"Load port: {load_port_name}")
 
     # ------------------------------------------------------------------
     # 7. Check if results are empty
@@ -15039,7 +15181,7 @@ TOOLS = [
     Tool(
         name="Get Shipped Quantity",
         func=get_shipped_quantity,
-        return_direct=True,
+        # return_direct=True,
         description=(
             "**PRIMARY TOOL FOR SHIPPED QUANTITY QUERIES**\n"
             "\n"
@@ -15098,6 +15240,8 @@ TOOLS = [
             "Keywords: status, milestone, track, tracking, where, location, journey, event, history, progress\n"
             "\n"
             "DO NOT use this tool for QUANTITY queries - use 'Get Shipped Quantity' instead!\n"
+            "DO NOT use this tool for SIMPLE ARRIVAL STATUS questions ('Did PO reach?', 'Is PO in transit?') - use 'Check Arrival Status' instead!\n"
+            "DO NOT use this tool for ETA queries ('What is ETA?', 'When will arrive?') - use 'Get Container ETA' or 'Get ETA For PO' instead!\n"
             "DO NOT use 'Get Containers or PO or OBL By Supplier' for status queries.\n"
             "DO NOT use 'Check Arrival Status' for milestone queries.\n"
         ),
@@ -15110,7 +15254,33 @@ TOOLS = [
     Tool(
         name="Check Arrival Status",
         func=check_arrival_status,
-        description="Check if a container or PO has arrived based on ATA_DP and derived_ATA_DP logic.",
+        description=(
+            "PRIMARY TOOL for direct YES/NO arrival status queries.\n"
+            "\n"
+            "Use this tool when user asks DIRECT questions about:\n"
+            "- 'Did PO X reach the discharge port?' or 'Has PO X reached discharge port?'\n"
+            "- 'Is PO Y still in transit?' or 'Is PO Y in transit?'\n"
+            "- 'Has container Z arrived?' or 'Did container Z arrive?'\n"
+            "- 'Did this PO already reach the discharge port or is it still in transit?'\n"
+            "- 'Has this container reached destination?'\n"
+            "- 'Is this PO delivered?' or 'Did this shipment arrive?'\n"
+            "- 'Has container X reached the port?' or 'Did container X reach port?'\n"
+            "\n"
+            "Keywords that indicate THIS tool:\n"
+            "- 'did reach', 'has reached', 'already reached', 'reached discharge port'\n"
+            "- 'has arrived', 'did arrive', 'already arrived'\n"
+            "- 'still in transit', 'is in transit', 'in transit'\n"
+            "- 'reached or in transit', 'arrived or transit'\n"
+            "- 'delivered', 'has delivered', 'reached destination'\n"
+            "\n"
+            "CRITICAL: Use this tool for BINARY questions (reached/not reached, arrived/not arrived, in transit/delivered).\n"
+            "\n"
+            "DO NOT use 'Get Container Milestones' for simple arrival status questions.\n"
+            "DO NOT use 'Check Transit Status' for 'has arrived' questions.\n"
+            "\n"
+            "Returns: Clear answer about whether PO/container has arrived at discharge port or is still in transit.\n"
+            "Logic: Checks ATA_DP (actual arrival) and derived_ATA_DP based on ETA_DP.\n"
+        ),
     ),
     Tool(
         name="Get Delayed Containers",
@@ -15193,12 +15363,37 @@ TOOLS = [
     Tool(
         name="Get Container ETD",
         func=get_container_etd,
-        description="Return ETD for a specific container.",
+        description="Return ETD (Estimated Time of Departure) for a specific container from load port.",
+    ),
+    Tool(
+        name="Get Container ETA",
+        func=get_container_eta,
+        description=(
+            "PRIMARY TOOL FOR CONTAINER ETA/ARRIVAL QUERIES.\n"
+            "\n"
+            "Use this tool when user asks about ETA or arrival time for a CONTAINER:\n"
+            "- 'What is the ETA for container X?' or 'ETA of container Y?'\n"
+            "- 'When will container Z arrive?' or 'Expected arrival for container A?'\n"
+            "- 'What is the arrival date for this container?'\n"
+            "- 'When is container MSBU4522691 expected to arrive?'\n"
+            "\n"
+            "Returns:\n"
+            "- container_number\n"
+            "- discharge_port (destination/arrival port)\n"
+            "- eta_dp (original estimated arrival date)\n"
+            "- revised_eta (updated arrival date - PREFERRED if available)\n"
+            "- ata_dp (actual arrival date if container has already arrived)\n"
+            "\n"
+            "Keywords: ETA, arrival, when will arrive, expected arrival, arrival date, estimated arrival\n"
+            "\n"
+            "DO NOT use 'Get Container Milestones' for simple ETA queries.\n"
+            "DO NOT use 'Get ETA For PO' for container ETA queries (that's for POs only).\n"
+        ),
     ),
     Tool(
         name="Get Upcoming Arrivals",
         func=get_upcoming_arrivals,
-        return_direct=True,
+        # return_direct=True,
         description=(
             "List **containers** (NOT POs) scheduled to arrive OR that have already arrived on specific dates."
             "Use ONLY when query asks about containers/shipments WITHOUT mentioning 'PO' or 'purchase order'."
@@ -15386,7 +15581,7 @@ TOOLS = [
     Tool(
         name="Get Cargo Ready Date",
         func=get_cargo_ready_date,
-        return_direct=True,
+        # return_direct=True,
         description=(
             "PRIMARY TOOL FOR ALL CARGO READY DATE QUERIES.\n"
             "\n"
@@ -15448,7 +15643,16 @@ TOOLS = [
     Tool(
         name="Check Transit Status",
         func=check_transit_status,
-        description="Check if a PO/cargo is currently in transit or find containers with transit times exceeding specific thresholds. Handles questions like 'which containers are taking more than X days of transit time?'",
+        description=(
+            "Check if a PO/cargo is currently in transit OR find containers with transit times exceeding specific thresholds.\n"
+            "\n"
+            "Use this tool for:\n"
+            "- Transit time analysis: 'which containers are taking more than X days of transit time?'\n"
+            "- Transit duration queries: 'containers with transit time over 30 days'\n"
+            "- Excessive transit time: 'shipments taking too long in transit'\n"
+            "\n"
+            "DO NOT use for simple arrival status questions like 'Did PO reach?' - use 'Check Arrival Status' instead.\n"
+        ),
     ),
     Tool(
         name="Get Containers By Carrier",
@@ -15468,7 +15672,7 @@ TOOLS = [
     Tool(
         name="Get Containers or PO or OBL By Supplier",
         func=get_containers_PO_OBL_by_supplier,
-        return_direct=True,
+        # return_direct=True,
         description=(
             "PRIMARY TOOL for ALL SUPPLIER/SHIPPER lookup and filtering queries.\n"
             "\n"
@@ -15549,7 +15753,7 @@ TOOLS = [
     Tool(
         name="Get Carrier For PO",
         func=get_carrier_for_po,
-        return_direct=True,
+        # return_direct=True,
         description=(
             "Find the final_carrier_name for a PO (matches po_number_multiple / po_number).\n"
             "Use queries like 'who is carrier for PO 5500009022' or '5500009022' or 'carrier for purchase order 5302967849'.\n"
@@ -15609,7 +15813,25 @@ TOOLS = [
     Tool(
         name="Get ETA For PO",
         func=get_eta_for_po,
-        description="Get ETA for a PO (prefers revised_eta over eta_dp).",
+        description=(
+            "PRIMARY TOOL FOR PO ETA/ARRIVAL QUERIES.\n"
+            "\n"
+            "Use this tool when user asks about ETA or arrival time for a PO (Purchase Order):\n"
+            "- 'What is the ETA for PO X?' or 'ETA of PO 5302982894?'\n"
+            "- 'When will PO Y arrive?' or 'Expected arrival for PO Z?'\n"
+            "- 'What is the arrival date for this PO?'\n"
+            "\n"
+            "Returns:\n"
+            "- PO number\n"
+            "- Container(s) associated with the PO\n"
+            "- revised_eta (updated arrival date - PREFERRED if available)\n"
+            "- eta_dp (original estimated arrival date)\n"
+            "- discharge_port (destination/arrival port)\n"
+            "\n"
+            "Keywords: PO ETA, PO arrival, when will PO arrive, PO expected arrival\n"
+            "\n"
+            "DO NOT use for container ETA queries - use 'Get Container ETA' instead.\n"
+        ),
     ),
     Tool(
         name="Get Containers By ETD Window",
@@ -15826,7 +16048,7 @@ TOOLS = [
     Tool(
         name="Get Container Rail Transport Status",
         func=get_container_rail_transport_status,
-        return_direct=True,
+        # return_direct=True,
         description=(
             "PRIMARY TOOL for checking if a container is being transported via RAIL.\n"
             "\n"
