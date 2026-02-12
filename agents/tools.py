@@ -3829,382 +3829,6 @@ def get_delayed_bls(question: str = None, consignee_code: str = None, **kwargs) 
     return out.where(pd.notnull(out), None).to_dict(orient="records")
 
 
-# def get_hot_containers(question: str = None, consignee_code: str = None, **kwargs) -> str:
-#     """
-#     Unified hot-container handler.
-
-#     Enhancements:
-#       Supports consignee_code filtering (comma-separated)
-#       Detects consignee name in question to further narrow results
-#       Handles "less than", "more than", "8+", "1–3", "missed ETA", etc.
-#       Location detection now supports both codes (USLAX) and names ("Los Angeles")
-#     """
-#     import re
-#     import pandas as pd
-
-#     query = (question or "")
-#     df = _df()  # already consignee-filtered if thread context applies
-
-#     # -----------------------
-#     # Apply consignee code filter
-#     # -----------------------
-#     if consignee_code and "consignee_code_multiple" in df.columns:
-#         codes = [c.strip() for c in str(consignee_code).split(",") if c.strip()]
-#         mask = pd.Series(False, index=df.index)
-#         for c in codes:
-#             mask |= df["consignee_code_multiple"].astype(str).str.contains(c)
-#         df = df[mask].copy()
-
-#     if df.empty:
-#         return "No container records found for provided consignee codes."
-
-#     # -----------------------
-#     # Identify hot-flag column
-#     # -----------------------
-#     hot_flag_cols = [c for c in df.columns if 'hot_container_flag' in c.lower()] or \
-#                     [c for c in df.columns if 'hot_container' in c.lower()]
-#     if not hot_flag_cols:
-#         return "Hot container flag column not found in the data."
-#     hot_flag_col = hot_flag_cols[0]
-
-#     def _is_hot(v) -> bool:
-#         if pd.isna(v):
-#             return False
-#         s = str(v).strip().upper()
-#         return s in {"Y", "YES", "TRUE", "1", "HOT"} or v is True or v == 1
-
-#     hot_df = df[df[hot_flag_col].apply(_is_hot)].copy()
-#     if hot_df.empty:
-#         return "No hot containers found for your authorized consignees."
-
-#     # -----------------------
-#     # Detect consignee name in question
-#     # -----------------------
-#     consignee_name_filter = None
-#     if "consignee_code_multiple" in hot_df.columns:
-#         all_names = hot_df["consignee_code_multiple"].dropna().astype(str).unique().tolist()
-#         q_up = query.upper()
-#         for name in all_names:
-#             clean_name = re.sub(r"\([^)]*\)", "", name).strip().upper()
-#             if clean_name and clean_name in q_up:
-#                 consignee_name_filter = clean_name
-#                 break
-#         if consignee_name_filter:
-#             hot_df = hot_df[hot_df["consignee_code_multiple"].astype(str).str.upper().str.contains(consignee_name_filter)]
-#             if hot_df.empty:
-#                 return f"No hot containers found for consignee '{consignee_name_filter}'."
-
-#     # -----------------------
-#     # Location filters (enhanced)
-#     # -----------------------
-#     #port_cols = [c for c in ["discharge_port", "vehicle_arrival_lcn", "final_destination","place_of_delivery", "load_port"]
-#     port_cols = [c for c in ["discharge_port"]
-#                  if c in hot_df.columns]
-
-#     def _extract_loc_code_and_name(q: str):
-#         q_up = (q or "").upper()
-
-#         # (1) Code like (USLAX)
-#         m = re.search(r"\(([A-Z0-9]{3,6})\)", q_up)
-#         if m:
-#             return m.group(1), None
-
-#         # (2) Bare port code e.g., "USLAX" (check against known dataset codes)
-#         cand_codes = set(re.findall(r"\b[A-Z0-9]{3,6}\b", q_up))
-#         if port_cols and cand_codes:
-#             known_codes = set()
-#             for c in port_cols:
-#                 vals = hot_df[c].dropna().astype(str).str.upper()
-#                 known_codes |= set(re.findall(r"\(([A-Z0-9]{3,6})\)", " ".join(vals.tolist())))
-#             for code in cand_codes:
-#                 if code in known_codes:
-#                     return code, None
-
-#         # (3) Named port/city with prepositions (on/at/in/to/from)
-#         m2_list = re.findall(r"(?:\b(?:ON|AT|IN|TO|FROM)\s+([A-Z][A-Z0-9\s\.,'\-]{2,}))", q_up)
-#         if m2_list:
-#             cand = max(m2_list, key=len).strip()
-#             # Stop at common separators like "FOR" (e.g., "at Los Angeles for consignee 0000866")
-#             cand = re.split(r"\bFOR\b", cand, maxsplit=1)[0].strip()
-#             # Clean noise like "BY", "DELAYED", "DAYS", etc.
-#             cand = re.sub(r"(?:(?:\d+\s*DAYS?)|ARRIV(?:ING|AL)?|LATE|DELAYED|OVERDUE|BEHIND|BY|ONWARD).*", "", cand).strip()
-#             if cand:
-#                 return None, cand
-
-#         # (4) Fallback: match known port names in query (e.g., "Los Angeles")
-#         if port_cols:
-#             for c in port_cols:
-#                 vals = hot_df[c].dropna().astype(str).str.upper().unique().tolist()
-#                 for val in vals:
-#                     val_clean = re.sub(r"\([^)]*\)", "", val).strip()
-#                     if len(val_clean) > 2 and val_clean in q_up:
-#                         return None, val_clean
-
-#         return None, None
-
-#     code, name = _extract_loc_code_and_name(query)
-
-#     def _looks_like_time_phrase(text: str) -> bool:
-#         if not text:
-#             return False
-#         t = str(text).strip().lower()
-#         # Common month names/abbrevs, relative periods, or a year token.
-#         if re.search(
-#             r"\b(jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|"
-#             r"sep|sept|september|oct|october|nov|november|dec|december)\b",
-#             t,
-#         ):
-#             return True
-#         if re.search(r"\b(this|next|last)\s+(week|month)\b", t):
-#             return True
-#         if re.search(r"\b(today|tomorrow|yesterday)\b", t):
-#             return True
-#         if re.search(r"\b\d{4}\b", t):
-#             return True
-#         return False
-
-#     # Avoid mis-classifying time phrases like "in November 2025" as locations.
-#     if name and _looks_like_time_phrase(name):
-#         name = None
-
-#     if code or name:
-#         loc_mask = pd.Series(False, index=hot_df.index)
-#         if code:
-#             for c in port_cols:
-#                 loc_mask |= hot_df[c].astype(str).str.upper().str.contains(rf"\({re.escape(code)}\)", na=False)
-#         else:
-#             tokens = [t for t in re.split(r"\W+", (name or "")) if len(t) >= 3]
-#             for c in port_cols:
-#                 col_vals = hot_df[c].astype(str).str.upper()
-#                 cond = pd.Series(True, index=hot_df.index)
-#                 for t in tokens:
-#                     cond &= col_vals.str.contains(re.escape(t), na=False)
-#                 loc_mask |= cond
-#         hot_df = hot_df[loc_mask].copy()
-#         if hot_df.empty:
-#             where = f"{code or name}"
-#             return f"No hot containers found at {where} for your authorized consignees."
-
-#     ql = (query or "").lower()
-
-#     # -----------------------
-#     # Optional final_carrier_name (minimal + query-driven)
-#     # -----------------------
-#     def _extract_carrier_or_vessel(q: str) -> str | None:
-#         q_norm = (q or "").strip()
-#         if not q_norm:
-#             return None
-#         # Primary patterns: "with Maersk", "carrier Maersk", "line Maersk"
-#         m = re.search(
-#             r"\b(?:with|carrier|line)\s+([A-Za-z0-9&\-\.'\s]{2,60}?)(?=\s+\b(?:in|on|for|to|from|at|between|during|within|next|last|this)\b|\s*$)",
-#             q_norm,
-#             re.IGNORECASE,
-#         )
-#         if m:
-#             cand = m.group(1).strip(" \t\r\n,.;:-")
-#             return cand or None
-
-#         # Secondary pattern: "by <carrier>" (avoid delay phrases like "by more than 5 days")
-#         m2 = re.search(
-#             r"\bby\s+([A-Za-z][A-Za-z&\-\.'\s]{1,60}?)(?=\s+\b(?:in|on|for|to|from|at|between|during|within|next|last|this)\b|\s*$)",
-#             q_norm,
-#             re.IGNORECASE,
-#         )
-#         if not m2:
-#             return None
-#         cand2 = m2.group(1).strip(" \t\r\n,.;:-")
-#         # Reject common non-carrier phrases
-#         if re.search(r"\b(more|less|under|over|than|days?|weeks?|months?|eta|delayed|late|overdue|behind)\b", cand2, re.IGNORECASE):
-#             return None
-#         return cand2 or None
-
-#     carrier_or_vessel = _extract_carrier_or_vessel(query)
-#     if carrier_or_vessel:
-#         carrier_cols = [c for c in ["final_carrier_name"] if c in hot_df.columns]
-#         if carrier_cols:
-#             carrier_mask = pd.Series(False, index=hot_df.index)
-
-#             # **CRITICAL FIX**: Case-insensitive substring matching for carrier names
-#             carrier_upper = carrier_or_vessel.upper()
-#             for c in carrier_cols:
-#                 # Match if carrier name CONTAINS the search term (case-insensitive)
-#                 carrier_mask |= hot_df[c].astype(str).str.upper().str.contains(
-#                     re.escape(carrier_upper),
-#                     na=False,
-#                     regex=True
-#                 )
-
-#             hot_df = hot_df[carrier_mask].copy()
-#             if hot_df.empty:
-#                 return f"No hot containers found for carrier/vessel '{carrier_or_vessel}' for your authorized consignees."
-
-#             try:
-#                 logger.info(f"[get_hot_containers] After carrier filter ('{carrier_or_vessel}'): {len(hot_df)} rows")
-#             except Exception:
-#                 pass
-
-#     # -----------------------
-#     # Optional time filter (minimal + query-driven)
-#     # -----------------------
-#     def _extract_month_year_range(q: str) -> tuple[pd.Timestamp, pd.Timestamp, str] | None:
-#         ql_local = (q or "").lower()
-#         month_map = {
-#             "jan": 1,
-#             "january": 1,
-#             "feb": 2,
-#             "february": 2,
-#             "mar": 3,
-#             "march": 3,
-#             "apr": 4,
-#             "april": 4,
-#             "may": 5,
-#             "jun": 6,
-#             "june": 6,
-#             "jul": 7,
-#             "july": 7,
-#             "aug": 8,
-#             "august": 8,
-#             "sep": 9,
-#             "sept": 9,
-#             "september": 9,
-#             "oct": 10,
-#             "october": 10,
-#             "nov": 11,
-#             "november": 11,
-#             "dec": 12,
-#             "december": 12,
-#         }
-
-#         # Match "November 2025" or "Nov 2025" (month + year, no day).
-#         m = re.search(
-#             r"\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|"
-#             r"sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{4})\b",
-#             ql_local,
-#         )
-#         if not m:
-#             return None
-
-#         # If there's an explicit day present (e.g., "Nov 10 2025"), let parse_time_period handle it.
-#         if re.search(r"\b\d{1,2}\s+" + re.escape(m.group(1)) + r"\s+\d{4}\b", ql_local):
-#             return None
-#         if re.search(r"\b" + re.escape(m.group(1)) + r"\s+\d{1,2}\s+\d{4}\b", ql_local):
-#             return None
-
-#         month_key = m.group(1)
-#         year = int(m.group(2))
-#         # Normalize key to the shortest month prefix when possible.
-#         month_key = month_key[:3] if month_key[:3] in month_map else month_key
-#         month = month_map.get(month_key, month_map.get(month_key.lower()))
-#         if not month:
-#             return None
-
-#         start = pd.Timestamp(year=year, month=month, day=1).normalize()
-#         end = (start + pd.offsets.MonthEnd(0)).normalize()
-#         return start, end, f"{start.strftime('%B %Y')} ({start.strftime('%Y-%m-%d')} to {end.strftime('%Y-%m-%d')})"
-
-#     def _query_has_explicit_time(q: str) -> bool:
-#         ql_local = (q or "").lower()
-#         return bool(
-#             re.search(
-#                 r"\b(today|tomorrow|yesterday)\b|\b(this|next|last)\s+(week|month)\b|\bbetween\b|\bfrom\b|"
-#                 r"\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}\b|\b\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}\b|"
-#                 r"\b(?:jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|sep|sept|september|"
-#                 r"oct|october|nov|november|dec|december)\b\s+\d{4}\b|\bnext\s+\d{1,3}\s+days?\b|\blast\s+\d{1,3}\s+days?\b",
-#                 ql_local,
-#             )
-#         )
-
-#     if _query_has_explicit_time(query):
-#         month_range = _extract_month_year_range(query)
-#         if month_range:
-#             start_date, end_date, period_desc = month_range
-#         else:
-#             start_date, end_date, period_desc = parse_time_period(query)
-
-#         eta_cols = [c for c in ["revised_eta", "eta_dp", "eta_fd", "predictive_eta"] if c in hot_df.columns]
-#         if eta_cols:
-#             hot_df = ensure_datetime(hot_df, eta_cols)
-#             eta_for_filter = hot_df[eta_cols].bfill(axis=1).iloc[:, 0]
-#             date_mask = eta_for_filter.notna() & (eta_for_filter.dt.normalize() >= start_date) & (eta_for_filter.dt.normalize() <= end_date)
-#             hot_df = hot_df[date_mask].copy()
-#             if hot_df.empty:
-#                 return f"No hot containers found for {period_desc} for your authorized consignees."
-
-#     # -----------------------
-#     # A) Delayed / missed ETA hot containers
-#     # -----------------------
-#     if any(w in ql for w in ("delay", "late", "overdue", "behind", "missed", "eta", "deadline")):
-#         hot_df = ensure_datetime(hot_df, ["eta_dp", "ata_dp"])
-#         arrived = hot_df[hot_df["ata_dp"].notna()].copy()
-#         if arrived.empty:
-#             where = f" at {code or name}" if (code or name) else ""
-#             return f"No hot containers have arrived{where} for your authorized consignees."
-
-#         arrived["delay_days"] = (arrived["ata_dp"] - arrived["eta_dp"]).dt.days.fillna(0).astype(int)
-
-#         range_match = re.search(r"(\d{1,4})\s*[-–—]\s*(\d{1,4})\s*days?\b", ql, re.IGNORECASE)
-#         less_than = re.search(r"\b(?:less\s+than|under|below|<)\s*(\d{1,4})\s*days?\b", ql, re.IGNORECASE)
-#         more_than = re.search(r"\b(?:more\s+than|over|>)\s*(\d{1,4})\s*days?\b", ql, re.IGNORECASE)
-#         plus_sign = re.search(r"\b(\d{1,4})\s*\+\s*days?\b", ql, re.IGNORECASE)
-#         exact = re.search(r"\b(?:delayed|late|overdue|behind)\s+by\s+(\d{1,4})\s+days?\b", ql, re.IGNORECASE)
-
-#         if range_match:
-#             d1, d2 = int(range_match.group(1)), int(range_match.group(2))
-#             low, high = min(d1, d2), max(d1, d2)
-#             delayed = arrived[(arrived["delay_days"] >= low) & (arrived["delay_days"] <= high)]
-#         elif less_than:
-#             d = int(less_than.group(1))
-#             delayed = arrived[(arrived["delay_days"] > 0) & (arrived["delay_days"] < d)]
-#         elif more_than or plus_sign:
-#             d = int((more_than or plus_sign).group(1))
-#             delayed = arrived[arrived["delay_days"] > d]
-#         elif exact:
-#             d = int(exact.group(1))
-#             delayed = arrived[arrived["delay_days"] == d]
-#         else:
-#             delayed = arrived[arrived["delay_days"] > 0]
-
-#         delayed = delayed[delayed[hot_flag_col].apply(_is_hot)]
-#         delayed = delayed[delayed["delay_days"] > 0]
-
-#         if delayed.empty:
-#             where = f" at {code or name}" if (code or name) else ""
-#             return f"No hot containers are delayed for your authorized consignees{where}."
-
-#         cols = ["container_number", "eta_dp", "ata_dp", "delay_days", "discharge_port", "consignee_code_multiple"]
-#         #if "vehicle_arrival_lcn" in delayed.columns:
-#         #    cols.append("vehicle_arrival_lcn")
-#         cols = [c for c in cols if c in delayed.columns]
-
-#         out = delayed[cols].sort_values("delay_days", ascending=False).head(200).copy()
-#         for dcol in ["eta_dp", "ata_dp"]:
-#             if dcol in out.columns and pd.api.types.is_datetime64_any_dtype(out[dcol]):
-#                 out[dcol] = out[dcol].dt.strftime("%Y-%m-%d")
-
-#         return out.where(pd.notnull(out), None).to_dict(orient="records")
-
-#     # -----------------------
-#     # C) Fallback - simple hot list
-#     # -----------------------
-#     display_cols = ['container_number', 'consignee_code_multiple']
-#     display_cols += [c for c in ['discharge_port', 'eta_dp', 'revised_eta','final_carrier_name'] if c in hot_df.columns]
-#     display_cols = [c for c in display_cols if c in hot_df.columns]
-
-#     if 'eta_dp' in hot_df.columns:
-#         hot_df = safe_sort_dataframe(hot_df, 'eta_dp', ascending=True)
-#     else:
-#         hot_df = safe_sort_dataframe(hot_df, 'container_number', ascending=True)
-
-#     result_data = hot_df[display_cols].head(200).copy()
-#     for col in result_data.columns:
-#         if pd.api.types.is_datetime64_dtype(result_data[col]):
-#             result_data[col] = result_data[col].dt.strftime('%Y-%m-%d')
-
-#     if len(result_data) == 0:
-#         return "No hot containers found for your authorized consignees."
-#     return result_data.where(pd.notnull(result_data), None).to_dict(orient="records")
-
-
 def get_hot_containers(
     question: str = None, consignee_code: str = None, **kwargs
 ) -> str:
@@ -4218,6 +3842,8 @@ def get_hot_containers(
       - Detects consignee name in question to further narrow results
       - Handles "less than", "more than", "8+", "1–3", "missed ETA", etc.
       - Location detection supports both codes (USLAX) and names ("Los Angeles")
+      - **Carrier filtering** - supports "with Maersk", "carrier MSC", "shipping with X"
+      - **Smart date filtering** - uses ATD_LP for "shipping" queries, ETA for arrival queries
       - **STRICT hot flag validation** - rejects any non-hot containers
 
     Supported Queries:
@@ -4226,6 +3852,8 @@ def get_hot_containers(
       - "hot containers arriving at Los Angeles"
       - "hot containers with delay > 5 days"
       - "hot containers for Amer Sports"
+      - "hot containers shipping with Maersk in November 2025" (filters by ATD_LP + carrier)
+      - "hot containers arriving with MSC in December" (filters by ETA + carrier)
     """
     import re
     from datetime import datetime, timedelta
@@ -4397,22 +4025,51 @@ def get_hot_containers(
     from agents.prompts import parse_time_period
 
     # Check if query contains time period indicators
+    # **FIXED**: Added all month names/abbreviations to detect date periods properly
     has_time_period = any(
         indicator in query.lower()
         for indicator in [
+            # All month names and abbreviations
+            "jan",
+            "january",
+            "feb",
+            "february",
+            "mar",
+            "march",
+            "apr",
+            "april",
+            "may",
             "jun",
+            "june",
+            "jul",
             "july",
+            "aug",
             "august",
             "sep",
+            "sept",
+            "september",
+            "oct",
+            "october",
+            "nov",
+            "november",
+            "dec",
+            "december",
+            # Other time indicators
             "month",
             "week",
             "days",
+            "day",
             "between",
             "from",
             "to",
             "next",
             "last",
             "this",
+            # Year patterns
+            "2024",
+            "2025",
+            "2026",
+            "2027",
         ]
     )
 
@@ -4427,27 +4084,66 @@ def get_hot_containers(
             except:
                 pass
 
-            # Determine which ETA column to use (priority: revised_eta > eta_dp > eta_fd)
-            eta_col = None
-            for col in ["revised_eta", "eta_dp", "eta_fd"]:
-                if col in hot_df.columns:
-                    eta_col = col
-                    break
+            # **NEW**: Detect if query is about shipping/departure vs arrival
+            # If query contains "shipping", "shipped", "departing", "departed", "ETD", "sail", use ATD_LP
+            # Otherwise, use ETA dates (revised_eta, eta_dp, eta_fd)
+            is_shipping_query = any(
+                keyword in query.lower()
+                for keyword in [
+                    "shipping",
+                    "shipped",
+                    "ship ",
+                    "departing",
+                    "departed",
+                    "etd",
+                    "sail",
+                    "sailing",
+                    "sailed",
+                    "leaving",
+                    "left",
+                ]
+            )
 
-            if eta_col:
-                # Ensure datetime format
-                hot_df = ensure_datetime(hot_df, [eta_col])
+            if is_shipping_query and "atd_lp" in hot_df.columns:
+                # Use actual departure date for shipping queries
+                date_col = "atd_lp"
+                hot_df = ensure_datetime(hot_df, [date_col])
 
                 # Filter by date range
-                mask = (hot_df[eta_col] >= start_date) & (hot_df[eta_col] <= end_date)
+                mask = (hot_df[date_col] >= start_date) & (hot_df[date_col] <= end_date)
                 hot_df = hot_df[mask].copy()
 
                 try:
                     logger.info(
-                        f"[get_hot_containers] After date filter using {eta_col}: {len(hot_df)} rows"
+                        f"[get_hot_containers] Shipping query detected - After date filter using {date_col}: {len(hot_df)} rows"
                     )
                 except:
                     pass
+            else:
+                # Use ETA date columns for arrival queries (default behavior)
+                # Determine which ETA column to use (priority: revised_eta > eta_dp > eta_fd)
+                eta_col = None
+                for col in ["revised_eta", "eta_dp", "eta_fd"]:
+                    if col in hot_df.columns:
+                        eta_col = col
+                        break
+
+                if eta_col:
+                    # Ensure datetime format
+                    hot_df = ensure_datetime(hot_df, [eta_col])
+
+                    # Filter by date range
+                    mask = (hot_df[eta_col] >= start_date) & (
+                        hot_df[eta_col] <= end_date
+                    )
+                    hot_df = hot_df[mask].copy()
+
+                    try:
+                        logger.info(
+                            f"[get_hot_containers] After date filter using {eta_col}: {len(hot_df)} rows"
+                        )
+                    except:
+                        pass
         except Exception as e:
             try:
                 logger.warning(f"[get_hot_containers] Failed to parse time period: {e}")
@@ -4595,19 +4291,88 @@ def get_hot_containers(
         return f"No hot containers found for the specified criteria."
 
     # -----------------------
+    # Carrier/Vessel filtering (NEW - handles "with Maersk", "by Maersk", "carrier Maersk")
+    # -----------------------
+    def _extract_carrier_or_vessel(q: str) -> str | None:
+        """Extract carrier name from query with multiple pattern support."""
+        q_norm = (q or "").strip()
+        if not q_norm:
+            return None
+
+        # Primary patterns: "with Maersk", "carrier Maersk", "line Maersk", "by Maersk", "shipping with Maersk"
+        patterns = [
+            # Pattern 1: "shipping with X", "ship with X"
+            r"\bship(?:ping)?\s+with\s+([A-Za-z0-9&\-\.'\s]{2,60}?)(?=\s+\b(?:in|on|for|to|from|at|between|during|within|next|last|this)\b|\s*$)",
+            # Pattern 2: "with X", "carrier X", "line X"
+            r"\b(?:with|carrier|line)\s+([A-Za-z0-9&\-\.'\s]{2,60}?)(?=\s+\b(?:in|on|for|to|from|at|between|during|within|next|last|this)\b|\s*$)",
+            # Pattern 3: "by X" (avoid delay phrases like "by more than 5 days")
+            r"\bby\s+([A-Za-z][A-Za-z&\-\.'\s]{1,60}?)(?=\s+\b(?:in|on|for|to|from|at|between|during|within|next|last|this)\b|\s*$)",
+        ]
+
+        for pattern in patterns:
+            m = re.search(pattern, q_norm, re.IGNORECASE)
+            if m:
+                cand = m.group(1).strip(" \t\r\n,.;:-")
+
+                # For "by X" pattern, reject common non-carrier phrases
+                if "by" in pattern and re.search(
+                    r"\b(more|less|under|over|than|days?|weeks?|months?|eta|delayed|late|overdue|behind)\b",
+                    cand,
+                    re.IGNORECASE,
+                ):
+                    continue
+
+                if cand:
+                    return cand
+
+        return None
+
+    carrier_or_vessel = _extract_carrier_or_vessel(query)
+    if carrier_or_vessel and "final_carrier_name" in hot_df.columns:
+        try:
+            logger.info(
+                f"[get_hot_containers] Applying carrier filter for: '{carrier_or_vessel}'"
+            )
+        except:
+            pass
+
+        # **CRITICAL FIX**: Case-insensitive substring matching for carrier names
+        carrier_upper = carrier_or_vessel.upper()
+        carrier_mask = (
+            hot_df["final_carrier_name"]
+            .astype(str)
+            .str.upper()
+            .str.contains(re.escape(carrier_upper), na=False, regex=True)
+        )
+
+        hot_df = hot_df[carrier_mask].copy()
+
+        try:
+            logger.info(
+                f"[get_hot_containers] After carrier filter ('{carrier_or_vessel}'): {len(hot_df)} rows"
+            )
+        except:
+            pass
+
+        if hot_df.empty:
+            return f"No hot containers found for carrier/vessel '{carrier_or_vessel}' for your authorized consignees."
+
+    # -----------------------
     # Build output columns
     # -----------------------
     out_cols = [
         "container_number",
         "po_number_multiple",
         "ocean_bl_no_multiple",
-        "booking_number_multiple",  # Include hot flag for verification
+        "booking_number_multiple",
         "discharge_port",
         "load_port",
+        "etd_lp",  # Estimated departure date
+        "atd_lp",  # Actual departure date (for shipping queries)
         "revised_eta",
         "eta_dp",
         "ata_dp",
-        "carrier_name",
+        "final_carrier_name",  # Include carrier name in output
         "supplier_vendor_name",
         "consignee_code_multiple",
     ]
@@ -4618,7 +4383,11 @@ def get_hot_containers(
     )  # Increased limit to 500
 
     # Format dates
-    date_cols = [c for c in ["revised_eta", "eta_dp", "ata_dp"] if c in result.columns]
+    date_cols = [
+        c
+        for c in ["etd_lp", "atd_lp", "revised_eta", "eta_dp", "ata_dp"]
+        if c in result.columns
+    ]
     if date_cols:
         result = ensure_datetime(result, date_cols)
         for c in date_cols:
