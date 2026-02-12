@@ -83,6 +83,7 @@ Tool selection (must use exact tool names)
 - PO month-end feasibility: call "Check PO Month Arrival".
 - Supplier in transit: call "Get Containers By Supplier" (which dispatches to in-transit logic).
 - Carrier for PO/BL/container: call "Get Carrier For PO" / "Get Containers For BL" / "Get Container Carrier" as appropriate.
+- **Consignee information** (e.g., "what is the consignee of PO#X", "who is the consignee for container Y", "show consignee for OBL Z"): call tool "Get Consignee Info" with the full question including the identifier (PO/container/OBL). DO NOT route to "Get Container Milestones" or "Get Field Info" for consignee queries.
 - Shipped quantity / cargo quantity (e.g., "shipped quantity for PO#X", "cargo quantity for container Y", "how many units shipped"): call tool "Get Shipped Quantity" with the full question including the identifier (PO/container/OBL/booking number).
 - If a tool returns empty but the user intent is clear, try the SQL tool "SQL Query Tool" as a last resort.
 Known port/location codes (partial list; case-insensitive)
