@@ -41,17 +41,21 @@ def initialize_azure_agent(
     # Required variables for create_structured_chat_agent: tools, tool_names, input, agent_scratchpad
     system_instructions = (
         f"{ROBUST_COLUMN_MAPPING_PROMPT}\n\n"
+<<<<<<< HEAD
         "CONVERSATION CONTEXT HANDLING:\n"
         "- The user's current question may include context from previous conversation (marked as [Previous conversation for context:])\n"
         "- Entity references like 'this container', 'this PO', etc. have already been RESOLVED to actual identifiers\n"
         "- The current question contains ALL necessary information to answer it - do NOT ask for clarification\n"
         "- If you see 'container MSBU4522691' in the question, that IS the container number you need\n"
         "- Use the exact identifiers provided in the 'Current question:' section\n\n"
+=======
+>>>>>>> 99cbe11c92cbc6d757f0bedc9cd337575bed7ee6
         "CRITICAL TOOL CALL RULES:\n"
         "- Make ONLY ONE tool call per user question\n"
         "- If user specifies a year (e.g., 'Oct 2025'), include that EXACT year in your FIRST and ONLY tool call\n"
         "- NEVER make a trial call without the year followed by another call with the year\n"
         "- NEVER modify dates provided by the user - pass them exactly as given\n"
+<<<<<<< HEAD
         "- NEVER ask for clarification if the question contains specific identifiers (container numbers, PO numbers, etc.)\n"
         "- Example: User asks 'delayed in Oct 2025' → Make ONE call with 'containers delayed in Oct 2025'\n\n"
         "VECTOR SEARCH FALLBACK:\n"
@@ -59,6 +63,9 @@ def initialize_azure_agent(
         "- Vector Search Tool uses semantic similarity (FAISS + Pinecone fallback) to find relevant information\n"
         "- This is useful when the query doesn't match exact function patterns but the data might exist\n"
         "- Example flow: Try specific tool → If empty → Try Vector Search Tool → Return results\n\n"
+=======
+        "- Example: User asks 'delayed in Oct 2025' → Make ONE call with 'containers delayed in Oct 2025'\n\n"
+>>>>>>> 99cbe11c92cbc6d757f0bedc9cd337575bed7ee6
         f"{PREFIX}\n\n"
         "{tools}\n\n"
         f"{FORMAT_INSTRUCTIONS}"

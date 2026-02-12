@@ -714,6 +714,7 @@ def ask(body: QueryWithConsigneeBody):
         except Exception as fallback_exc:
             logger.error(f"Router fallback also failed: {fallback_exc}")
             raise HTTPException(status_code=500, detail=f"Agent failed: {exc}")
+<<<<<<< HEAD
 
 
 # import logging
@@ -1074,3 +1075,5 @@ def get_active_sessions():
         "active_sessions": count,
         "message": f"There are {count} active session(s)",
     }
+=======
+>>>>>>> 99cbe11c92cbc6d757f0bedc9cd337575bed7ee6

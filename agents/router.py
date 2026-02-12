@@ -3,6 +3,7 @@ import threading
 
 from agents.prompts import map_synonym_to_column
 from agents.tools import _df  # Import the DataFrame function to test filtering
+from agents.tools import get_consignee_info  # Add consignee info function
 from agents.tools import get_hot_containers  # Add this missing import
 from agents.tools import get_shipped_quantity  # Add shipped quantity function
 from agents.tools import (  # Add the missing functions
@@ -99,7 +100,8 @@ def route_query(query: str, consignee_codes: list = None) -> str:
         q = query.lower()
 
         # Enhanced container/PO/OBL/Booking detection (do this early)
-        from utils.container import (extract_container_number,
+        from utils.container import (extract_booking_number,
+                                     extract_container_number,
                                      extract_ocean_bl_number,
                                      extract_po_number)
 
@@ -109,6 +111,12 @@ def route_query(query: str, consignee_codes: list = None) -> str:
             obl_no = extract_ocean_bl_number(query)
         except Exception:
             obl_no = None
+
+        # Extract booking number for vessel queries
+        try:
+            booking_no = extract_booking_number(query)
+        except Exception:
+            booking_no = None
 
         # ========== NEW: BL/OBL upcoming/delayed queries ==========
         # Route BL queries with time windows or delay keywords to get_upcoming_bls
@@ -217,6 +225,50 @@ def route_query(query: str, consignee_codes: list = None) -> str:
             logger.info(f"Router: Containers at DP not FD route for query: {query}")
             return get_containers_at_dp_not_fd(query)
 
+        # ========== PRIORITY 2.7: Handle consignee queries (BEFORE carrier/milestone) ==========
+        # Check for consignee queries EARLY to prevent routing to milestone status
+        consignee_keywords = [
+            "consignee",
+            "customer",
+            "receiver",
+            "buyer",
+            "consignee code",
+            "consignee name",
+        ]
+        if any(kw in q for kw in consignee_keywords) and any(
+            phrase in q
+            for phrase in [
+                "what is",
+                "who is",
+                "show",
+                "get",
+                "tell me",
+                "consignee of",
+                "consignee for",
+            ]
+        ):
+            if po_no or container_no or obl_no:
+                logger.info(f"Router: Consignee query route for query: {query}")
+                return get_consignee_info(query)
+
+        # ========== PRIORITY 2.8: Handle vessel queries ==========
+        # Check for vessel-related queries (first vessel, mother vessel, feeder vessel)
+        vessel_keywords = [
+            "vessel",
+            "mother vessel",
+            "feeder vessel",
+            "first vessel",
+            "final vessel",
+            "ship name",
+            "vessel name",
+            "vessel details",
+        ]
+        if any(kw in q for kw in vessel_keywords):
+            # Check if there's a container number or booking number to query
+            if container_no or booking_no:
+                logger.info(f"Router: Vessel query route for query: {query}")
+                return get_vessel_info(query)
+
         # ========== PRIORITY 3: Handle carrier queries (NEW - SPECIFIC) ==========
         # Questions 15, 16, 17, 18: Carrier queries for PO/Container/OBL
         if ("carrier" in q or "who is" in q) and (po_no or container_no or "obl" in q):
@@ -225,35 +277,55 @@ def route_query(query: str, consignee_codes: list = None) -> str:
         # ========== PRIORITY 4: Hot containers routing ==========
         # NOTE: Queries with "hot" + delay thresholds ("delayed by X days")
         # are handled by PRIORITY 2 above, not here
-        if (
-            ("hot container" in q or "hot containers" in q)
-            and "delay" not in q
-            and "late" not in q
-        ):
-            return get_hot_containers(query)
-        elif "hot container" in q or "hot containers" in q:
-            # If hot + delay/late without specific day threshold, use get_hot_containers
-            # Check if there's a specific day threshold
-            has_day_threshold = re.search(r"\d+\s+days?", query, re.IGNORECASE)
-            if has_day_threshold:
-                logger.info(
-                    f"Router: Hot containers with delay threshold -> get_delayed_containers for query: {query}"
-                )
-                return get_delayed_containers(query)
+        if "hot container" in q or "hot containers" in q:
+            # Check for upcoming/arriving keywords - route to future-only function
+            if any(
+                keyword in q
+                for keyword in [
+                    "arriving",
+                    "upcoming",
+                    "arrive",
+                    "next",
+                    "coming",
+                    "will arrive",
+                ]
+            ):
+                logger.info(f"Router: Hot upcoming arrivals route for query: {query}")
+                return get_hot_upcoming_arrivals(query)
+            # Check for delay/late keywords
+            elif "delay" in q or "late" in q:
+                # If hot + delay/late without specific day threshold, use get_hot_containers
+                # Check if there's a specific day threshold
+                has_day_threshold = re.search(r"\d+\s+days?", query, re.IGNORECASE)
+                if has_day_threshold:
+                    logger.info(
+                        f"Router: Hot containers with delay threshold -> get_delayed_containers for query: {query}"
+                    )
+                    return get_delayed_containers(query)
+                else:
+                    return get_hot_containers(query)
+            # Default: all hot containers (past and future)
             else:
                 return get_hot_containers(query)
 
         # ========== PRIORITY 5: Container status queries ==========
-        if any(
-            keyword in q
-            for keyword in [
-                "milestone",
-                "status",
-                "track",
-                "event history",
-                "journey",
-                "where",
-            ]
+        # CRITICAL: Exclude consignee queries from routing to milestones
+        is_consignee_query = any(
+            kw in q for kw in ["consignee", "customer", "receiver"]
+        )
+        if (
+            any(
+                keyword in q
+                for keyword in [
+                    "milestone",
+                    "status",
+                    "track",
+                    "event history",
+                    "journey",
+                    "where",
+                ]
+            )
+            and not is_consignee_query
         ):
             return get_container_milestones(query)
 
