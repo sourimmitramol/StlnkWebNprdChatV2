@@ -24,8 +24,8 @@ from agents.prompts import (COLUMN_SYNONYMS, is_date_in_range,
 from config import settings
 from services.azure_blob import get_shipment_df
 from services.vectorstore import get_vectorstore
-from utils.container import (extract_container_number, extract_ocean_bl_number,
-                             extract_po_number)
+from utils.container import (extract_booking_number, extract_container_number,
+                             extract_ocean_bl_number, extract_po_number)
 from utils.logger import logger
 from utils.misc import clean_container_number, to_datetime
 
@@ -6079,27 +6079,16 @@ def get_vessel_info(input_str: str) -> str:
         return "No data available for your authorized consignees."
 
     # ========== 1) TRY BOOKING NUMBER FIRST ==========
-    booking_no = None
+    # **CRITICAL FIX**: Use extract_booking_number utility function
+    booking_no = extract_booking_number(input_str)
 
-    # **CRITICAL FIX**: Improved booking number detection
-    # Pattern 1: If input is NOT a container format (AAAA#######), treat as potential booking
-    input_upper = input_str.upper().strip()
-
-    # Container format check: exactly 4 letters + 7 digits
-    is_container_format = bool(re.fullmatch(r"[A-Z]{4}\d{7}", input_upper))
-
-    if not is_container_format:
-        # Check length: booking numbers are typically 6-20 characters
-        if 6 <= len(input_upper) <= 20:
-            # Contains at least 2 letters and some digits (booking pattern)
-            if re.search(r"[A-Z]", input_upper) and re.search(r"\d", input_upper):
-                booking_no = input_upper
-                try:
-                    logger.info(
-                        f"[get_vessel_info] Detected as potential booking number: {booking_no}"
-                    )
-                except:
-                    pass
+    if booking_no:
+        try:
+            logger.info(
+                f"[get_vessel_info] Detected as potential booking number: {booking_no}"
+            )
+        except:
+            pass
 
     if booking_no and "booking_number_multiple" in df.columns:
         try:
@@ -6159,12 +6148,8 @@ def get_vessel_info(input_str: str) -> str:
                 "booking_number_multiple",
                 "container_number",
                 "po_number_multiple",
-                "first_vessel_code",
                 "first_vessel_name",
-                "first_voyage_code",
-                "final_vessel_code",
                 "final_vessel_name",
-                "final_voyage_code",
                 "load_port",
                 "discharge_port",
                 "etd_lp",
@@ -6282,6 +6267,188 @@ def get_vessel_info(input_str: str) -> str:
 
     # ========== 3) NO VALID IDENTIFIER FOUND ==========
     return f"Please specify a valid container number or booking number. Input received: {input_str}"
+
+
+# ------------------------------------------------------------------
+# 🏢 Get Consignee Info (for PO/Container/OBL)
+# ------------------------------------------------------------------
+
+
+def get_consignee_info(query: str = None, **kwargs) -> str:
+    """
+    Get consignee information for a PO, Container, or Ocean BL.
+
+    Supports queries like:
+      - "What is the consignee of 5302943326"
+      - "Who is the consignee for PO 5302943326"
+      - "Show consignee for container MSBU4522691"
+      - "Consignee details for OBL MOLWMNL2400017"
+      - "Get consignee name for PO#1234567890"
+
+    Returns:
+      - Consignee code(s) and name(s)
+      - Identifier details (PO/Container/OBL)
+      - Additional context: load_port, discharge_port, carrier, etc.
+    """
+    import re
+
+    import pandas as pd
+
+    query = (query or "").strip()
+
+    logger.info(f"[get_consignee_info] Query: {query}")
+
+    df = _df()
+    if df.empty:
+        return "No data available for your authorized consignees."
+
+    # -----------------------
+    # Identify query type and extract identifier
+    # Priority: Container → Ocean BL → PO
+    # -----------------------
+    identifier = None
+    identifier_type = None
+
+    # 1. Check for Container number
+    container_num = extract_container_number(query)
+    if container_num:
+        identifier = container_num
+        identifier_type = "CONTAINER"
+        logger.info(f"[get_consignee_info] Detected Container: {identifier}")
+
+    # 2. Check for Ocean BL
+    if not identifier:
+        try:
+            obl_num = extract_ocean_bl_number(query)
+            if obl_num:
+                identifier = obl_num
+                identifier_type = "OBL"
+                logger.info(f"[get_consignee_info] Detected OBL: {identifier}")
+        except Exception:
+            pass
+
+    # 3. Check for PO number
+    if not identifier:
+        po_num = extract_po_number(query)
+        if po_num:
+            identifier = po_num
+            identifier_type = "PO"
+            logger.info(f"[get_consignee_info] Detected PO: {identifier}")
+
+    if not identifier:
+        logger.info(f"[get_consignee_info] No identifier found in query: {query}")
+        return "No PO, Container, or OBL number found in query. Please specify a valid identifier (e.g., PO#5302943326, container MSBU4522691, or OBL MOLWMNL2400017)."
+
+    # -----------------------
+    # Filter dataset by identifier type
+    # -----------------------
+    result_df = pd.DataFrame()
+
+    if identifier_type == "PO":
+        # Search in po_number_multiple column
+        if "po_number_multiple" in df.columns:
+            logger.info(
+                f"[get_consignee_info] Searching for PO {identifier} in po_number_multiple column"
+            )
+            mask = (
+                df["po_number_multiple"].astype(str).str.contains(identifier, na=False)
+            )
+            result_df = df[mask].copy()
+            logger.info(
+                f"[get_consignee_info] Found {len(result_df)} records matching PO {identifier}"
+            )
+
+    elif identifier_type == "CONTAINER":
+        # Search in container_number column
+        if "container_number" in df.columns:
+            clean = clean_container_number(identifier)
+            mask = (
+                df["container_number"].astype(str).str.replace(" ", "").str.upper()
+                == clean
+            )
+            result_df = df[mask].copy()
+
+            # Fallback to contains match
+            if result_df.empty:
+                mask = (
+                    df["container_number"]
+                    .astype(str)
+                    .str.upper()
+                    .str.contains(identifier, na=False)
+                )
+                result_df = df[mask].copy()
+
+    elif identifier_type == "OBL":
+        # Search in ocean_bl_no_multiple column
+        if "ocean_bl_no_multiple" in df.columns:
+            mask = (
+                df["ocean_bl_no_multiple"]
+                .astype(str)
+                .str.upper()
+                .str.contains(identifier, na=False)
+            )
+            result_df = df[mask].copy()
+
+    if result_df.empty:
+        return f"No records found for {identifier_type} {identifier}."
+
+    # -----------------------
+    # Build structured output DataFrame
+    # -----------------------
+    if "consignee_code_multiple" not in result_df.columns:
+        return f"Consignee information column not available in the dataset for {identifier_type} {identifier}."
+
+    # Add identifier columns for context
+    result_df["identifier_type"] = identifier_type
+    result_df["identifier_value"] = identifier
+
+    # Select output columns based on identifier type
+    out_cols = [
+        "identifier_type",
+        "identifier_value",
+        "consignee_code_multiple",
+        "container_number",
+        "po_number_multiple",
+        "ocean_bl_no_multiple",
+        "booking_number_multiple",
+        "load_port",
+        "discharge_port",
+        "final_destination",
+        "final_carrier_name",
+        "supplier_vendor_name",
+        "transport_mode",
+        "etd_lp",
+        "eta_dp",
+        "ata_dp",
+        "revised_eta",
+    ]
+
+    # Include only columns that exist in the DataFrame
+    out_cols = [c for c in out_cols if c in result_df.columns]
+
+    # Select and deduplicate (keep first occurrence for each unique combination)
+    out = result_df[out_cols].drop_duplicates().head(20).copy()
+
+    if out.empty:
+        return f"No consignee information found for {identifier_type} {identifier}."
+
+    # -----------------------
+    # Format date columns to string
+    # -----------------------
+    date_cols = ["etd_lp", "eta_dp", "ata_dp", "revised_eta", "atd_lp"]
+    existing_date_cols = [c for c in date_cols if c in out.columns]
+
+    if existing_date_cols:
+        out = ensure_datetime(out, existing_date_cols)
+        for dcol in existing_date_cols:
+            if pd.api.types.is_datetime64_any_dtype(out[dcol]):
+                out[dcol] = out[dcol].dt.strftime("%Y-%m-%d")
+
+    logger.info(
+        f"[get_consignee_info] Returning {len(out)} records for {identifier_type} {identifier}"
+    )
+
+    return out.where(pd.notnull(out), None).to_dict(orient="records")
 
 
 # ------------------------------------------------------------------
@@ -15245,6 +15412,37 @@ TOOLS = [
         description="Get carrier information for containers or POs. For POs with multiple records, returns the carrier from the latest shipment based on ETD/ETA dates. Handles queries like 'who is the carrier for PO X', 'what carrier handles container Y', etc.",
     ),
     Tool(
+        name="Get Consignee Info",
+        func=get_consignee_info,
+        return_direct=True,
+        description=(
+            "**PRIMARY TOOL** for consignee-related queries. "
+            "Use this tool when user asks about CONSIGNEE information for PO, Container, or OBL.\n"
+            "\n"
+            "**EXACT QUERY PATTERNS TO ROUTE HERE:**\n"
+            "- 'what is the consignee of PO 5302943326'\n"
+            "- 'who is the consignee for container MSBU4522691'\n"
+            "- 'show consignee for OBL MOLWMNL2400017'\n"
+            "- 'consignee details for PO#1234567890'\n"
+            "- 'get consignee name for container X'\n"
+            "- 'consignee information for PO Y'\n"
+            "- 'which consignee is PO Z for'\n"
+            "\n"
+            "Returns list[dict] with records containing:\n"
+            "- identifier_type, identifier_value (PO/Container/OBL number)\n"
+            "- consignee_code_multiple (consignee codes and names)\n"
+            "- container_number, po_number_multiple, ocean_bl_no_multiple\n"
+            "- load_port, discharge_port, final_destination\n"
+            "- final_carrier_name, supplier_vendor_name, transport_mode\n"
+            "- etd_lp, eta_dp, ata_dp, revised_eta (formatted as YYYY-MM-DD)\n"
+            "\n"
+            "Keywords: consignee, customer, receiver, buyer, consignee code, consignee name\n"
+            "\n"
+            "DO NOT use 'Get Container Milestones' for consignee queries.\n"
+            "DO NOT use 'Get Field Info' for consignee queries.\n"
+        ),
+    ),
+    Tool(
         name="Check Arrival Status",
         func=check_arrival_status,
         description="Check if a container or PO has arrived based on ATA_DP and derived_ATA_DP logic.",
@@ -15426,6 +15624,7 @@ TOOLS = [
     Tool(
         name="Get Vessel Info",
         func=get_vessel_info,
+        return_direct=True,
         description=(
             "PRIMARY TOOL for ALL VESSEL-RELATED QUERIES (mother vessel, feeder vessel, first vessel, final vessel).\n"
             "\n"

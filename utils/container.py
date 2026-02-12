@@ -107,6 +107,53 @@ def extract_ocean_bl_number(text: str) -> Optional[str]:
     return None
 
 
+def extract_booking_number(text: str) -> Optional[str]:
+    """
+    Detect a booking number in free-form text.
+    Handles:
+        - "booking EG2002468"
+        - "booking number CN2229273"
+        - "bkg EG2002468"
+        - alphanumeric pattern (2-4 letters + 6-15 digits/letters)
+    Returns the cleaned, upper-cased booking number or None.
+
+    Note: Booking numbers are typically alphanumeric (mix of letters and numbers)
+    and are 6-20 characters long. They differ from container numbers which are
+    exactly 4 letters + 7 digits.
+    """
+    if not text:
+        return None
+
+    # Priority 1: Explicit "booking" or "bkg" prefix
+    patterns = [
+        r"booking\s+(?:number\s+)?(?:no\.?\s+)?([A-Z0-9]{6,20})",  # "booking EG2002468"
+        r"bkg\s+(?:number\s+)?(?:no\.?\s+)?([A-Z0-9]{6,20})",  # "bkg EG2002468"
+        r"booking#\s*([A-Z0-9]{6,20})",  # "booking#EG2002468"
+        r"bkg#\s*([A-Z0-9]{6,20})",  # "bkg#EG2002468"
+    ]
+
+    for pat in patterns:
+        m = re.search(pat, text, flags=re.IGNORECASE)
+        if m:
+            return m.group(1).upper()
+
+    # Priority 2: Alphanumeric pattern (NOT matching container format)
+    # Booking numbers typically have letters + numbers mixed, 6-20 chars
+    # Exclude container format (exactly 4 letters + 7 digits)
+    # Pattern: 2-4 letters followed by 6-15 digits/letters OR similar variations
+    alphanumeric_pattern = r"\b([A-Z]{2,4}\d{6,15})\b"
+    m = re.search(alphanumeric_pattern, text, flags=re.IGNORECASE)
+    if m:
+        candidate = m.group(1).upper()
+        # Exclude if it matches container format exactly (4 letters + 7 digits)
+        if not re.fullmatch(r"[A-Z]{4}\d{7}", candidate):
+            # Additional check: must have at least some digits
+            if re.search(r"\d", candidate):
+                return candidate
+
+    return None
+
+
 def extract_supplier_vendor_name(text: str) -> Optional[str]:
     """
     Detect a supplier/vendor name in free-form text.
