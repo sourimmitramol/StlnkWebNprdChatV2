@@ -1,5 +1,5 @@
 # Test Vector Store Initialization
-# This script tests the vector store setup and creates the FAISS index
+# This script tests the vector store setup and creates the ChromaDB index
 
 import logging
 import sys
@@ -19,33 +19,33 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def test_faiss_index():
-    """Test FAISS index creation and search"""
+def test_chroma_index():
+    """Test ChromaDB index creation and search"""
     print("\n" + "=" * 80)
-    print("Testing FAISS Vector Store")
+    print("Testing ChromaDB Vector Store")
     print("=" * 80)
 
     try:
         # Check if index exists
-        index_path = Path("faiss_index")
+        index_path = Path("chroma_db")
         if index_path.exists():
-            print(f"✓ FAISS index directory exists at: {index_path}")
+            print(f"✓ ChromaDB directory exists at: {index_path}")
         else:
-            print(f"✗ FAISS index directory not found. Will create new index...")
+            print(f"✗ ChromaDB directory not found. Will create new index...")
 
         # Get or create vector store
-        print("\nInitializing FAISS vector store...")
+        print("\nInitializing ChromaDB vector store...")
         vectorstore = get_vectorstore()
 
         if vectorstore:
-            print("✓ FAISS vector store initialized successfully!")
+            print("✓ ChromaDB vector store initialized successfully!")
 
             # Test search
             print("\nTesting vector search with query: 'delayed containers'")
             results = vectorstore.similarity_search("delayed containers", k=3)
 
             if results:
-                print(f"✓ Found {len(results)} results from FAISS")
+                print(f"✓ Found {len(results)} results from ChromaDB")
                 print("\nSample result (first 200 chars):")
                 print("-" * 80)
                 print(results[0].page_content[:200] + "...")
@@ -54,12 +54,12 @@ def test_faiss_index():
                 print("✗ No results found. Index might be empty.")
 
         else:
-            print("✗ Failed to initialize FAISS vector store")
+            print("✗ Failed to initialize ChromaDB vector store")
             return False
 
     except Exception as e:
-        print(f"✗ Error testing FAISS: {e}")
-        logger.error(f"FAISS test failed", exc_info=True)
+        print(f"✗ Error testing ChromaDB: {e}")
+        logger.error(f"ChromaDB test failed", exc_info=True)
         return False
 
     return True
@@ -101,7 +101,7 @@ def check_configuration():
     print("Checking Configuration")
     print("=" * 80)
 
-    print(f"\nVector Store Type: {getattr(settings, 'VECTOR_STORE_TYPE', 'faiss')}")
+    print(f"\nVector Store Type: {getattr(settings, 'VECTOR_STORE_TYPE', 'chroma')}")
     print(f"Azure OpenAI Endpoint: {settings.AZURE_OPENAI_ENDPOINT[:50]}...")
     print(f"Azure OpenAI Deployment: {settings.AZURE_OPENAI_DEPLOYMENT}")
     print(f"Embedding Model: {settings.AZURE_OPENAI_EMBEDDING_MODEL}")
@@ -116,28 +116,28 @@ def check_configuration():
 
 
 def rebuild_index():
-    """Force rebuild the FAISS index"""
+    """Force rebuild the ChromaDB index"""
     print("\n" + "=" * 80)
-    print("Rebuilding FAISS Index")
+    print("Rebuilding ChromaDB Index")
     print("=" * 80)
 
     try:
         import shutil
 
-        index_path = Path("faiss_index")
+        index_path = Path("chroma_db")
 
         if index_path.exists():
             print(f"Removing existing index at: {index_path}")
             shutil.rmtree(index_path)
 
-        print("\nBuilding new FAISS index (this may take a few minutes)...")
+        print("\nBuilding new ChromaDB index (this may take a few minutes)...")
         vectorstore = _build_index()
 
         if vectorstore:
-            print("✓ FAISS index rebuilt successfully!")
+            print("✓ ChromaDB index rebuilt successfully!")
             return True
         else:
-            print("✗ Failed to rebuild FAISS index")
+            print("✗ Failed to rebuild ChromaDB index")
             return False
 
     except Exception as e:
@@ -155,25 +155,27 @@ if __name__ == "__main__":
     check_configuration()
 
     # Ask user if they want to rebuild
-    index_exists = Path("faiss_index").exists()
+    index_exists = Path("chroma_db").exists()
     if index_exists:
         print("\n" + "=" * 80)
         response = (
-            input("\nFAISS index already exists. Rebuild it? (y/n): ").strip().lower()
+            input("\nChromaDB index already exists. Rebuild it? (y/n): ")
+            .strip()
+            .lower()
         )
         if response == "y":
             if not rebuild_index():
                 print("\n✗ Rebuild failed. Exiting.")
                 sys.exit(1)
     else:
-        print("\nNo FAISS index found. Building new index...")
+        print("\nNo ChromaDB index found. Building new index...")
         if not rebuild_index():
             print("\n✗ Index creation failed. Exiting.")
             sys.exit(1)
 
-    # Test FAISS
-    if not test_faiss_index():
-        print("\n✗ FAISS test failed")
+    # Test ChromaDB
+    if not test_chroma_index():
+        print("\n✗ ChromaDB test failed")
         sys.exit(1)
 
     # Test search fallback

@@ -2221,7 +2221,7 @@ def answer_with_column_mapping(query: str) -> str:
     """
     Enhanced interpreter for natural language queries about shipment data.
     Uses robust column mapping, fuzzy matching, and multi-identifier support.
-    
+
     Supports:
     - Specific lookups: "What is the carrier for container MSKU1234567"
     - Aggregations: "How many containers", "Total count"
@@ -2229,21 +2229,22 @@ def answer_with_column_mapping(query: str) -> str:
     - Multi-identifier: Handles containers, PO numbers, Ocean BL numbers
     - Date queries: "When did container X arrive", "ETA for PO 123456"
     - Comparison: "Containers with ETA before December"
-    
+
     Input: Natural language query about shipment data.
     Output: Answer based on mapped columns and intelligent data analysis.
     """
-    from agents.prompts import map_synonym_to_column
     from fuzzywuzzy import process
 
+    from agents.prompts import map_synonym_to_column
+
     df = _df()
-    
+
     if df.empty:
         return "No data available for your authorized consignees."
 
     query_lower = query.lower()
     query_upper = query.upper()
-    
+
     try:
         logger.info(f"[answer_with_column_mapping] Processing query: {query}")
     except:
@@ -2265,7 +2266,6 @@ def answer_with_column_mapping(query: str) -> str:
         "bl": ["ocean_bl_no_multiple"],
         "booking": ["booking_number_multiple"],
         "booking number": ["booking_number_multiple"],
-        
         # Vessel/Carrier
         "vessel": ["first_vessel_name", "final_vessel_name"],
         "ship": ["first_vessel_name", "final_vessel_name"],
@@ -2273,7 +2273,6 @@ def answer_with_column_mapping(query: str) -> str:
         "feeder vessel": ["first_vessel_name"],
         "carrier": ["final_carrier_name"],
         "shipping line": ["final_carrier_name"],
-        
         # Ports/Locations
         "load port": ["load_port", "final_load_port"],
         "origin": ["load_port"],
@@ -2282,7 +2281,6 @@ def answer_with_column_mapping(query: str) -> str:
         "destination": ["discharge_port", "final_destination"],
         "arrival port": ["discharge_port"],
         "final destination": ["final_destination"],
-        
         # Dates
         "eta": ["eta_dp", "revised_eta", "eta_fd"],
         "ata": ["ata_dp"],
@@ -2291,40 +2289,57 @@ def answer_with_column_mapping(query: str) -> str:
         "arrival date": ["ata_dp", "eta_dp"],
         "departure date": ["atd_lp", "etd_lp"],
         "delivery date": ["delivery_date_to_consignee"],
-        
         # Supplier
         "supplier": ["supplier_vendor_name"],
         "vendor": ["supplier_vendor_name"],
         "shipper": ["supplier_vendor_name"],
-        
         # Status/Flags
         "hot": ["hot_container_flag"],
         "status": ["container_status"],
     }
-    
+
     # ========== DETECT QUERY INTENT ==========
     # Check for aggregation queries
-    is_count_query = any(word in query_lower for word in ["how many", "count", "total number", "number of"])
-    is_list_query = any(word in query_lower for word in ["show", "list", "display", "get all", "what are"])
-    is_specific_lookup = any(word in query_lower for word in ["what is", "what's", "tell me", "show me the"])
-    is_comparison = any(word in query_lower for word in ["before", "after", "more than", "less than", "greater", "earlier", "later"])
-    
+    is_count_query = any(
+        word in query_lower
+        for word in ["how many", "count", "total number", "number of"]
+    )
+    is_list_query = any(
+        word in query_lower
+        for word in ["show", "list", "display", "get all", "what are"]
+    )
+    is_specific_lookup = any(
+        word in query_lower for word in ["what is", "what's", "tell me", "show me the"]
+    )
+    is_comparison = any(
+        word in query_lower
+        for word in [
+            "before",
+            "after",
+            "more than",
+            "less than",
+            "greater",
+            "earlier",
+            "later",
+        ]
+    )
+
     # ========== EXTRACT IDENTIFIERS ==========
     container_no = extract_container_number(query)
     po_no = extract_po_number(query)
     obl_no = extract_ocean_bl_number(query)
-    
+
     # Try to extract booking number if available
     booking_no = None
     try:
         booking_no = extract_booking_number(query)
     except:
         pass
-    
+
     # ========== MAP QUERY TERMS TO COLUMNS ==========
     mapped_columns = []
     mapped_column_names = set()
-    
+
     # Check each mapping
     for term, columns in column_mappings.items():
         if term in query_lower:
@@ -2332,87 +2347,144 @@ def answer_with_column_mapping(query: str) -> str:
                 if col in df.columns and col not in mapped_column_names:
                     mapped_columns.append(col)
                     mapped_column_names.add(col)
-    
+
     # If no explicit mapping, try fuzzy matching on all words
     if not mapped_columns:
-        words = [w for w in re.findall(r'\b[a-zA-Z_]{3,}\b', query_lower) 
-                if w not in {'what', 'the', 'for', 'is', 'are', 'show', 'me', 'tell', 'get', 'list', 'display'}]
-        
+        words = [
+            w
+            for w in re.findall(r"\b[a-zA-Z_]{3,}\b", query_lower)
+            if w
+            not in {
+                "what",
+                "the",
+                "for",
+                "is",
+                "are",
+                "show",
+                "me",
+                "tell",
+                "get",
+                "list",
+                "display",
+            }
+        ]
+
         for word in words:
             # Fuzzy match against column names
             matches = process.extract(word, df.columns.tolist(), limit=2)
             for match, score in matches:
-                if score > 70 and match not in mapped_column_names:  # 70% similarity threshold
+                if (
+                    score > 70 and match not in mapped_column_names
+                ):  # 70% similarity threshold
                     mapped_columns.append(match)
                     mapped_column_names.add(match)
-    
+
     # ========== SPECIFIC IDENTIFIER LOOKUP ==========
     if container_no or po_no or obl_no or booking_no:
         # Lookup by specific identifier
         identifier = container_no or po_no or obl_no or booking_no
-        identifier_type = "Container" if container_no else ("PO" if po_no else ("Ocean BL" if obl_no else "Booking"))
-        
+        identifier_type = (
+            "Container"
+            if container_no
+            else ("PO" if po_no else ("Ocean BL" if obl_no else "Booking"))
+        )
+
         rows = pd.DataFrame()
-        
+
         if container_no and "container_number" in df.columns:
             clean = clean_container_number(container_no)
-            rows = df[df["container_number"].astype(str).str.replace(" ", "").str.upper() == clean]
+            rows = df[
+                df["container_number"].astype(str).str.replace(" ", "").str.upper()
+                == clean
+            ]
             if rows.empty:
-                rows = df[df["container_number"].astype(str).str.contains(container_no, case=False, na=False)]
-        
+                rows = df[
+                    df["container_number"]
+                    .astype(str)
+                    .str.contains(container_no, case=False, na=False)
+                ]
+
         elif po_no and "po_number_multiple" in df.columns:
             po_norm = _normalize_po_token(po_no)
-            rows = df[df["po_number_multiple"].apply(lambda cell: _po_in_cell(cell, po_norm))]
-        
+            rows = df[
+                df["po_number_multiple"].apply(lambda cell: _po_in_cell(cell, po_norm))
+            ]
+
         elif obl_no and "ocean_bl_no_multiple" in df.columns:
-            rows = df[df["ocean_bl_no_multiple"].astype(str).str.contains(obl_no, case=False, na=False)]
-        
+            rows = df[
+                df["ocean_bl_no_multiple"]
+                .astype(str)
+                .str.contains(obl_no, case=False, na=False)
+            ]
+
         elif booking_no and "booking_number_multiple" in df.columns:
             booking_norm = _normalize_booking_token(booking_no)
-            rows = df[df["booking_number_multiple"].apply(lambda cell: _booking_in_cell(cell, booking_norm))]
-        
+            rows = df[
+                df["booking_number_multiple"].apply(
+                    lambda cell: _booking_in_cell(cell, booking_norm)
+                )
+            ]
+
         if rows.empty:
             return f"No data found for {identifier_type} {identifier}."
-        
+
         row = rows.iloc[0]
-        
+
         # If specific columns were requested, show only those
         if mapped_columns:
             result_lines = [f"Information for {identifier_type} {identifier}:"]
             for col in mapped_columns:
                 if col in row.index and pd.notnull(row[col]):
                     value = row[col]
-                    if pd.api.types.is_datetime64_dtype(df[col]) or isinstance(value, pd.Timestamp):
+                    if pd.api.types.is_datetime64_dtype(df[col]) or isinstance(
+                        value, pd.Timestamp
+                    ):
                         value = value.strftime("%Y-%m-%d")
-                    col_display = col.replace('_', ' ').title()
+                    col_display = col.replace("_", " ").title()
                     result_lines.append(f"  {col_display}: {value}")
-            
+
             if len(result_lines) == 1:  # No columns had data
                 result_lines.append("  No data available for the requested fields.")
-            
+
             return "\n".join(result_lines)
         else:
             # Show comprehensive information
             important_cols = [
-                "container_number", "po_number_multiple", "ocean_bl_no_multiple",
-                "booking_number_multiple", "consignee_code_multiple",
-                "load_port", "discharge_port", "final_destination",
-                "first_vessel_name", "final_vessel_name", "final_carrier_name",
-                "etd_lp", "atd_lp", "eta_dp", "ata_dp", "revised_eta",
-                "delivery_date_to_consignee", "supplier_vendor_name"
+                "container_number",
+                "po_number_multiple",
+                "ocean_bl_no_multiple",
+                "booking_number_multiple",
+                "consignee_code_multiple",
+                "load_port",
+                "discharge_port",
+                "final_destination",
+                "first_vessel_name",
+                "final_vessel_name",
+                "final_carrier_name",
+                "etd_lp",
+                "atd_lp",
+                "eta_dp",
+                "ata_dp",
+                "revised_eta",
+                "delivery_date_to_consignee",
+                "supplier_vendor_name",
             ]
-            
-            result_lines = [f"Comprehensive information for {identifier_type} {identifier}:"]
+
+            result_lines = [
+                f"Comprehensive information for {identifier_type} {identifier}:"
+            ]
             for col in important_cols:
                 if col in row.index and pd.notnull(row[col]):
                     value = row[col]
-                    if pd.api.types.is_datetime64_dtype(df[col]) or isinstance(value, pd.Timestamp):
+                    if pd.api.types.is_datetime64_dtype(df[col]) or isinstance(
+                        value, pd.Timestamp
+                    ):
                         value = value.strftime("%Y-%m-%d")
-                    col_display = col.replace('_', ' ').title()
+                    col_display = col.replace("_", " ").title()
                     result_lines.append(f"  {col_display}: {value}")
-            
+
             return "\n".join(result_lines)
-    
+
     # ========== AGGREGATION QUERIES ==========
     if is_count_query:
         # Extract what we're counting
@@ -2421,10 +2493,10 @@ def answer_with_column_mapping(query: str) -> str:
             count_target = "POs"
         elif "booking" in query_lower:
             count_target = "bookings"
-        
+
         # Apply filters if mentioned
         filtered_df = df.copy()
-        
+
         # Port filter
         for port_term in ["from", "at", "to", "in"]:
             pattern = rf"{port_term}\s+([A-Z][A-Za-z\s,]+?)(?:\s|$)"
@@ -2432,79 +2504,105 @@ def answer_with_column_mapping(query: str) -> str:
             if match:
                 port_name = match.group(1).strip()
                 if "discharge_port" in filtered_df.columns:
-                    filtered_df = filtered_df[filtered_df["discharge_port"].astype(str).str.contains(port_name, case=False, na=False)]
+                    filtered_df = filtered_df[
+                        filtered_df["discharge_port"]
+                        .astype(str)
+                        .str.contains(port_name, case=False, na=False)
+                    ]
                 elif "load_port" in filtered_df.columns:
-                    filtered_df = filtered_df[filtered_df["load_port"].astype(str).str.contains(port_name, case=False, na=False)]
-        
+                    filtered_df = filtered_df[
+                        filtered_df["load_port"]
+                        .astype(str)
+                        .str.contains(port_name, case=False, na=False)
+                    ]
+
         # Carrier filter
-        carrier_match = re.search(r"(?:with|by|carrier)\s+([A-Z][A-Za-z\s]+?)(?:\s|$)", query, re.IGNORECASE)
+        carrier_match = re.search(
+            r"(?:with|by|carrier)\s+([A-Z][A-Za-z\s]+?)(?:\s|$)", query, re.IGNORECASE
+        )
         if carrier_match and "final_carrier_name" in filtered_df.columns:
             carrier = carrier_match.group(1).strip()
-            filtered_df = filtered_df[filtered_df["final_carrier_name"].astype(str).str.contains(carrier, case=False, na=False)]
-        
+            filtered_df = filtered_df[
+                filtered_df["final_carrier_name"]
+                .astype(str)
+                .str.contains(carrier, case=False, na=False)
+            ]
+
         count = len(filtered_df)
-        
+
         # Build descriptive response
         filters_applied = []
         if carrier_match:
             filters_applied.append(f"carrier {carrier_match.group(1)}")
         if "from" in query_lower or "to" in query_lower:
             filters_applied.append("specified port")
-        
+
         if filters_applied:
             return f"There are {count} {count_target} with {' and '.join(filters_applied)}."
         else:
             return f"There are {count} {count_target} in your authorized data."
-    
+
     # ========== LIST/DISPLAY QUERIES ==========
     if is_list_query and mapped_columns:
         # Show unique values for the mapped columns
         result_lines = []
-        
+
         for col in mapped_columns[:5]:  # Limit to 5 columns
             if col in df.columns:
                 if pd.api.types.is_datetime64_dtype(df[col]):
                     non_null = df[col].dropna()
                     if not non_null.empty:
                         result_lines.append(f"{col.replace('_', ' ').title()}:")
-                        result_lines.append(f"  Date range: {non_null.min().strftime('%Y-%m-%d')} to {non_null.max().strftime('%Y-%m-%d')}")
-                        result_lines.append(f"  Total records with dates: {non_null.count()}")
+                        result_lines.append(
+                            f"  Date range: {non_null.min().strftime('%Y-%m-%d')} to {non_null.max().strftime('%Y-%m-%d')}"
+                        )
+                        result_lines.append(
+                            f"  Total records with dates: {non_null.count()}"
+                        )
                 else:
                     unique_values = df[col].value_counts().head(10)
                     if not unique_values.empty:
-                        result_lines.append(f"\n{col.replace('_', ' ').title()} (top values):")
+                        result_lines.append(
+                            f"\n{col.replace('_', ' ').title()} (top values):"
+                        )
                         for val, count in unique_values.items():
                             val_str = str(val)[:50]  # Limit length
                             result_lines.append(f"  {val_str}: {count}")
-        
-        return "\n".join(result_lines) if result_lines else "No data available for the requested fields."
-    
+
+        return (
+            "\n".join(result_lines)
+            if result_lines
+            else "No data available for the requested fields."
+        )
+
     # ========== FALLBACK: SHOW COLUMN STATISTICS ==========
     if mapped_columns:
         result_lines = ["Data insights for your query:"]
-        
+
         for col in mapped_columns[:3]:  # Limit to 3 columns
             if col in df.columns:
                 result_lines.append(f"\n{col.replace('_', ' ').title()}:")
-                
+
                 if pd.api.types.is_datetime64_dtype(df[col]):
                     non_null = df[col].dropna()
                     if not non_null.empty:
-                        result_lines.append(f"  Date range: {non_null.min().strftime('%Y-%m-%d')} to {non_null.max().strftime('%Y-%m-%d')}")
+                        result_lines.append(
+                            f"  Date range: {non_null.min().strftime('%Y-%m-%d')} to {non_null.max().strftime('%Y-%m-%d')}"
+                        )
                         result_lines.append(f"  Records: {non_null.count()}")
                 else:
                     unique_count = df[col].nunique()
                     result_lines.append(f"  Unique values: {unique_count}")
-                    
+
                     top_values = df[col].value_counts().head(3)
                     if not top_values.empty:
                         result_lines.append("  Top values:")
                         for val, count in top_values.items():
                             val_str = str(val)[:40]
                             result_lines.append(f"    {val_str}: {count}")
-        
+
         return "\n".join(result_lines)
-    
+
     # ========== NO MAPPINGS FOUND ==========
     return (
         "Could not interpret your query. Please try being more specific, for example:\n"
