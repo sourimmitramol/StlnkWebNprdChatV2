@@ -133,14 +133,31 @@ def infer_concept_used(tool_name: str, tool_input: str) -> str:
     """
     tool_lower = tool_name.lower()
     input_lower = tool_input.lower()
-    
+
     # Date-based queries
-    if any(month in input_lower for month in ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 
-                                                'jul', 'aug', 'sep', 'oct', 'nov', 'dec']):
-        date_concept = "Time-based filtering with ata_dp, eta_dp and month/year analysis"
+    if any(
+        month in input_lower
+        for month in [
+            "jan",
+            "feb",
+            "mar",
+            "apr",
+            "may",
+            "jun",
+            "jul",
+            "aug",
+            "sep",
+            "oct",
+            "nov",
+            "dec",
+        ]
+    ):
+        date_concept = (
+            "Time-based filtering with ata_dp, eta_dp and month/year analysis"
+        )
     else:
         date_concept = None
-    
+
     # Tool-specific concepts
     if "delayed" in tool_lower:
         return date_concept or "Delay detection using ETA vs ATA comparison"
@@ -177,15 +194,17 @@ def enrich_observation_with_concept(observation_list):
         if isinstance(step, tuple) and len(step) == 2:
             action, result = step
             # Convert action to dict if it has attributes
-            if hasattr(action, '__dict__'):
+            if hasattr(action, "__dict__"):
                 action_dict = {
                     "tool": action.tool,
                     "tool_input": action.tool_input,
                     "log": action.log,
-                    "type": "AgentAction"
+                    "type": "AgentAction",
                 }
                 # Add concept_used field
-                action_dict["concept_used"] = infer_concept_used(action.tool, action.tool_input)
+                action_dict["concept_used"] = infer_concept_used(
+                    action.tool, action.tool_input
+                )
                 enriched.append([action_dict, result])
             else:
                 enriched.append(step)
@@ -617,7 +636,7 @@ def ask(body: QueryWithConsigneeBody):
             )
 
         observation = result.get("intermediate_steps", [])
-        
+
         # Enrich observation with concept_used field
         enriched_observation = enrich_observation_with_concept(observation)
 
