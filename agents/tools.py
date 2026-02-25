@@ -15330,7 +15330,7 @@ TOOLS = [
     Tool(
         name="Get PO Booking OBL Status",
         func=get_po_booking_obl_status,
-        return_direct=True,
+        #return_direct=True,
         description=(
             "PRIMARY TOOL FOR PO, BOOKING, AND OBL STATUS QUERIES.\n"
             "\n"
