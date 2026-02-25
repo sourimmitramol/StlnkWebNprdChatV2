@@ -15771,12 +15771,6 @@ TOOLS = [
             "\n"
             "DO NOT use this tool for PO/Booking/OBL queries - use 'Get PO Booking OBL Status' instead!\n"
             "DO NOT use this tool for QUANTITY queries - use 'Get Shipped Quantity' instead!\n"
-<<<<<<< HEAD
-            "DO NOT use this tool for SIMPLE ARRIVAL STATUS questions ('Did PO reach?', 'Is PO in transit?') - use 'Check Arrival Status' instead!\n"
-            "DO NOT use this tool for ETA queries ('What is ETA?', 'When will arrive?') - use 'Get Container ETA' or 'Get ETA For PO' instead!\n"
-            "DO NOT use 'Get Containers or PO or OBL By Supplier' for status queries.\n"
-=======
->>>>>>> main_rokr_dev
             "DO NOT use 'Check Arrival Status' for milestone queries.\n"
         ),
     ),
