@@ -172,7 +172,7 @@ def infer_concept_used(tool_name: str, tool_input: str) -> str:
     elif "carrier" in tool_lower:
         return "Carrier identification from shipment records"
     elif "po" in tool_lower or "purchase order" in tool_lower:
-        return "Purchase order tracking with status aggregation"
+        return "Purchase order tracking based on ETA DP and PO number extraction"
     elif "hot container" in tool_lower:
         return "Priority container identification based on urgency metrics"
     elif "cargo ready" in tool_lower:
