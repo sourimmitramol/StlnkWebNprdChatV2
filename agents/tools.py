@@ -1899,7 +1899,7 @@ def get_current_location(query: str) -> str:
 def get_container_milestones(input_str: str) -> str:
     """
     Retrieve all milestone events for a given CONTAINER number ONLY.
-    
+
     This function is EXCLUSIVELY for container status and milestone queries.
     For PO, Booking, or OBL status, use 'get_po_booking_obl_status' instead.
     """
@@ -1921,7 +1921,9 @@ def get_container_milestones(input_str: str) -> str:
 
     # Normalize container_number column
     if "container_number" in df.columns:
-        df["container_number"] = df["container_number"].astype(str).fillna("").str.strip()
+        df["container_number"] = (
+            df["container_number"].astype(str).fillna("").str.strip()
+        )
 
     container_no = None
     header_text = ""
@@ -1931,7 +1933,7 @@ def get_container_milestones(input_str: str) -> str:
         df["container_number"].str.replace(" ", "").str.upper()
         == query_clean.replace(" ", "").upper()
     ]
-    
+
     if not match_container.empty:
         container_no = match_container.iloc[0]["container_number"]
         header_text = ""
@@ -1939,7 +1941,9 @@ def get_container_milestones(input_str: str) -> str:
     else:
         # Fallback: Try partial match
         match_container = df[
-            df["container_number"].str.upper().str.contains(query_clean.upper(), na=False)
+            df["container_number"]
+            .str.upper()
+            .str.contains(query_clean.upper(), na=False)
         ]
         if not match_container.empty:
             container_no = match_container.iloc[0]["container_number"]
@@ -2040,7 +2044,7 @@ def get_container_milestones(input_str: str) -> str:
 def get_po_booking_obl_status(input_str: str) -> str:
     """
     Retrieve detailed status information for a PO, Booking, or OBL number.
-    
+
     This function provides comprehensive shipment details including:
     - Container number(s) associated with the PO/Booking/OBL
     - All milestone dates and locations
@@ -2048,9 +2052,9 @@ def get_po_booking_obl_status(input_str: str) -> str:
     - Carrier and transport details
     - Dates (ETD, ETA, ATA, etc.)
     - Consignee and supplier information
-    
+
     Returns: list[dict] with detailed records in JSON format
-    
+
     NOTE: This tool is ONLY for PO, Booking, and OBL queries.
     For container status/milestones, use 'Get Container Milestones' instead.
     """
@@ -2063,7 +2067,12 @@ def get_po_booking_obl_status(input_str: str) -> str:
     df = _df().copy()
 
     # Normalize required columns
-    for col in ["container_number", "po_number_multiple", "ocean_bl_no_multiple", "booking_number_multiple"]:
+    for col in [
+        "container_number",
+        "po_number_multiple",
+        "ocean_bl_no_multiple",
+        "booking_number_multiple",
+    ]:
         if col in df.columns:
             df[col] = df[col].astype(str).fillna("").str.strip()
 
@@ -2077,38 +2086,42 @@ def get_po_booking_obl_status(input_str: str) -> str:
     # 1) Try Container match (most specific: 4 letters + 7 digits)
     container_no = extract_container_number(query)
     if container_no:
-        logger.info(f"[get_po_booking_obl_status] Detected container number: {container_no}. This tool is for PO/Booking/OBL only.")
+        logger.info(
+            f"[get_po_booking_obl_status] Detected container number: {container_no}. This tool is for PO/Booking/OBL only."
+        )
         return "This tool is for PO, Booking, and OBL status queries. For container status, please use 'Get Container Milestones' tool or rephrase your query."
-    
+
     # 2) Try OBL match (requires 4+ letters + digits)
     obl_no = extract_ocean_bl_number(query)
     if obl_no:
         logger.info(f"[get_po_booking_obl_status] Searching for OBL: {obl_no}")
         identifier = obl_no
         identifier_type = "OBL"
-        
+
         if "ocean_bl_no_multiple" in df.columns:
             result_df = df[
                 df["ocean_bl_no_multiple"]
                 .str.upper()
                 .str.contains(obl_no.upper(), na=False)
             ].copy()
-    
+
     # 3) Try Booking match (works with or without "booking" prefix)
     if result_df.empty and not identifier:
         booking_no = extract_booking_number(query)
         if booking_no:
-            logger.info(f"[get_po_booking_obl_status] Searching for Booking: {booking_no}")
+            logger.info(
+                f"[get_po_booking_obl_status] Searching for Booking: {booking_no}"
+            )
             identifier = booking_no
             identifier_type = "BOOKING"
-            
+
             if "booking_number_multiple" in df.columns:
                 result_df = df[
                     df["booking_number_multiple"]
                     .str.upper()
                     .str.contains(booking_no, na=False)
                 ].copy()
-    
+
     # 4) Try PO match (numeric only)
     if result_df.empty and not identifier:
         po_no = extract_po_number(query)
@@ -2117,12 +2130,12 @@ def get_po_booking_obl_status(input_str: str) -> str:
             m = re.search(r"\b(\d{6,})\b", query)
             if m:
                 po_no = m.group(1)
-        
+
         if po_no:
             logger.info(f"[get_po_booking_obl_status] Searching for PO: {po_no}")
             identifier = po_no
             identifier_type = "PO"
-            
+
             po_norm = _normalize_po_token(po_no)
             if "po_number_multiple" in df.columns:
                 match_po = df[
@@ -2130,7 +2143,7 @@ def get_po_booking_obl_status(input_str: str) -> str:
                         lambda cell: _po_in_cell(cell, po_norm)
                     )
                 ]
-                
+
                 if not match_po.empty:
                     result_df = match_po.copy()
                 else:
@@ -2152,13 +2165,13 @@ def get_po_booking_obl_status(input_str: str) -> str:
 
     # Select comprehensive output columns
     out_cols = [
-        #"identifier_type",
-        #"identifier_value",
+        # "identifier_type",
+        # "identifier_value",
         "container_number",
         "po_number_multiple",
         "ocean_bl_no_multiple",
         "booking_number_multiple",
-        #"consignee_code_multiple",
+        # "consignee_code_multiple",
         "supplier_vendor_name",
         "load_port",
         "final_load_port",
@@ -2176,27 +2189,24 @@ def get_po_booking_obl_status(input_str: str) -> str:
         "etd_lp",
         "eta_dp",
         "ata_dp",
-        #"derived_ata_dp",
+        # "derived_ata_dp",
         "revised_eta",
-        "equipment_arrived_at_last_cy",
-        "out_gate_at_last_cy",
-        "delivery_date_to_consignee",
-        "empty_container_return_date",
+        # "equipment_arrived_at_last_cy",
+        # "out_gate_at_last_cy",
+        # "delivery_date_to_consignee",
+        # "empty_container_return_date",
         # Location details
-        "out_gate_at_last_cy_lcn",
-        "delivery_date_to_consignee_lcn",
-        "empty_container_return_lcn",
         # Cargo info
-        #"cargo_count",
-        #"cargo_um",
-        #"cargo_detail_count",
-        #"detail_cargo_um",
-        #"cargo_weight",
+        # "cargo_count",
+        # "cargo_um",
+        # "cargo_detail_count",
+        # "detail_cargo_um",
+        # "cargo_weight",
     ]
 
     # Include only columns that exist
     out_cols = [c for c in out_cols if c in result_df.columns]
-    
+
     # Select and deduplicate
     output = result_df[out_cols].drop_duplicates().head(20).copy()
 
@@ -2205,10 +2215,18 @@ def get_po_booking_obl_status(input_str: str) -> str:
 
     # Format date columns
     date_cols = [
-        "atd_lp", "ata_flp", "atd_flp", "etd_lp", "eta_dp", "ata_dp", 
-        "derived_ata_dp", "revised_eta", "equipment_arrived_at_last_cy",
-        "out_gate_at_last_cy", "delivery_date_to_consignee", 
-        "empty_container_return_date"
+        "atd_lp",
+        "ata_flp",
+        "atd_flp",
+        "etd_lp",
+        "eta_dp",
+        "ata_dp",
+        "derived_ata_dp",
+        "revised_eta",
+        "equipment_arrived_at_last_cy",
+        "out_gate_at_last_cy",
+        "delivery_date_to_consignee",
+        "empty_container_return_date",
     ]
     existing_date_cols = [c for c in date_cols if c in output.columns]
 
@@ -2220,6 +2238,7 @@ def get_po_booking_obl_status(input_str: str) -> str:
 
     # Add calculated shipped_quantity if available
     if "cargo_count" in output.columns and "cargo_um" in output.columns:
+
         def format_quantity(row):
             count = row.get("cargo_count")
             um = row.get("cargo_um")
@@ -2228,10 +2247,12 @@ def get_po_booking_obl_status(input_str: str) -> str:
             elif pd.notna(count):
                 return str(int(count))
             return None
+
         output["shipped_quantity"] = output.apply(format_quantity, axis=1)
 
     # Add detailed_cargo_quantity if available
     if "cargo_detail_count" in output.columns and "detail_cargo_um" in output.columns:
+
         def format_detailed_quantity(row):
             count = row.get("cargo_detail_count")
             um = row.get("detail_cargo_um")
@@ -2240,7 +2261,10 @@ def get_po_booking_obl_status(input_str: str) -> str:
             elif pd.notna(count):
                 return str(int(count))
             return None
-        output["detailed_cargo_quantity"] = output.apply(format_detailed_quantity, axis=1)
+
+        output["detailed_cargo_quantity"] = output.apply(
+            format_detailed_quantity, axis=1
+        )
 
     logger.info(
         f"[get_po_booking_obl_status] Returning {len(output)} records for {identifier_type} {identifier}"

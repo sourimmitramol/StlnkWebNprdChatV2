@@ -48,3 +48,4 @@ Thumbs.db
 
 # Project specific
 run_app.ps1
+chroma_db/
