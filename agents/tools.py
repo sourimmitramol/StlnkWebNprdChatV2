@@ -5813,6 +5813,7 @@ def lookup_keyword(query: str) -> str:
         return "No rows match the supplied keywords."
 
     priority = [
+        "job_no",
         "container_number",
         "po_number_multiple",
         "ocean_bl_no_multiple",
@@ -15751,7 +15752,7 @@ TOOLS = [
     Tool(
         name="Get Container Milestones",
         func=get_container_milestones,
-        return_direct=True,
+        #return_direct=True,
         description=(
             "PRIMARY TOOL FOR CONTAINER STATUS AND MILESTONE QUERIES ONLY.\n"
             "\n"
@@ -15817,7 +15818,7 @@ TOOLS = [
     Tool(
         name="Get Consignee Info",
         func=get_consignee_info,
-        return_direct=True,
+        #return_direct=True,
         description=(
             "**PRIMARY TOOL** for consignee-related queries. "
             "Use this tool when user asks about CONSIGNEE information for PO, Container, or OBL.\n"
@@ -16078,7 +16079,7 @@ TOOLS = [
     Tool(
         name="Get Vessel Info",
         func=get_vessel_info,
-        return_direct=True,
+        #return_direct=True,
         description=(
             "PRIMARY TOOL for ALL VESSEL-RELATED QUERIES (mother vessel, feeder vessel, first vessel, final vessel).\n"
             "\n"

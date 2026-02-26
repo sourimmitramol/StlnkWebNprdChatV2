@@ -349,22 +349,29 @@ Rules:
 - This policy overrides any earlier instruction to format outputs as tables or summaries.
 - When you use a tool named **Get Container Milestones** or **get_container_milestones** (or any tool whose name contains the word "milestone"), you MUST include the tool's latest **Observation** exactly as returned (verbatim, with original line breaks and spacing) before any summary.
 - Do NOT paraphrase, rewrite, truncate, re-order, table-ify, or reformat the Observation. Preserve all whitespace and punctuation exactly.
- 
-Output exactly in this format (no extra sections, no "Final Answer:" label):
- 
+
+Final answer format for milestones (inside the JSON `action_input` string of the **Final Answer**):
+- You MUST still follow the LangChain structured chat **FORMAT_INSTRUCTIONS** and respond with a JSON object.
+- For the **Final Answer** step, set `"action": "Final Answer"` and put the ENTIRE user-visible text below into the `"action_input"` string value.
+- Do **not** remove or change the JSON wrapper required by the format instructions; only control the text of `action_input`.
+
+The `action_input` string for milestone queries MUST look like this (and only this, apart from the actual pasted content and summary text):
+
 Milestones (verbatim)
 ```text
 <PASTE THE LATEST Observation EXACTLY AS-IS HERE>
- 
+```
+
 Desired result
-- One short sentence stating the current status (e.g., reached discharge port), include the container number and date (YYYY-MM-DD).
+- One short sentence stating the current status (e.g., reached discharge port), including the container number and date (YYYY-MM-DD).
 - If the milestones show no events, say: "No milestones found for <container_id>."
+
 Additional rules:
 - If the `get_container_milestones` tool was not called or returned empty, say "No milestones found for <container_id>."
 - Never restate or alter the milestones text outside the text block.
 - Never omit any lines from the Observation.
-- Never include tool names, thoughts, or chain-of-thought. Only produce the two sections above.
- 
+- Never include tool names, thoughts, or chain-of-thought. Only produce the two sections above inside `action_input`.
+
 Example:
 If a user asks for "vessel no and ETA at destination port for container ABCD1234567", you should map:
 - "vessel no" → container_number (if context is container) or vessel_name (if context is vessel)
@@ -392,6 +399,12 @@ COLUMN_SYNONYMS = {
     "container type": "container_type",
     "type": "container_type",
     "ctype": "container_type",
+    "seal number": "seal_number",
+    "seal no": "seal_number",
+    "seal": "seal_number",
+    "seal#": "seal_number",
+    "container seal": "seal_number",
+    "seal_no": "seal_number",
     "destination service": "destination_service",
     "dest service": "destination_service",
     "consignee code": "consignee_code_multiple",
@@ -532,6 +545,9 @@ COLUMN_SYNONYMS = {
     "booking status": "booking_approval_status",
     "service contract number": "service_contract_number",
     "contract number": "service_contract_number",
+    "job number": "job_no",
+    "job no": "job_no",
+    "job_no": "job_no",
     "carrier vehicle load date": "carrier_vehicle_load_date",
     "vehicle load date": "carrier_vehicle_load_date",
     "carrier vehicle load lcn": "carrier_vehicle_load_lcn",
