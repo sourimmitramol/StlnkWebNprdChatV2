@@ -523,9 +523,11 @@ Generate the pandas code now:"""
             'False': False,
         }
         
-        # Provide execution context in both globals and locals so that
-        # generated code can reliably resolve symbols like `df` and `pd`.
-        exec_globals = {
+        # Provide execution context using a unified namespace so that
+        # generated code can reliably resolve symbols like `df`, `pd`,
+        # and any intermediate variables like `container_df`.
+        # Using the same dict for both globals and locals avoids scoping issues.
+        exec_namespace = {
             "__builtins__": safe_builtins,
             'df': df.copy(),
             'pd': pd,
@@ -534,15 +536,12 @@ Generate the pandas code now:"""
             'timedelta': timedelta,
             're': re,
             'parse_time_period': parse_time_period,
-        }
-
-        local_vars = {
-            'result': None
+            'result': None,
         }
         
         try:
-            exec(generated_code, exec_globals, local_vars)
-            result = local_vars.get('result')
+            exec(generated_code, exec_namespace, exec_namespace)
+            result = exec_namespace.get('result')
             
             if result is None:
                 return "The generated code did not produce a result. Please rephrase your query."

@@ -119,6 +119,7 @@ Tool selection (must use exact tool names)
 - Carrier for PO/BL/container: call "Get Carrier For PO" / "Get Containers For BL" / "Get Container Carrier" as appropriate.
 - **Consignee information** (e.g., "what is the consignee of PO#X", "who is the consignee for container Y", "show consignee for OBL Z"): call tool "Get Consignee Info" with the full question including the identifier (PO/container/OBL). DO NOT route to "Get Container Milestones" or "Get Field Info" for consignee queries.
 - Shipped quantity / cargo quantity (e.g., "shipped quantity for PO#X", "cargo quantity for container Y", "how many units shipped"): call tool "Get Shipped Quantity" with the full question including the identifier (PO/container/OBL/booking number).
+- **Job number queries** (e.g., "what is the job number for container X", "job number associated with PO Y"): There is NO specific tool for job numbers. DO NOT attempt to answer job number queries using tools or by guessing. Simply state "I don't have explicit information about the job number" to trigger pandas fallback which can retrieve the job_no field from the dataset. NEVER respond with booking number, BL number, or PO number when asked for job number - they are different fields.
 - If a tool returns empty but the user intent is clear, try the SQL tool "SQL Query Tool" as a last resort.
 Known port/location codes (partial list; case-insensitive)
 - USNYC → NEW YORK, NY
@@ -239,6 +240,7 @@ Disambiguation:
  
  
 Column mappings and synonyms:
+- job_no: "job number", "job no", "job#", "internal job number" - IMPORTANT: This is a UNIQUE internal job identifier and is NOT the same as booking number, BL number, or PO number. It is a separate field (job_no column) that identifies the internal job record for the shipment. When asked for job number, ALWAYS return the job_no field value, NEVER return booking_number_multiple or ocean_bl_no_multiple.
 - carr_eqp_uid: "carr_eqp_uid", "carrier equipment uid", "equipment id"
 - container_number: "container number", "con number", "container no", "container", "cont no", "cont#", "container#", "cntr no", "cntr#", "vessel no", "vessel"
 - container_type: "container type", "type", "ctype"
