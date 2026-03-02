@@ -20,7 +20,7 @@ from agents.tools import (  # Add the missing functions
     get_containers_PO_OBL_by_supplier, get_containers_still_at_load_port,
     get_delayed_containers, get_delayed_containers_not_arrived,
     get_delayed_pos, get_eta_for_booking, get_eta_for_po, get_field_info,
-    get_hot_upcoming_arrivals, get_load_port_for_container,
+    get_hot_upcoming_arrivals, get_job_number_info, get_load_port_for_container,
     get_po_booking_obl_status, get_po_transit_analysis, get_upcoming_arrivals,
     get_upcoming_bls, get_upcoming_pos, get_upcoming_shipments_by_etd,
     get_vessel_info, get_weekly_status_changes, lookup_keyword, sql_query_tool,
@@ -103,10 +103,14 @@ def route_query(query: str, consignee_codes: list = None) -> str:
         from utils.container import (extract_booking_number,
                                      extract_container_number,
                                      extract_ocean_bl_number,
-                                     extract_po_number)
+                                     extract_po_number,
+                                     extract_job_no,
+                                     extract_vessel_name)
 
         container_no = extract_container_number(query)
         po_no = extract_po_number(query)
+        job_no = extract_job_no(query)
+        vessel_name = extract_vessel_name(query)
         try:
             obl_no = extract_ocean_bl_number(query)
         except Exception:
@@ -268,6 +272,25 @@ def route_query(query: str, consignee_codes: list = None) -> str:
             if container_no or booking_no:
                 logger.info(f"Router: Vessel query route for query: {query}")
                 return get_vessel_info(query)
+
+        # ========== PRIORITY 2.9: Handle job number queries ==========
+        # Check for job number related queries
+        job_keywords = [
+            "job number",
+            "job no",
+            "job numbers",
+            "jobs associated",
+            "which job",
+            "what job",
+            "job for",
+            "job associated",
+            "show job",
+        ]
+        if any(kw in q for kw in job_keywords):
+            # Check if there's an identifier (container, PO, OBL, booking, vessel) to query
+            if container_no or po_no or obl_no or booking_no or vessel_name:
+                logger.info(f"Router: Job number query route for query: {query}")
+                return get_job_number_info(query)
 
         # ========== PRIORITY 3: Handle carrier queries (NEW - SPECIFIC) ==========
         # Questions 15, 16, 17, 18: Carrier queries for PO/Container/OBL

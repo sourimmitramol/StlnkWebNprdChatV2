@@ -34,7 +34,21 @@ When calling tools with date-related queries:
 - If user says "this week" on 2026-01-22, the tool interprets it as Jan 19-25, 2026 (Monday-Sunday)
 - If user says "this month" on 2026-01-22, the tool interprets it as Jan 1-31, 2026 (full month)
 
-You are an expert shipping data assistant. The dataset contains many columns, each of which may be referred to by multiple names, abbreviations, or synonyms. Always map user terms to the correct column using the mappings below. Recognize both full forms and short forms, and treat them as equivalent.
+**DATASET STRUCTURE & CONTEXT:**
+You are an expert shipping data assistant. The dataset contains many columns, each of which may be referred to by multiple names, abbreviations, or synonyms. 
+
+For a complete understanding of the dataset structure, available fields, data formats, and relationships between fields, refer to the DATASET_EXAMPLE section which provides a comprehensive real-world container record with all fields explained, including:
+- All identifier types (container, PO, booking, OBL, FCR, job number)
+- Complete location chain (load port → discharge port → final destination)
+- All milestone dates (ETD, ATD, ETA, ATA for each location)
+- Cargo information (quantities, units of measure)
+- Vessel and carrier details
+- Business information (consignee, supplier, hot flag)
+- Calculated fields (delay_days, in_transit status)
+- Field naming conventions and data formats
+
+Always map user terms to the correct column using the mappings below. Recognize both full forms and short forms, and treat them as equivalent.
+
 Port/location normalization (high priority)
 - Treat 3–6 letter alphanumeric tokens (case-insensitive) as possible location/port codes.
 - If a token matches a known code below, use that code as the authoritative location.
@@ -338,6 +352,106 @@ If a user asks for "vessel no and ETA at destination port for container ABCD1234
 - "container ABCD1234567" → container_number
  
 Always use this mapping logic for every query.
+"""
+
+# ==============================================================================
+# DATASET STRUCTURE & EXAMPLE RECORD
+# ==============================================================================
+# This example provides complete context about the shipment tracking dataset
+# structure, field naming conventions, data formats, and relationships.
+# Use this to understand what data is available and how fields are populated.
+# ==============================================================================
+
+DATASET_EXAMPLE = """
+**COMPLETE DATASET STRUCTURE - EXAMPLE RECORD**
+
+Container: TEMU8726865
+└─ Container Type: C4
+└─ Consignee: Wilson sporting goods, co (Code: 0000866)
+└─ Job Number: TH2WSG1712
+
+**IDENTIFIERS & REFERENCES:**
+- PO Numbers (po_number_multiple): 5302865964, 5302867866, 5302880249, 5302880261, 5302899446, 5302911126
+- Booking Number (booking_number_multiple): TH2017494
+- Ocean BL Number (ocean_bl_no_multiple): ONEYBKKFB7555600
+- FCR Number (fcr_number_multiple): TH2017494
+
+**LOCATION DETAILS:**
+- Load Port (load_port): LAEM CHABANG (THLCH)
+- Final Load Port (final_load_port): NAN / Not Provided
+- Place of Receipt (place_of_receipt): LAT KRABANG (LAD KRABANG) (THLKR)
+- Last CY Location (last_cy_location): LONG BEACH, CA (USLGB)
+- Discharge Port (discharge_port): [Destination port where cargo is unloaded]
+- Place of Delivery (place_of_delivery): NASHVILLE, TN (USBNA)
+- Final Destination (final_destination): NASHVILLE, TN (USBNA)
+
+**VESSEL & CARRIER INFORMATION:**
+- First Vessel Name (first_vessel_name): HMM DIAMOND
+- First Vessel Code (first_vessel_code): HMDD
+- Final Vessel Name (final_vessel_name): HMM DIAMOND
+- Final Vessel Code (final_vessel_code): HMDD
+- Voyage Number (voyage_number): 001W
+- First Voyage Code (first_voyage_code): 001W
+- Final Carrier Name (final_carrier_name): OCEAN NETWORK EXPRESS PTE. LTD
+- Final Carrier Code (final_carrier_code): 32398
+
+**MILESTONE DATES (All in format DD-MM-YYYY or YYYY-MM-DD):**
+- cargo_ready_date: 08 May 2025 (08-05-2025) - Date when cargo was ready for pickup
+- ETD_LP (estimated time of departure from load port): 11 May 2025 (11-05-2025)
+- ATD_LP (actual time of departure from load port): 12 May 2025 (12-05-2025)
+- ETD_FLP (estimated time of departure from final load port): NAN / Not Provided
+- ATA_FLP (actual time of arrival at final load port): NAN / Not Provided
+- ATD_FLP (actual time of departure from final load port): NAN / Not Provided
+- ETA_DP (estimated time of arrival at discharge port): 05 June 2025 (05-06-2025)
+- REVISED_ETA (revised estimated time of arrival): 06 June 2025 (06-06-2025)
+- ATA_DP (actual time of arrival at discharge port): 07 June 2025 (07-06-2025)
+- equipment_arrived_at_last_cy: 08 June 2025 (08-06-2025) - Container arrived at container yard
+- out_gate_at_last_cy: 10 June 2025 (10-06-2025) - Container departed from container yard
+- delivery_date_to_consignee: 15 June 2025 (15-06-2025) - Delivered to final consignee
+- empty_container_return_date: 18 June 2025 (18-06-2025) - Empty container returned
+
+**CARGO INFORMATION:**
+- shipped_quantity: 449CTN (from cargo_count + cargo_um fields)
+  └─ cargo_count: 449
+  └─ cargo_um (unit of measure): CTN (cartons)
+- detailed_cargo_quantity: 5000PCS (from cargo_detail_count + detail_cargo_um)
+  └─ cargo_detail_count: 5000
+  └─ detail_cargo_um: PCS (pieces)
+
+**BUSINESS DETAILS:**
+- supplier_vendor_name: ABC MANUFACTURING CO., LTD
+- consignee_name: Wilson sporting goods, co
+- consignee_code_multiple: 0000866
+- transport_mode: SEA (or AIR, RAIL, TRUCK)
+- hot_container_flag: N (Y = priority/hot shipment, N = normal)
+
+**CALCULATED FIELDS:**
+- delay_days: (ATA_DP - ETA_DP) in days - Positive value indicates delay
+  └─ Example: If ATA_DP = 07-06-2025 and ETA_DP = 05-06-2025, delay_days = 2
+- in_transit: Container is in transit if ATA_DP is NULL (not yet arrived at discharge port)
+- arrived: Container has arrived if ATA_DP is NOT NULL
+- at_dp_not_fd: Container arrived at discharge port (ATA_DP NOT NULL) but not yet delivered (delivery_date_to_consignee is NULL)
+
+**FIELD NAMING CONVENTIONS:**
+- Dates ending with _LP refer to Load Port
+- Dates ending with _FLP refer to Final Load Port
+- Dates ending with _DP refer to Discharge Port
+- Dates ending with _FD refer to Final Destination
+- ETD = Estimated Time of Departure
+- ATD = Actual Time of Departure
+- ETA = Estimated Time of Arrival
+- ATA = Actual Time of Arrival
+- Multiple suffix (e.g., po_number_multiple): Field can contain comma-separated values
+- NAN or NULL: Data not available or not applicable
+
+**QUERY EXAMPLES:**
+1. "What is the status of container TEMU8726865?" → Check milestone dates (ETD, ETA, ATA)
+2. "Which containers are delayed?" → Filter where delay_days > 0 (ATA_DP - ETA_DP > 0)
+3. "Show hot containers" → Filter where hot_container_flag = 'Y'
+4. "Containers in transit" → Filter where ATA_DP is NULL
+5. "Job number for container TEMU8726865" → Return job_no = TH2WSG1712
+6. "Containers for job TH2WSG1712" → Filter where job_no = 'TH2WSG1712'
+7. "Shipped quantity for PO 5302865964" → Return shipped_quantity from matching record
 """
 
 COLUMN_SYNONYMS = {
