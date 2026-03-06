@@ -20,10 +20,11 @@ from agents.tools import (  # Add the missing functions
     get_containers_PO_OBL_by_supplier, get_containers_still_at_load_port,
     get_delayed_containers, get_delayed_containers_not_arrived,
     get_delayed_pos, get_eta_for_booking, get_eta_for_po, get_field_info,
-    get_hot_upcoming_arrivals, get_job_number_info, get_load_port_for_container,
-    get_po_booking_obl_status, get_po_transit_analysis, get_upcoming_arrivals,
-    get_upcoming_bls, get_upcoming_pos, get_upcoming_shipments_by_etd,
-    get_vessel_info, get_weekly_status_changes, lookup_keyword, sql_query_tool,
+    get_hot_upcoming_arrivals, get_job_number_info,
+    get_load_port_for_container, get_po_booking_obl_status,
+    get_po_transit_analysis, get_upcoming_arrivals, get_upcoming_bls,
+    get_upcoming_pos, get_upcoming_shipments_by_etd, get_vessel_info,
+    get_weekly_status_changes, lookup_keyword, sql_query_tool,
     vector_search_tool)
 from utils.logger import logger
 
@@ -101,11 +102,9 @@ def route_query(query: str, consignee_codes: list = None) -> str:
 
         # Enhanced container/PO/OBL/Booking detection (do this early)
         from utils.container import (extract_booking_number,
-                                     extract_container_number,
+                                     extract_container_number, extract_job_no,
                                      extract_ocean_bl_number,
-                                     extract_po_number,
-                                     extract_job_no,
-                                     extract_vessel_name)
+                                     extract_po_number, extract_vessel_name)
 
         container_no = extract_container_number(query)
         po_no = extract_po_number(query)

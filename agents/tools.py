@@ -25,8 +25,8 @@ from config import settings
 from services.azure_blob import get_shipment_df
 from services.vectorstore import get_vectorstore
 from utils.container import (extract_booking_number, extract_container_number,
-                             extract_ocean_bl_number, extract_po_number,
-                             extract_job_no, extract_vessel_name)
+                             extract_job_no, extract_ocean_bl_number,
+                             extract_po_number, extract_vessel_name)
 from utils.logger import logger
 from utils.misc import clean_container_number, to_datetime
 
@@ -14010,23 +14010,23 @@ def get_job_number_info(question: str = None, consignee_code: str = None, **kwar
     """
     Get job number information associated with various shipment identifiers.
     Supports BIDIRECTIONAL lookups:
-    
+
     A) FROM identifiers TO job number:
     - "which job number is associated with container number HLBU1140676"
     - "which job number is associated with PO 5302865962"
     - "which job number is associated with OBL HLCUSGN2503AQHF4"
     - "Which jobs associated with MAERSK FORTALEZA"
     - "what is the job no of container HAMU3943548"
-    
+
     B) FROM job number TO identifiers (REVERSE LOOKUP):
     - "which hot containers are associated with job number TH2WSG1712"
     - "which POs are associated with job number TH2WSG1712"
     - "which OBLs are associated with job number TH2WSG1712"
     - "show containers for job TH2WSG1712"
     - "hot containers for job TH2WSG1712"
-    
+
     Returns: JSON/dict format with job_no and associated shipment details.
-    
+
     Data source: job_no column (uses _df() for consignee scoping)
     """
     import pandas as pd
@@ -14053,17 +14053,22 @@ def get_job_number_info(question: str = None, consignee_code: str = None, **kwar
 
     # ========== EXTRACT JOB NUMBER (NEW) ==========
     job_no_input = extract_job_no(q_extract)
-    
+
     # Additional patterns for job number extraction
     if not job_no_input:
         # Pattern: "job number TH2WSG1712", "job TH2WSG1712", "job# TH2WSG1712"
-        m_job = re.search(r"\b(?:job\s+(?:number\s+)?(?:no\.?\s+)?|job#\s*)([A-Z0-9]{6,20})\b", q_upper)
+        m_job = re.search(
+            r"\b(?:job\s+(?:number\s+)?(?:no\.?\s+)?|job#\s*)([A-Z0-9]{6,20})\b",
+            q_upper,
+        )
         if m_job:
             job_no_input = m_job.group(1)
-    
+
     if not job_no_input:
         # Pattern: "with job number TH2WSG1712", "for job TH2WSG1712"
-        m_with_job = re.search(r"\b(?:with|for)\s+job\s+(?:number\s+)?([A-Z0-9]{6,20})\b", q_upper)
+        m_with_job = re.search(
+            r"\b(?:with|for)\s+job\s+(?:number\s+)?([A-Z0-9]{6,20})\b", q_upper
+        )
         if m_with_job:
             job_no_input = m_with_job.group(1)
 
@@ -14120,15 +14125,20 @@ def get_job_number_info(question: str = None, consignee_code: str = None, **kwar
         job_mask = df["job_no"].fillna("").str.upper() == job_no_input.upper()
         mask |= job_mask
         try:
-            logger.info(f"[get_job_number_info] REVERSE LOOKUP: Filtering by job_no: {job_no_input}")
+            logger.info(
+                f"[get_job_number_info] REVERSE LOOKUP: Filtering by job_no: {job_no_input}"
+            )
         except:
             pass
 
     # ========== PRIORITY 2: Filter by other identifiers (FORWARD LOOKUP) ==========
     # Filter by container number
     if container_no and "container_number" in df.columns:
-        mask |= df["container_number"].fillna("").str.upper().str.contains(
-            re.escape(container_no), regex=True, na=False
+        mask |= (
+            df["container_number"]
+            .fillna("")
+            .str.upper()
+            .str.contains(re.escape(container_no), regex=True, na=False)
         )
         try:
             logger.info(f"[get_job_number_info] Filtering by container: {container_no}")
@@ -14138,8 +14148,11 @@ def get_job_number_info(question: str = None, consignee_code: str = None, **kwar
     # Filter by PO number
     if po_no and "po_number_multiple" in df.columns:
         # Search in comma-separated po_number_multiple
-        mask |= df["po_number_multiple"].fillna("").astype(str).apply(
-            lambda cell: po_no in str(cell).replace(" ", "")
+        mask |= (
+            df["po_number_multiple"]
+            .fillna("")
+            .astype(str)
+            .apply(lambda cell: po_no in str(cell).replace(" ", ""))
         )
         try:
             logger.info(f"[get_job_number_info] Filtering by PO: {po_no}")
@@ -14148,8 +14161,11 @@ def get_job_number_info(question: str = None, consignee_code: str = None, **kwar
 
     # Filter by Ocean BL
     if obl_no and "ocean_bl_no_multiple" in df.columns:
-        mask |= df["ocean_bl_no_multiple"].fillna("").str.upper().str.contains(
-            re.escape(obl_no), regex=True, na=False
+        mask |= (
+            df["ocean_bl_no_multiple"]
+            .fillna("")
+            .str.upper()
+            .str.contains(re.escape(obl_no), regex=True, na=False)
         )
         try:
             logger.info(f"[get_job_number_info] Filtering by OBL: {obl_no}")
@@ -14160,8 +14176,11 @@ def get_job_number_info(question: str = None, consignee_code: str = None, **kwar
     if booking_no and "booking_number_multiple" in df.columns:
         # Use the normalized booking matching approach
         booking_norm = booking_no.upper().strip()
-        mask |= df["booking_number_multiple"].fillna("").astype(str).apply(
-            lambda cell: booking_norm in str(cell).upper().replace(" ", "")
+        mask |= (
+            df["booking_number_multiple"]
+            .fillna("")
+            .astype(str)
+            .apply(lambda cell: booking_norm in str(cell).upper().replace(" ", ""))
         )
         try:
             logger.info(f"[get_job_number_info] Filtering by booking: {booking_no}")
@@ -14171,8 +14190,11 @@ def get_job_number_info(question: str = None, consignee_code: str = None, **kwar
     # Filter by vessel name
     if vessel_name and "final_vessel_name" in df.columns:
         # Fuzzy match on vessel name
-        mask |= df["final_vessel_name"].fillna("").str.upper().str.contains(
-            re.escape(vessel_name), regex=True, na=False
+        mask |= (
+            df["final_vessel_name"]
+            .fillna("")
+            .str.upper()
+            .str.contains(re.escape(vessel_name), regex=True, na=False)
         )
         try:
             logger.info(f"[get_job_number_info] Filtering by vessel: {vessel_name}")
@@ -14212,17 +14234,21 @@ def get_job_number_info(question: str = None, consignee_code: str = None, **kwar
             .str.upper()
             .isin(["Y", "YES", "TRUE", "1"])
         )
-        
+
         hot_count = hot_mask.sum()
         try:
-            logger.info(f"[get_job_number_info] Hot containers found: {hot_count} out of {len(filtered)}")
+            logger.info(
+                f"[get_job_number_info] Hot containers found: {hot_count} out of {len(filtered)}"
+            )
         except:
             pass
-        
+
         if hot_count > 0:
             filtered = filtered[hot_mask].copy()
             try:
-                logger.info(f"[get_job_number_info] Applied hot container filter - {hot_count} records")
+                logger.info(
+                    f"[get_job_number_info] Applied hot container filter - {hot_count} records"
+                )
             except:
                 pass
         else:
@@ -14234,8 +14260,12 @@ def get_job_number_info(question: str = None, consignee_code: str = None, **kwar
                 identifier_parts.append(f"container {container_no}")
             if vessel_name:
                 identifier_parts.append(f"vessel {vessel_name}")
-            
-            identifier_str = " / ".join(identifier_parts) if identifier_parts else "the provided identifier"
+
+            identifier_str = (
+                " / ".join(identifier_parts)
+                if identifier_parts
+                else "the provided identifier"
+            )
             return f"No hot containers found for {identifier_str}. Total containers found: {len(filtered)} (non-hot)."
 
     # Prepare output columns
@@ -14265,15 +14295,17 @@ def get_job_number_info(question: str = None, consignee_code: str = None, **kwar
     result_df = filtered[output_cols].copy()
 
     # Sort by ETD/ETA to get most recent
-    date_cols = [c for c in ["etd_lp", "eta_dp", "revised_eta"] if c in result_df.columns]
+    date_cols = [
+        c for c in ["etd_lp", "eta_dp", "revised_eta"] if c in result_df.columns
+    ]
     if date_cols:
         result_df = ensure_datetime(result_df, date_cols)
         result_df["_sort_date"] = result_df[date_cols].max(axis=1)
         result_df = result_df.sort_values("_sort_date", ascending=False)
         result_df = result_df.drop(columns=["_sort_date"])
 
-    # Limit to 50 records
-    result_df = result_df.head(50)
+    # Limit to 150 records
+    result_df = result_df.head(150)
 
     # Format date columns
     for dcol in ["etd_lp", "eta_dp", "ata_dp", "revised_eta"]:
@@ -14283,9 +14315,7 @@ def get_job_number_info(question: str = None, consignee_code: str = None, **kwar
             result_df[dcol] = result_df[dcol].dt.strftime("%Y-%m-%d")
 
     try:
-        logger.info(
-            f"[get_job_number_info] Returning {len(result_df)} job record(s)"
-        )
+        logger.info(f"[get_job_number_info] Returning {len(result_df)} job record(s)")
     except:
         pass
 
@@ -14296,13 +14326,21 @@ def get_job_number_info(question: str = None, consignee_code: str = None, **kwar
     if job_no_input:
         # REVERSE LOOKUP: Show what was found for this job number
         container_count = result_df["container_number"].nunique()
-        po_count = result_df["po_number_multiple"].nunique() if "po_number_multiple" in result_df.columns else 0
-        obl_count = result_df["ocean_bl_no_multiple"].nunique() if "ocean_bl_no_multiple" in result_df.columns else 0
-        
+        po_count = (
+            result_df["po_number_multiple"].nunique()
+            if "po_number_multiple" in result_df.columns
+            else 0
+        )
+        obl_count = (
+            result_df["ocean_bl_no_multiple"].nunique()
+            if "ocean_bl_no_multiple" in result_df.columns
+            else 0
+        )
+
         hot_status = ""
         if "hot" in q_lower and "hot_container_flag" in result_df.columns:
             hot_status = " (hot containers only)"
-        
+
         summary_parts = []
         if container_count > 0:
             summary_parts.append(f"{container_count} container(s)")
@@ -14310,7 +14348,7 @@ def get_job_number_info(question: str = None, consignee_code: str = None, **kwar
             summary_parts.append(f"{po_count} PO(s)")
         if obl_count > 0:
             summary_parts.append(f"{obl_count} OBL(s)")
-        
+
         summary_str = ", ".join(summary_parts) if summary_parts else "records"
         msg = f"Found {summary_str} for job number {job_no_input}{hot_status}.\n\nDetails:\n"
     else:
@@ -14327,7 +14365,11 @@ def get_job_number_info(question: str = None, consignee_code: str = None, **kwar
         if vessel_name:
             identifier_parts.append(f"vessel {vessel_name}")
 
-        identifier_str = " / ".join(identifier_parts) if identifier_parts else "the provided identifier"
+        identifier_str = (
+            " / ".join(identifier_parts)
+            if identifier_parts
+            else "the provided identifier"
+        )
 
         # Get unique job numbers
         unique_jobs = result_df["job_no"].dropna().unique()
@@ -16646,4 +16688,5 @@ TOOLS = [
             "\n"
             "Keywords: job number, job no, job, jobs, associated, job_no\n"
         ),
-    ),]
+    ),
+]

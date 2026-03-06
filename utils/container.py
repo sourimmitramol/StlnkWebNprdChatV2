@@ -200,7 +200,7 @@ def extract_job_no(text: str) -> Optional[str]:
         - "job# 1234567"
         - alphanumeric patterns (6-20 characters)
     Returns the cleaned, upper-cased job number or None.
-    
+
     Note: Job numbers can be purely numeric or alphanumeric.
     This function prioritizes explicit "job" prefixes to avoid false positives.
     """
@@ -219,7 +219,7 @@ def extract_job_no(text: str) -> Optional[str]:
         if m:
             return m.group(1).upper()
 
-    # Priority 2: If asking about job associated with other identifiers, 
+    # Priority 2: If asking about job associated with other identifiers,
     # we don't extract standalone numbers to avoid confusion with container/PO/BL numbers
     # The job number should be explicitly marked with "job" keyword in such queries
 
@@ -236,7 +236,7 @@ def extract_vessel_name(text: str) -> Optional[str]:
         - "which jobs associated with MAERSK FORTALEZA"
         - "vessel name CMA CGM BALBOA"
     Returns the extracted vessel name (cleaned and upper-cased) or None.
-    
+
     Note: Vessel names are typically multiple words, all caps in databases.
     This function looks for explicit vessel/ship keywords or standalone caps patterns.
     """
@@ -278,15 +278,28 @@ def extract_vessel_name(text: str) -> Optional[str]:
             # Clean up extra whitespace
             name = re.sub(r"\s+", " ", name)
             name_upper = name.upper()
-            
+
             # Validate: Must be 2+ words of 3+ chars each (typical vessel name pattern)
             words = name_upper.split()
             if len(words) >= 2 and all(len(w) >= 3 for w in words):
                 # Exclude common question/query words
                 excluded_words = {
-                    "WHICH", "WHAT", "WHERE", "WHEN", "WHO", "HOW",
-                    "JOB", "NUMBER", "CONTAINER", "BOOKING", "STATUS",
-                    "THE", "AND", "FOR", "WITH", "ASSOCIATED"
+                    "WHICH",
+                    "WHAT",
+                    "WHERE",
+                    "WHEN",
+                    "WHO",
+                    "HOW",
+                    "JOB",
+                    "NUMBER",
+                    "CONTAINER",
+                    "BOOKING",
+                    "STATUS",
+                    "THE",
+                    "AND",
+                    "FOR",
+                    "WITH",
+                    "ASSOCIATED",
                 }
                 # Check if the name contains mostly non-excluded words
                 valid_words = [w for w in words if w not in excluded_words]
@@ -297,44 +310,69 @@ def extract_vessel_name(text: str) -> Optional[str]:
     # Examples: "MAERSK FORTALEZA", "MSC FLAMINIA", "EVER GIVEN"
     # Pattern: 2+ consecutive capitalized words - but exclude question words
     text_upper = text.upper()
-    
+
     # Find all potential vessel name patterns (2+ consecutive uppercase words)
     matches = re.finditer(r"\b([A-Z]{3,}(?:\s+[A-Z]{3,})+)\b", text_upper)
-    
+
     for match in matches:
         name = match.group(1).strip()
-        
+
         # Basic length check
         if len(name) < 7:
             continue
-        
+
         # Exclude common non-vessel phrases
-        if name in ["USA", "EUR", "USD", "PO NUMBER", "CONTAINER NUMBER", 
-                    "JOB NUMBER", "BOOKING NUMBER", "OCEAN BL"]:
+        if name in [
+            "USA",
+            "EUR",
+            "USD",
+            "PO NUMBER",
+            "CONTAINER NUMBER",
+            "JOB NUMBER",
+            "BOOKING NUMBER",
+            "OCEAN BL",
+        ]:
             continue
-        
+
         # Split into words and validate
         words = name.split()
-        
+
         # Must be 2+ words
         if len(words) < 2:
             continue
-        
+
         # Exclude if it contains too many question/query words
         excluded_words = {
-            "WHICH", "WHAT", "WHERE", "WHEN", "WHO", "HOW",
-            "JOB", "NUMBER", "CONTAINER", "BOOKING", "STATUS",
-            "IS", "ARE", "WAS", "WERE", "THE", "AND", "OR",
-            "ASSOCIATED", "WITH", "FOR"
+            "WHICH",
+            "WHAT",
+            "WHERE",
+            "WHEN",
+            "WHO",
+            "HOW",
+            "JOB",
+            "NUMBER",
+            "CONTAINER",
+            "BOOKING",
+            "STATUS",
+            "IS",
+            "ARE",
+            "WAS",
+            "WERE",
+            "THE",
+            "AND",
+            "OR",
+            "ASSOCIATED",
+            "WITH",
+            "FOR",
         }
-        
+
         # Count excluded words
         excluded_count = sum(1 for w in words if w in excluded_words)
-        
+
         # If more than half the words are excluded, skip this match
         if excluded_count > len(words) // 2:
             continue
-        
+
         # If at least 2 valid words remain, this is likely a vessel name
         valid_words = [w for w in words if w not in excluded_words]
         if len(valid_words) >= 2:
