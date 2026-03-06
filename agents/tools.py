@@ -14016,6 +14016,7 @@ def get_job_number_info(question: str = None, consignee_code: str = None, **kwar
     - "which job number is associated with PO 5302865962"
     - "which job number is associated with OBL HLCUSGN2503AQHF4"
     - "Which jobs associated with MAERSK FORTALEZA"
+    - "what is the job no of container HAMU3943548"
     
     B) FROM job number TO identifiers (REVERSE LOOKUP):
     - "which hot containers are associated with job number TH2WSG1712"
@@ -16580,12 +16581,13 @@ TOOLS = [
     Tool(
         name="Get Job Number Info",
         func=get_job_number_info,
-        #return_direct=True,
+        return_direct=True,
         description=(
             "PRIMARY TOOL for ALL JOB NUMBER QUERIES AND LOOKUPS.\n"
             "\n"
             "Use this tool when query asks about:\n"
             "- Job number associated with container: 'which job number is associated with container HLBU1140676'\n"
+            "- Job number associated with container: 'what is the job no of HAMU3943548'\n"
             "- Job number for PO: 'which job number is associated with PO 5302865962'\n"
             "- Job number for OBL: 'which job number is associated with OBL HLCUSGN2503AQHF4'\n"
             "- Job number for booking: 'which job number is associated with booking number VN2084901'\n"
