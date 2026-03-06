@@ -25,7 +25,8 @@ from config import settings
 from services.azure_blob import get_shipment_df
 from services.vectorstore import get_vectorstore
 from utils.container import (extract_booking_number, extract_container_number,
-                             extract_ocean_bl_number, extract_po_number)
+                             extract_job_no, extract_ocean_bl_number,
+                             extract_po_number, extract_vessel_name)
 from utils.logger import logger
 from utils.misc import clean_container_number, to_datetime
 
@@ -1899,7 +1900,7 @@ def get_current_location(query: str) -> str:
 def get_container_milestones(input_str: str) -> str:
     """
     Retrieve all milestone events for a given CONTAINER number ONLY.
-    
+
     This function is EXCLUSIVELY for container status and milestone queries.
     For PO, Booking, or OBL status, use 'get_po_booking_obl_status' instead.
     """
@@ -1921,7 +1922,9 @@ def get_container_milestones(input_str: str) -> str:
 
     # Normalize container_number column
     if "container_number" in df.columns:
-        df["container_number"] = df["container_number"].astype(str).fillna("").str.strip()
+        df["container_number"] = (
+            df["container_number"].astype(str).fillna("").str.strip()
+        )
 
     container_no = None
     header_text = ""
@@ -1931,7 +1934,7 @@ def get_container_milestones(input_str: str) -> str:
         df["container_number"].str.replace(" ", "").str.upper()
         == query_clean.replace(" ", "").upper()
     ]
-    
+
     if not match_container.empty:
         container_no = match_container.iloc[0]["container_number"]
         header_text = ""
@@ -1939,7 +1942,9 @@ def get_container_milestones(input_str: str) -> str:
     else:
         # Fallback: Try partial match
         match_container = df[
-            df["container_number"].str.upper().str.contains(query_clean.upper(), na=False)
+            df["container_number"]
+            .str.upper()
+            .str.contains(query_clean.upper(), na=False)
         ]
         if not match_container.empty:
             container_no = match_container.iloc[0]["container_number"]
@@ -2040,7 +2045,7 @@ def get_container_milestones(input_str: str) -> str:
 def get_po_booking_obl_status(input_str: str) -> str:
     """
     Retrieve detailed status information for a PO, Booking, or OBL number.
-    
+
     This function provides comprehensive shipment details including:
     - Container number(s) associated with the PO/Booking/OBL
     - All milestone dates and locations
@@ -2048,9 +2053,9 @@ def get_po_booking_obl_status(input_str: str) -> str:
     - Carrier and transport details
     - Dates (ETD, ETA, ATA, etc.)
     - Consignee and supplier information
-    
+
     Returns: list[dict] with detailed records in JSON format
-    
+
     NOTE: This tool is ONLY for PO, Booking, and OBL queries.
     For container status/milestones, use 'Get Container Milestones' instead.
     """
@@ -2063,7 +2068,12 @@ def get_po_booking_obl_status(input_str: str) -> str:
     df = _df().copy()
 
     # Normalize required columns
-    for col in ["container_number", "po_number_multiple", "ocean_bl_no_multiple", "booking_number_multiple"]:
+    for col in [
+        "container_number",
+        "po_number_multiple",
+        "ocean_bl_no_multiple",
+        "booking_number_multiple",
+    ]:
         if col in df.columns:
             df[col] = df[col].astype(str).fillna("").str.strip()
 
@@ -2077,38 +2087,42 @@ def get_po_booking_obl_status(input_str: str) -> str:
     # 1) Try Container match (most specific: 4 letters + 7 digits)
     container_no = extract_container_number(query)
     if container_no:
-        logger.info(f"[get_po_booking_obl_status] Detected container number: {container_no}. This tool is for PO/Booking/OBL only.")
+        logger.info(
+            f"[get_po_booking_obl_status] Detected container number: {container_no}. This tool is for PO/Booking/OBL only."
+        )
         return "This tool is for PO, Booking, and OBL status queries. For container status, please use 'Get Container Milestones' tool or rephrase your query."
-    
+
     # 2) Try OBL match (requires 4+ letters + digits)
     obl_no = extract_ocean_bl_number(query)
     if obl_no:
         logger.info(f"[get_po_booking_obl_status] Searching for OBL: {obl_no}")
         identifier = obl_no
         identifier_type = "OBL"
-        
+
         if "ocean_bl_no_multiple" in df.columns:
             result_df = df[
                 df["ocean_bl_no_multiple"]
                 .str.upper()
                 .str.contains(obl_no.upper(), na=False)
             ].copy()
-    
+
     # 3) Try Booking match (works with or without "booking" prefix)
     if result_df.empty and not identifier:
         booking_no = extract_booking_number(query)
         if booking_no:
-            logger.info(f"[get_po_booking_obl_status] Searching for Booking: {booking_no}")
+            logger.info(
+                f"[get_po_booking_obl_status] Searching for Booking: {booking_no}"
+            )
             identifier = booking_no
             identifier_type = "BOOKING"
-            
+
             if "booking_number_multiple" in df.columns:
                 result_df = df[
                     df["booking_number_multiple"]
                     .str.upper()
                     .str.contains(booking_no, na=False)
                 ].copy()
-    
+
     # 4) Try PO match (numeric only)
     if result_df.empty and not identifier:
         po_no = extract_po_number(query)
@@ -2117,12 +2131,12 @@ def get_po_booking_obl_status(input_str: str) -> str:
             m = re.search(r"\b(\d{6,})\b", query)
             if m:
                 po_no = m.group(1)
-        
+
         if po_no:
             logger.info(f"[get_po_booking_obl_status] Searching for PO: {po_no}")
             identifier = po_no
             identifier_type = "PO"
-            
+
             po_norm = _normalize_po_token(po_no)
             if "po_number_multiple" in df.columns:
                 match_po = df[
@@ -2130,7 +2144,7 @@ def get_po_booking_obl_status(input_str: str) -> str:
                         lambda cell: _po_in_cell(cell, po_norm)
                     )
                 ]
-                
+
                 if not match_po.empty:
                     result_df = match_po.copy()
                 else:
@@ -2152,13 +2166,13 @@ def get_po_booking_obl_status(input_str: str) -> str:
 
     # Select comprehensive output columns
     out_cols = [
-        #"identifier_type",
-        #"identifier_value",
+        # "identifier_type",
+        # "identifier_value",
         "container_number",
         "po_number_multiple",
         "ocean_bl_no_multiple",
         "booking_number_multiple",
-        #"consignee_code_multiple",
+        # "consignee_code_multiple",
         "supplier_vendor_name",
         "load_port",
         "final_load_port",
@@ -2176,27 +2190,24 @@ def get_po_booking_obl_status(input_str: str) -> str:
         "etd_lp",
         "eta_dp",
         "ata_dp",
-        #"derived_ata_dp",
+        # "derived_ata_dp",
         "revised_eta",
-        "equipment_arrived_at_last_cy",
-        "out_gate_at_last_cy",
-        "delivery_date_to_consignee",
-        "empty_container_return_date",
+        # "equipment_arrived_at_last_cy",
+        # "out_gate_at_last_cy",
+        # "delivery_date_to_consignee",
+        # "empty_container_return_date",
         # Location details
-        "out_gate_at_last_cy_lcn",
-        "delivery_date_to_consignee_lcn",
-        "empty_container_return_lcn",
         # Cargo info
-        #"cargo_count",
-        #"cargo_um",
-        #"cargo_detail_count",
-        #"detail_cargo_um",
-        #"cargo_weight",
+        # "cargo_count",
+        # "cargo_um",
+        # "cargo_detail_count",
+        # "detail_cargo_um",
+        # "cargo_weight",
     ]
 
     # Include only columns that exist
     out_cols = [c for c in out_cols if c in result_df.columns]
-    
+
     # Select and deduplicate
     output = result_df[out_cols].drop_duplicates().head(20).copy()
 
@@ -2205,10 +2216,18 @@ def get_po_booking_obl_status(input_str: str) -> str:
 
     # Format date columns
     date_cols = [
-        "atd_lp", "ata_flp", "atd_flp", "etd_lp", "eta_dp", "ata_dp", 
-        "derived_ata_dp", "revised_eta", "equipment_arrived_at_last_cy",
-        "out_gate_at_last_cy", "delivery_date_to_consignee", 
-        "empty_container_return_date"
+        "atd_lp",
+        "ata_flp",
+        "atd_flp",
+        "etd_lp",
+        "eta_dp",
+        "ata_dp",
+        "derived_ata_dp",
+        "revised_eta",
+        "equipment_arrived_at_last_cy",
+        "out_gate_at_last_cy",
+        "delivery_date_to_consignee",
+        "empty_container_return_date",
     ]
     existing_date_cols = [c for c in date_cols if c in output.columns]
 
@@ -2220,6 +2239,7 @@ def get_po_booking_obl_status(input_str: str) -> str:
 
     # Add calculated shipped_quantity if available
     if "cargo_count" in output.columns and "cargo_um" in output.columns:
+
         def format_quantity(row):
             count = row.get("cargo_count")
             um = row.get("cargo_um")
@@ -2228,10 +2248,12 @@ def get_po_booking_obl_status(input_str: str) -> str:
             elif pd.notna(count):
                 return str(int(count))
             return None
+
         output["shipped_quantity"] = output.apply(format_quantity, axis=1)
 
     # Add detailed_cargo_quantity if available
     if "cargo_detail_count" in output.columns and "detail_cargo_um" in output.columns:
+
         def format_detailed_quantity(row):
             count = row.get("cargo_detail_count")
             um = row.get("detail_cargo_um")
@@ -2240,7 +2262,10 @@ def get_po_booking_obl_status(input_str: str) -> str:
             elif pd.notna(count):
                 return str(int(count))
             return None
-        output["detailed_cargo_quantity"] = output.apply(format_detailed_quantity, axis=1)
+
+        output["detailed_cargo_quantity"] = output.apply(
+            format_detailed_quantity, axis=1
+        )
 
     logger.info(
         f"[get_po_booking_obl_status] Returning {len(output)} records for {identifier_type} {identifier}"
@@ -14397,6 +14422,388 @@ def get_bl_transit_analysis(query: str) -> str:
     return output_data
 
 
+def get_job_number_info(question: str = None, consignee_code: str = None, **kwargs):
+    """
+    Get job number information associated with various shipment identifiers.
+    Supports BIDIRECTIONAL lookups:
+
+    A) FROM identifiers TO job number:
+    - "which job number is associated with container number HLBU1140676"
+    - "which job number is associated with PO 5302865962"
+    - "which job number is associated with OBL HLCUSGN2503AQHF4"
+    - "Which jobs associated with MAERSK FORTALEZA"
+    - "what is the job no of container HAMU3943548"
+
+    B) FROM job number TO identifiers (REVERSE LOOKUP):
+    - "which hot containers are associated with job number TH2WSG1712"
+    - "which POs are associated with job number TH2WSG1712"
+    - "which OBLs are associated with job number TH2WSG1712"
+    - "show containers for job TH2WSG1712"
+    - "hot containers for job TH2WSG1712"
+
+    Returns: JSON/dict format with job_no and associated shipment details.
+
+    Data source: job_no column (uses _df() for consignee scoping)
+    """
+    import pandas as pd
+
+    q = (question or kwargs.get("query") or kwargs.get("input") or "").strip()
+    if not q:
+        return "Please provide a valid query with container, PO, OBL, booking number, vessel name, or job number."
+
+    try:
+        logger.info(f"[get_job_number_info] Received query: {q!r}")
+    except:
+        pass
+
+    q_lower = q.lower()
+    q_upper = q.upper()
+
+    # Remove consignee code prefixes to avoid mis-extraction
+    q_extract = re.sub(
+        r"\b(?:for\s+)?(?:consignee|user)(?:\s+code)?\s+\d{5,10}\b",
+        "",
+        q,
+        flags=re.IGNORECASE,
+    ).strip()
+
+    # ========== EXTRACT JOB NUMBER (NEW) ==========
+    job_no_input = extract_job_no(q_extract)
+
+    # Additional patterns for job number extraction
+    if not job_no_input:
+        # Pattern: "job number TH2WSG1712", "job TH2WSG1712", "job# TH2WSG1712"
+        m_job = re.search(
+            r"\b(?:job\s+(?:number\s+)?(?:no\.?\s+)?|job#\s*)([A-Z0-9]{6,20})\b",
+            q_upper,
+        )
+        if m_job:
+            job_no_input = m_job.group(1)
+
+    if not job_no_input:
+        # Pattern: "with job number TH2WSG1712", "for job TH2WSG1712"
+        m_with_job = re.search(
+            r"\b(?:with|for)\s+job\s+(?:number\s+)?([A-Z0-9]{6,20})\b", q_upper
+        )
+        if m_with_job:
+            job_no_input = m_with_job.group(1)
+
+    # Extract other identifiers using utility functions
+    container_no = extract_container_number(q_extract)
+    po_no = extract_po_number(q_extract)
+    obl_no = extract_ocean_bl_number(q_extract)
+    booking_no = extract_booking_number(q_extract)
+    vessel_name = extract_vessel_name(q_extract)
+
+    # Fallback extraction for bare identifiers
+    if not container_no:
+        m_cont = re.search(r"\b([A-Z]{4}\d{7})\b", q_upper)
+        container_no = m_cont.group(1) if m_cont else None
+
+    if not po_no and not container_no and not job_no_input:
+        # Try extracting pure numeric (could be PO)
+        m_po = re.search(r"\b(\d{7,})\b", q_upper)
+        po_no = m_po.group(1) if m_po else None
+
+    if not booking_no and not container_no and not po_no and not job_no_input:
+        # Try alphanumeric patterns for booking
+        m_booking = re.search(r"\b([A-Z]{2,4}\d{6,15})\b", q_upper)
+        if m_booking:
+            cand = m_booking.group(1)
+            # Exclude container format
+            if not re.fullmatch(r"[A-Z]{4}\d{7}", cand):
+                booking_no = cand
+
+    try:
+        logger.info(
+            f"[get_job_number_info] Extracted identifiers: job_no={job_no_input}, container={container_no}, po={po_no}, "
+            f"obl={obl_no}, booking={booking_no}, vessel={vessel_name}"
+        )
+    except:
+        pass
+
+    # Get filtered DataFrame
+    df = _df()  # Respects consignee filtering
+
+    if df.empty:
+        return "No data available for your authorized consignees."
+
+    # Check if job_no column exists
+    if "job_no" not in df.columns:
+        return "Job number information is not available in the dataset."
+
+    # Build filter mask
+    mask = pd.Series([False] * len(df), index=df.index)
+
+    # ========== PRIORITY 1: Filter by JOB NUMBER (REVERSE LOOKUP - NEW) ==========
+    if job_no_input:
+        # REVERSE LOOKUP: Find containers/POs/OBLs for this job number
+        job_mask = df["job_no"].fillna("").str.upper() == job_no_input.upper()
+        mask |= job_mask
+        try:
+            logger.info(
+                f"[get_job_number_info] REVERSE LOOKUP: Filtering by job_no: {job_no_input}"
+            )
+        except:
+            pass
+
+    # ========== PRIORITY 2: Filter by other identifiers (FORWARD LOOKUP) ==========
+    # Filter by container number
+    if container_no and "container_number" in df.columns:
+        mask |= (
+            df["container_number"]
+            .fillna("")
+            .str.upper()
+            .str.contains(re.escape(container_no), regex=True, na=False)
+        )
+        try:
+            logger.info(f"[get_job_number_info] Filtering by container: {container_no}")
+        except:
+            pass
+
+    # Filter by PO number
+    if po_no and "po_number_multiple" in df.columns:
+        # Search in comma-separated po_number_multiple
+        mask |= (
+            df["po_number_multiple"]
+            .fillna("")
+            .astype(str)
+            .apply(lambda cell: po_no in str(cell).replace(" ", ""))
+        )
+        try:
+            logger.info(f"[get_job_number_info] Filtering by PO: {po_no}")
+        except:
+            pass
+
+    # Filter by Ocean BL
+    if obl_no and "ocean_bl_no_multiple" in df.columns:
+        mask |= (
+            df["ocean_bl_no_multiple"]
+            .fillna("")
+            .str.upper()
+            .str.contains(re.escape(obl_no), regex=True, na=False)
+        )
+        try:
+            logger.info(f"[get_job_number_info] Filtering by OBL: {obl_no}")
+        except:
+            pass
+
+    # Filter by booking number
+    if booking_no and "booking_number_multiple" in df.columns:
+        # Use the normalized booking matching approach
+        booking_norm = booking_no.upper().strip()
+        mask |= (
+            df["booking_number_multiple"]
+            .fillna("")
+            .astype(str)
+            .apply(lambda cell: booking_norm in str(cell).upper().replace(" ", ""))
+        )
+        try:
+            logger.info(f"[get_job_number_info] Filtering by booking: {booking_no}")
+        except:
+            pass
+
+    # Filter by vessel name
+    if vessel_name and "final_vessel_name" in df.columns:
+        # Fuzzy match on vessel name
+        mask |= (
+            df["final_vessel_name"]
+            .fillna("")
+            .str.upper()
+            .str.contains(re.escape(vessel_name), regex=True, na=False)
+        )
+        try:
+            logger.info(f"[get_job_number_info] Filtering by vessel: {vessel_name}")
+        except:
+            pass
+
+    # Apply filters
+    filtered = df[mask].copy()
+
+    if filtered.empty:
+        identifier_desc = []
+        if job_no_input:
+            identifier_desc.append(f"job number {job_no_input}")
+        if container_no:
+            identifier_desc.append(f"container {container_no}")
+        if po_no:
+            identifier_desc.append(f"PO {po_no}")
+        if obl_no:
+            identifier_desc.append(f"OBL {obl_no}")
+        if booking_no:
+            identifier_desc.append(f"booking {booking_no}")
+        if vessel_name:
+            identifier_desc.append(f"vessel {vessel_name}")
+
+        if job_no_input:
+            return f"No containers, POs, or OBLs found for {' / '.join(identifier_desc) if identifier_desc else 'the provided identifier'}."
+        else:
+            return f"No job number found for {' / '.join(identifier_desc) if identifier_desc else 'the provided identifier'}."
+
+    # ========== PRIORITY 3: Apply HOT CONTAINER FILTER (IMPROVED) ==========
+    # Check for hot_container_flag if "hot" mentioned in query
+    if "hot" in q_lower and "hot_container_flag" in filtered.columns:
+        hot_mask = (
+            filtered["hot_container_flag"]
+            .fillna("")
+            .astype(str)
+            .str.upper()
+            .isin(["Y", "YES", "TRUE", "1"])
+        )
+
+        hot_count = hot_mask.sum()
+        try:
+            logger.info(
+                f"[get_job_number_info] Hot containers found: {hot_count} out of {len(filtered)}"
+            )
+        except:
+            pass
+
+        if hot_count > 0:
+            filtered = filtered[hot_mask].copy()
+            try:
+                logger.info(
+                    f"[get_job_number_info] Applied hot container filter - {hot_count} records"
+                )
+            except:
+                pass
+        else:
+            # If hot flag requested but no hot containers found, return informative message
+            identifier_parts = []
+            if job_no_input:
+                identifier_parts.append(f"job number {job_no_input}")
+            if container_no:
+                identifier_parts.append(f"container {container_no}")
+            if vessel_name:
+                identifier_parts.append(f"vessel {vessel_name}")
+
+            identifier_str = (
+                " / ".join(identifier_parts)
+                if identifier_parts
+                else "the provided identifier"
+            )
+            return f"No hot containers found for {identifier_str}. Total containers found: {len(filtered)} (non-hot)."
+
+    # Prepare output columns
+    output_cols = [
+        "job_no",
+        "container_number",
+        "po_number_multiple",
+        "ocean_bl_no_multiple",
+        "booking_number_multiple",
+        "final_vessel_name",
+        "load_port",
+        "discharge_port",
+        "final_destination",
+        "etd_lp",
+        "eta_dp",
+        "ata_dp",
+        "revised_eta",
+        "final_carrier_name",
+        "consignee_code_multiple",
+        "supplier_vendor_name",
+        "hot_container_flag",
+        "transport_mode",
+    ]
+
+    # Filter to available columns
+    output_cols = [c for c in output_cols if c in filtered.columns]
+    result_df = filtered[output_cols].copy()
+
+    # Sort by ETD/ETA to get most recent
+    date_cols = [
+        c for c in ["etd_lp", "eta_dp", "revised_eta"] if c in result_df.columns
+    ]
+    if date_cols:
+        result_df = ensure_datetime(result_df, date_cols)
+        result_df["_sort_date"] = result_df[date_cols].max(axis=1)
+        result_df = result_df.sort_values("_sort_date", ascending=False)
+        result_df = result_df.drop(columns=["_sort_date"])
+
+    # Limit to 150 records
+    result_df = result_df.head(150)
+
+    # Format date columns
+    for dcol in ["etd_lp", "eta_dp", "ata_dp", "revised_eta"]:
+        if dcol in result_df.columns and pd.api.types.is_datetime64_any_dtype(
+            result_df[dcol]
+        ):
+            result_df[dcol] = result_df[dcol].dt.strftime("%Y-%m-%d")
+
+    try:
+        logger.info(f"[get_job_number_info] Returning {len(result_df)} job record(s)")
+    except:
+        pass
+
+    # Convert to dict/JSON format
+    output_data = result_df.where(pd.notnull(result_df), None).to_dict(orient="records")
+
+    # Build response message based on query type
+    if job_no_input:
+        # REVERSE LOOKUP: Show what was found for this job number
+        container_count = result_df["container_number"].nunique()
+        po_count = (
+            result_df["po_number_multiple"].nunique()
+            if "po_number_multiple" in result_df.columns
+            else 0
+        )
+        obl_count = (
+            result_df["ocean_bl_no_multiple"].nunique()
+            if "ocean_bl_no_multiple" in result_df.columns
+            else 0
+        )
+
+        hot_status = ""
+        if "hot" in q_lower and "hot_container_flag" in result_df.columns:
+            hot_status = " (hot containers only)"
+
+        summary_parts = []
+        if container_count > 0:
+            summary_parts.append(f"{container_count} container(s)")
+        if po_count > 0:
+            summary_parts.append(f"{po_count} PO(s)")
+        if obl_count > 0:
+            summary_parts.append(f"{obl_count} OBL(s)")
+
+        summary_str = ", ".join(summary_parts) if summary_parts else "records"
+        msg = f"Found {summary_str} for job number {job_no_input}{hot_status}.\n\nDetails:\n"
+    else:
+        # FORWARD LOOKUP: Show job numbers found for given identifier
+        identifier_parts = []
+        if container_no:
+            identifier_parts.append(f"container {container_no}")
+        if po_no:
+            identifier_parts.append(f"PO {po_no}")
+        if obl_no:
+            identifier_parts.append(f"OBL {obl_no}")
+        if booking_no:
+            identifier_parts.append(f"booking {booking_no}")
+        if vessel_name:
+            identifier_parts.append(f"vessel {vessel_name}")
+
+        identifier_str = (
+            " / ".join(identifier_parts)
+            if identifier_parts
+            else "the provided identifier"
+        )
+
+        # Get unique job numbers
+        unique_jobs = result_df["job_no"].dropna().unique()
+        job_count = len(unique_jobs)
+
+        if job_count == 0:
+            return f"No job number found for {identifier_str}."
+        elif job_count == 1:
+            msg = f"Job number for {identifier_str}: {unique_jobs[0]}\n\nDetails:\n"
+        else:
+            job_list = ", ".join(str(j) for j in unique_jobs[:5])
+            if job_count > 5:
+                job_list += f" and {job_count - 5} more"
+            msg = f"Found {job_count} job numbers for {identifier_str}: {job_list}\n\nDetails:\n"
+
+    return output_data
+
+
 def get_bulk_container_transit_analysis(query: str) -> str:
     """
     Analyzes transit times for multiple containers or container groups.
@@ -16737,6 +17144,75 @@ TOOLS = [
             "- Already shipped/departed → Use 'Get Containers Departed From Load Port'\n"
             "\n"
             "Keywords: will be shipped, scheduled to ship, shipping in, upcoming shipments, future departures\n"
+        ),
+    ),
+    Tool(
+        name="Get Job Number Info",
+        func=get_job_number_info,
+        return_direct=True,
+        description=(
+            "PRIMARY TOOL for ALL JOB NUMBER QUERIES AND LOOKUPS.\n"
+            "\n"
+            "Use this tool when query asks about:\n"
+            "- Job number associated with container: 'which job number is associated with container HLBU1140676'\n"
+            "- Job number associated with container: 'what is the job no of HAMU3943548'\n"
+            "- Job number for PO: 'which job number is associated with PO 5302865962'\n"
+            "- Job number for OBL: 'which job number is associated with OBL HLCUSGN2503AQHF4'\n"
+            "- Job number for booking: 'which job number is associated with booking number VN2084901'\n"
+            "- Job numbers for vessel: 'Which jobs associated with MAERSK FORTALEZA', 'jobs for vessel MSC FLAMINIA'\n"
+            "- General job lookups: 'job number for container X', 'show job no for PO Y'\n"
+            "\n"
+            "**QUERY PATTERNS - USE THIS TOOL FOR**:\n"
+            "- 'which job number is associated with [container/PO/OBL/booking]'\n"
+            "- 'which job number is associated with [identifier]' (bare container/PO/OBL/booking)\n"
+            "- 'job number for [container/PO/OBL/booking/vessel]'\n"
+            "- 'job no for [identifier]'\n"
+            "- 'show job number for [identifier]'\n"
+            "- 'what is the job number for [identifier]'\n"
+            "- 'jobs associated with [vessel name]'\n"
+            "- 'which jobs for [vessel/container/PO]'\n"
+            "\n"
+            "**SUPPORTED IDENTIFIERS**:\n"
+            "1. Container number: HLBU1140676, ABCD1234567 (4 letters + 7 digits)\n"
+            "2. PO number: 5302865962, PO 5302865962 (6-20 digits)\n"
+            "3. Ocean BL/OBL: HLCUSGN2503AQHF4, OBL MLGDMLWCN0001321 (alphanumeric)\n"
+            "4. Booking number: VN2084901, EG2002468 (alphanumeric, 6-20 chars)\n"
+            "5. Vessel name: MAERSK FORTALEZA, MSC FLAMINIA (searches final_vessel_name column)\n"
+            "\n"
+            "**BARE IDENTIFIER SUPPORT**:\n"
+            "- 'which job number is associated with HLBU1140676' → Detects as container\n"
+            "- 'which job number is associated with 5302865962' → Detects as PO\n"
+            "- 'which job number is associated with VN2084901' → Detects as booking\n"
+            "- 'Which jobs associated with MAERSK FORTALEZA' → Detects as vessel name\n"
+            "\n"
+            "**ADDITIONAL FILTERS** (optional, query-driven):\n"
+            "- Hot containers: 'hot job numbers for container X', 'priority jobs for vessel Y'\n"
+            "- Transport mode: 'job numbers for sea shipments'\n"
+            "- Consignee filtering: Automatic via _df() thread-local scoping\n"
+            "\n"
+            "**Returns**: JSON/dict list with:\n"
+            "- job_no (primary column)\n"
+            "- container_number, po_number_multiple, ocean_bl_no_multiple, booking_number_multiple\n"
+            "- final_vessel_name (vessel associated with job)\n"
+            "- load_port, discharge_port, final_destination\n"
+            "- etd_lp, eta_dp, ata_dp, revised_eta (formatted as YYYY-MM-DD)\n"
+            "- final_carrier_name, consignee_code_multiple, supplier_vendor_name\n"
+            "- hot_container_flag, transport_mode\n"
+            "\n"
+            "**Output Format**: Returns list[dict] with all job details in JSON format\n"
+            "\n"
+            "**Example Queries**:\n"
+            "1. 'which job number is associated with container number HLBU1140676'\n"
+            "2. 'which job number is associated with HLBU1140676'\n"
+            "3. 'which job number is associated with PO 5302865962'\n"
+            "4. 'which job number is associated with OBL HLCUSGN2503AQHF4'\n"
+            "5. 'which job number is associated with booking number VN2084901'\n"
+            "6. 'Which jobs associated with MAERSK FORTALEZA'\n"
+            "7. 'job number for container ABCD1234567'\n"
+            "8. 'show job no for PO 5302982894'\n"
+            "9. 'what job numbers are for vessel MSC FLAMINIA'\n"
+            "\n"
+            "Keywords: job number, job no, job, jobs, associated, job_no\n"
         ),
     ),
 ]
