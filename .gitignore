@@ -49,3 +49,9 @@ Thumbs.db
 # Project specific
 run_app.ps1
 chroma_db/
+
+# ignore md files
+*.md
+
+ignore static folder and its contents
+static/
