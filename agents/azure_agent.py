@@ -3,9 +3,26 @@ import logging
 import threading
 from typing import List, Tuple
 
-from langchain.agents import AgentExecutor, Tool, create_structured_chat_agent
-from langchain.agents.structured_chat.prompt import FORMAT_INSTRUCTIONS, PREFIX
-from langchain.prompts import ChatPromptTemplate
+try:
+    # LangChain 0.2.x style imports
+    from langchain.agents import (AgentExecutor, Tool,
+                                  create_structured_chat_agent)
+    from langchain.agents.structured_chat.prompt import (FORMAT_INSTRUCTIONS,
+                                                         PREFIX)
+    from langchain.prompts import ChatPromptTemplate
+except ImportError:
+    # LangChain 1.x compatibility fallback
+    from langchain_classic.agents import (
+        AgentExecutor,
+        Tool,
+        create_structured_chat_agent,
+    )
+    from langchain_classic.agents.structured_chat.prompt import (
+        FORMAT_INSTRUCTIONS,
+        PREFIX,
+    )
+    from langchain_core.prompts import ChatPromptTemplate
+
 from langchain_community.agent_toolkits import create_sql_agent
 from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
 
@@ -113,52 +130,52 @@ def pandas_code_generator_fallback(
 ) -> str | dict:
     """
     Pandas code generation fallback for queries not handled by predefined tools.
-    
+
     This function generates and executes pandas code to answer queries when:
     - No predefined tool matches the user's query
     - The agent cannot find a suitable function
     - The query requires custom data analysis
-    
+
     Features:
     - Automatic retry with query rephrasing on execution errors
     - Code syntax validation before execution
     - Safe execution environment with restricted builtins
-    
+
     Args:
         query: User's natural language query
         consignee_codes: Optional list of consignee codes for access control
         retry_count: Internal counter for retry attempts (max: 1)
-        
+
     Returns:
         If return_table is False (default): formatted response string.
         If return_table is True and the generated code produces a DataFrame 'result':
             {"text": summary_string, "table": list_of_row_dicts}
     """
     MAX_RETRIES = 1  # Allow one retry with rephrased query
-    import pandas as pd
     import re
     from datetime import datetime, timedelta
+
+    import pandas as pd
+
+    from agents.prompts import (COLUMN_SYNONYMS, INTENT_SYNONYMS,
+                                ROBUST_COLUMN_MAPPING_PROMPT,
+                                parse_time_period)
     from agents.tools import _df
-    from agents.prompts import (
-        COLUMN_SYNONYMS, 
-        INTENT_SYNONYMS, 
-        parse_time_period,
-        ROBUST_COLUMN_MAPPING_PROMPT
-    )
-    
+
     try:
         logger.info(f"[PANDAS FALLBACK] Generating code for query: {query}")
-        
+
         # Get the DataFrame with consignee filtering
         import threading
+
         if consignee_codes:
             threading.current_thread().consignee_codes = consignee_codes
-        
+
         df = _df()
-        
+
         if df.empty:
             return "No data available to process your query."
-        
+
         # Create comprehensive column descriptions using prompts.py knowledge
         column_descriptions = {
             "job_no": "Internal job number for the shipment (unique job identifier)",
@@ -167,7 +184,6 @@ def pandas_code_generator_fallback(
             "ocean_bl_no_multiple": "Ocean bill of lading numbers (can be multiple)",
             "booking_number_multiple": "Booking numbers for shipments",
             "consignee_code_multiple": "Customer/consignee codes with names",
-            
             # Date columns - CRITICAL for queries
             "etd_lp": "Estimated Time of Departure from Load Port (departure date)",
             "atd_lp": "Actual Time of Departure from Load Port (actual departure)",
@@ -179,7 +195,6 @@ def pandas_code_generator_fallback(
             "predictive_eta_fd": "Predicted ETA at Final Destination",
             "delivery_date_to_consignee": "Actual delivery date to customer",
             "empty_container_return_date": "Date when empty container was returned",
-            
             # Port and location columns
             "load_port": "Origin/Load Port (where container departed from)",
             "final_load_port": "Final Load Port (for transshipment)",
@@ -187,7 +202,6 @@ def pandas_code_generator_fallback(
             "final_destination": "Final delivery destination (DC/warehouse)",
             "place_of_delivery": "Place where goods are delivered",
             "last_cy_location": "Last container yard location",
-            
             # Carrier and vessel columns
             "final_carrier_name": "Shipping carrier/line name (e.g., MAERSK, CMA CGM)",
             "final_carrier_code": "Carrier code",
@@ -197,33 +211,28 @@ def pandas_code_generator_fallback(
             "final_vessel_code": "Final vessel code",
             "first_voyage_code": "First voyage number",
             "final_voyage_code": "Final voyage number",
-            
             # Status and flag columns
             "hot_container_flag": "Priority/urgent container flag (Y/Yes/True = hot)",
             "current_arrival_status": "Current arrival status",
             "current_departure_status": "Current departure status",
             "late_arrival_status": "Late arrival indicator",
             "late_booking_status": "Late booking indicator",
-            
             # Supplier and customer columns
             "supplier_vendor_name": "Supplier/vendor name",
             "manufacturer_name": "Manufacturer name",
             "ship_to_party_name": "Ship-to party/recipient",
-            
             # Cargo details
             "cargo_count": "Cargo count/quantity",
             "cargo_um": "Cargo unit of measure (CTN, PCS, etc.)",
             "cargo_detail_count": "Detailed cargo count",
             "detail_cargo_um": "Detailed cargo unit measure",
             "cargo_weight": "Total cargo weight",
-            
             # Container details
             "container_type": "Container type (e.g., 40HC, 20GP)",
             "destination_service": "Destination service type",
             "transport_mode": "Transport mode (Ocean, Air, Rail)",
             "seal_number": "Container seal number (security seal identifier)",
             "seal_no": "Container seal number (alternative field name)",
-            
             # Dates for gate and equipment movement
             "equipment_arrived_at_last_cy": "Equipment arrival at last container yard",
             "out_gate_at_last_cy": "Out gate at last container yard",
@@ -231,32 +240,33 @@ def pandas_code_generator_fallback(
             "carrier_vehicle_load_date": "Vehicle load date",
             "vehicle_departure_date": "Vehicle departure date",
             "vehicle_arrival_date": "Vehicle arrival date",
-            
             # Free time and charges
             "detention_free_days": "Detention free days allowed",
             "demurrage_free_days": "Demurrage free days allowed",
         }
-        
+
         # Build schema text with rich descriptions
         columns_info = []
         for col in df.columns[:60]:  # Increased to 60 for more context
             dtype = str(df[col].dtype)
             # Get description from our mapping or use generic
             desc = column_descriptions.get(col, "")
-            
+
             # Add sample values only for key columns to save tokens
             if col in column_descriptions:
                 sample_values = df[col].dropna().head(2).tolist()
                 if desc:
-                    columns_info.append(f"- {col} ({dtype}): {desc}\n  Sample: {sample_values}")
+                    columns_info.append(
+                        f"- {col} ({dtype}): {desc}\n  Sample: {sample_values}"
+                    )
                 else:
                     columns_info.append(f"- {col} ({dtype}): {sample_values}")
             else:
                 # For other columns, just list them
                 columns_info.append(f"- {col} ({dtype})")
-        
+
         schema_text = "\n".join(columns_info)
-        
+
         # Create reverse mapping for common user terms
         user_term_mapping = []
         seen_columns = set()
@@ -266,9 +276,9 @@ def pandas_code_generator_fallback(
                 seen_columns.add(col)
                 if len(seen_columns) >= 30:  # Limit to top 30
                     break
-        
+
         term_mapping_text = "\n".join(user_term_mapping[:30])
-        
+
         # Create LLM instance
         llm = AzureChatOpenAI(
             azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
@@ -277,7 +287,7 @@ def pandas_code_generator_fallback(
             azure_deployment=settings.AZURE_OPENAI_DEPLOYMENT,
             temperature=0.0,
         )
-        
+
         # Prompt for code generation with domain knowledge
         code_generation_prompt = f"""You are a pandas code generation expert for a shipping/logistics system.
 
@@ -471,78 +481,82 @@ Generate the pandas code now:"""
         # Generate code
         response = llm.invoke(code_generation_prompt)
         generated_code = response.content.strip()
-        
+
         # Clean up code (remove markdown blocks if present)
         if "```python" in generated_code:
-            generated_code = re.search(r"```python\n(.*?)```", generated_code, re.DOTALL).group(1)
+            generated_code = re.search(
+                r"```python\n(.*?)```", generated_code, re.DOTALL
+            ).group(1)
         elif "```" in generated_code:
-            generated_code = re.search(r"```\n(.*?)```", generated_code, re.DOTALL).group(1)
-        
+            generated_code = re.search(
+                r"```\n(.*?)```", generated_code, re.DOTALL
+            ).group(1)
+
         logger.info(f"[PANDAS FALLBACK] Generated code:\n{generated_code}")
-        
+
         # Validate generated code syntax before execution
         try:
-            compile(generated_code, '<string>', 'exec')
+            compile(generated_code, "<string>", "exec")
             logger.info("[PANDAS FALLBACK] Code syntax validation: PASSED")
         except SyntaxError as e:
             logger.error(f"[PANDAS FALLBACK] Code syntax validation FAILED: {e}")
             return f"Error: Generated code has syntax errors. Please rephrase your query more clearly."
-        
+
         # Execute the generated code safely with restricted builtins
         import numpy as np
-        
+
         # Safe builtins - only allow essential types and functions, no file/network access
         safe_builtins = {
-            'str': str,
-            'int': int,
-            'float': float,
-            'bool': bool,
-            'list': list,
-            'dict': dict,
-            'tuple': tuple,
-            'set': set,
-            'len': len,
-            'range': range,
-            'min': min,
-            'max': max,
-            'sum': sum,
-            'abs': abs,
-            'round': round,
-            'sorted': sorted,
-            'enumerate': enumerate,
-            'zip': zip,
-            'any': any,
-            'all': all,
-            'isinstance': isinstance,
-            'type': type,
+            "str": str,
+            "int": int,
+            "float": float,
+            "bool": bool,
+            "list": list,
+            "dict": dict,
+            "tuple": tuple,
+            "set": set,
+            "len": len,
+            "range": range,
+            "min": min,
+            "max": max,
+            "sum": sum,
+            "abs": abs,
+            "round": round,
+            "sorted": sorted,
+            "enumerate": enumerate,
+            "zip": zip,
+            "any": any,
+            "all": all,
+            "isinstance": isinstance,
+            "type": type,
             # Allow imports needed by pandas internals while still blocking
             # user-generated import statements from accessing arbitrary modules.
-            '__import__': __import__,
-            'None': None,
-            'True': True,
-            'False': False,
+            "__import__": __import__,
+            "None": None,
+            "True": True,
+            "False": False,
         }
-        
+
         # Provide execution context using a unified namespace so that
         # generated code can reliably resolve symbols like `df`, `pd`,
         # and any intermediate variables like `container_df`.
         # Using the same dict for both globals and locals avoids scoping issues.
         exec_namespace = {
             "__builtins__": safe_builtins,
-            'df': df.copy(),
-            'pd': pd,
-            'np': np,
-            'datetime': datetime,
-            'timedelta': timedelta,
-            're': re,
-            'parse_time_period': parse_time_period,
-            'result': None,
+            "df": df.copy(),
+            "pd": pd,
+            "np": np,
+            "datetime": datetime,
+            "timedelta": timedelta,
+            "re": re,
+            "parse_time_period": parse_time_period,
+            "result": None,
         }
-        
+
         try:
             exec(generated_code, exec_namespace, exec_namespace)
-            result = exec_namespace.get('result')
-            
+            result = exec_namespace.get("result")
+
             if result is None:
                 return "The generated code did not produce a result. Please rephrase your query."
 
@@ -558,7 +572,9 @@ Generate the pandas code now:"""
                 for col in df_result.columns:
                     try:
                         if np.issubdtype(df_result[col].dtype, np.datetime64):
-                            df_result[col] = pd.to_datetime(df_result[col], errors="coerce").dt.strftime("%Y-%m-%d")
+                            df_result[col] = pd.to_datetime(
+                                df_result[col], errors="coerce"
+                            ).dt.strftime("%Y-%m-%d")
                     except Exception:
                         continue
 
@@ -586,15 +602,17 @@ Generate the pandas code now:"""
                 if return_table:
                     return {"text": text, "table": []}
                 return text
-                
+
         except Exception as exec_error:
             error_msg = str(exec_error)
             logger.error(f"[PANDAS FALLBACK] Code execution error: {error_msg}")
-            
+
             # Retry with rephrased query if we haven't exceeded max retries
             if retry_count < MAX_RETRIES:
-                logger.info(f"[PANDAS FALLBACK] Retrying with rephrased query (attempt {retry_count + 1}/{MAX_RETRIES})")
-                
+                logger.info(
+                    f"[PANDAS FALLBACK] Retrying with rephrased query (attempt {retry_count + 1}/{MAX_RETRIES})"
+                )
+
                 # Automatically rephrase query with more details about the error
                 rephrased_query = f"""Original query: {query}
 
@@ -603,7 +621,7 @@ Previous attempt failed with error: {error_msg}
 Please provide a more detailed analysis. If the error was about missing columns or types, use available columns from the schema.
 If the error was about data types, add proper type conversions (e.g., .astype(str), pd.to_datetime()).
 If the error was about missing values, add proper null handling (e.g., .fillna(), .dropna(), .notna())."""
-                
+
                 # Recursive retry
                 return pandas_code_generator_fallback(
                     rephrased_query,
@@ -614,11 +632,13 @@ If the error was about missing values, add proper null handling (e.g., .fillna()
             else:
                 # Max retries reached
                 return f"Error executing analysis: {error_msg}. Unable to process query after {MAX_RETRIES + 1} attempts. Please try rephrasing your query with more specific details."
-    
+
     except Exception as e:
-        logger.error(f"[PANDAS FALLBACK] Error in pandas code generation: {e}", exc_info=True)
+        logger.error(
+            f"[PANDAS FALLBACK] Error in pandas code generation: {e}", exc_info=True
+        )
         return f"Unable to process your query using pandas analysis: {str(e)}"
-    
+
     finally:
         # Clean up thread-local consignee codes
         if consignee_codes and hasattr(threading.current_thread(), "consignee_codes"):

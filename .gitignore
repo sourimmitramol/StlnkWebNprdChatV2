@@ -49,3 +49,6 @@ Thumbs.db
 # Project specific
 run_app.ps1
 chroma_db/
+FRONTEND_SETUP.md
+HOT_CONTAINERS_FIX.md
+static/

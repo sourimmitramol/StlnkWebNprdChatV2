@@ -3,10 +3,13 @@
 import ast
 import logging
 import re
+from pathlib import Path
 from typing import List, Optional
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
 
 from agents.azure_agent import initialize_azure_agent
 from agents.memory_manager import memory_manager
@@ -46,6 +49,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Mount static files (HTML, CSS, JS)
+static_dir = Path(__file__).parent.parent / "static"
+if static_dir.exists():
+    app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+
 
 # ----------------------------------------------------------------------
 # Startup – create the agent once
@@ -55,6 +63,19 @@ def startup():
     global AGENT, LLM
     AGENT, LLM = initialize_azure_agent()  # imports all tools automatically
     logger.info("Agent ready for HTTP requests")
+
+
+@app.get("/", response_class=HTMLResponse)
+def root():
+    """Serve the main chat interface."""
+    static_dir = Path(__file__).parent.parent / "static"
+    index_path = static_dir / "index.html"
+
+    if index_path.exists():
+        with open(index_path, "r", encoding="utf-8") as f:
+            return f.read()
+    else:
+        return "<h1>Chat UI not found</h1><p>Please ensure static/index.html exists</p>"
 
 
 @app.get("/health")
@@ -255,6 +276,12 @@ def ask(body: QueryWithConsigneeBody):
         q = resolved_query  # Use resolved query for all subsequent processing
     else:
         logger.debug(f"No entity references found in: '{q}'")
+
+    # STEP 3: Resolve contextual queries (like "hot containers in this")
+    contextual_query = memory_manager.resolve_contextual_query(session_id, q)
+    if contextual_query != q:
+        logger.info(f"✅ Context resolved: '{q}' -> '{contextual_query}'")
+        q = contextual_query  # Use contextual query
 
     if not q:
         raise HTTPException(status_code=400, detail="Empty question")
@@ -493,11 +520,11 @@ def ask(body: QueryWithConsigneeBody):
         # If the user explicitly asked for job number, prioritise that in the
         # summary so questions like "What is its job number" are answered
         # directly.
-        if any(phrase in original_lower for phrase in ["job number", "job no", "job_no"]):
+        if any(
+            phrase in original_lower for phrase in ["job number", "job no", "job_no"]
+        ):
             if container and job_no:
-                parts.append(
-                    f"The job number for container {container} is {job_no}."
-                )
+                parts.append(f"The job number for container {container} is {job_no}.")
             elif job_no:
                 parts.append(f"The job number is {job_no}.")
 
@@ -536,9 +563,7 @@ def ask(body: QueryWithConsigneeBody):
             parts.append(f"Ocean BL: {bl_numbers}.")
 
         if discharge_port and date_at_port:
-            parts.append(
-                f"It is at discharge port {discharge_port} on {date_at_port}."
-            )
+            parts.append(f"It is at discharge port {discharge_port} on {date_at_port}.")
         elif discharge_port:
             parts.append(f"Discharge port: {discharge_port}.")
         elif load_port:
@@ -706,8 +731,84 @@ def ask(body: QueryWithConsigneeBody):
         # -------- existing table extraction logic (operates on `output` only) ---
         table_data = []
 
+        # FIRST: Try to extract structured data from intermediate_steps (tool observations)
+        if not table_data and result.get("intermediate_steps"):
+            try:
+                for step in result.get("intermediate_steps", []):
+                    observation = None
+
+                    # Handle tuple format (AgentAction, observation)
+                    if isinstance(step, tuple) and len(step) == 2:
+                        _, observation = step
+                    # Handle dict format
+                    elif isinstance(step, dict):
+                        observation = step.get("observation")
+
+                    if observation:
+                        # Try to parse observation as JSON/dict
+                        if isinstance(observation, str):
+                            # Try multiple patterns to find JSON arrays
+                            patterns = [
+                                r"(\[\s*\{[^\]]*\}\s*(?:,\s*\{[^\]]*\}\s*)*\])",  # Compact JSON array
+                                r"(\[\s*\{.*?\}\s*\])",  # Simple pattern
+                                r"(\[[\s\S]*?\{[\s\S]*?\}[\s\S]*?\])",  # Most permissive pattern
+                            ]
+
+                            for pattern in patterns:
+                                json_match = re.search(pattern, observation, re.DOTALL)
+                                if json_match:
+                                    try:
+                                        json_str = json_match.group(1)
+                                        # Try ast.literal_eval first (safer)
+                                        try:
+                                            parsed_obs = ast.literal_eval(json_str)
+                                        except:
+                                            # Fallback to json.loads
+                                            import json
+
+                                            parsed_obs = json.loads(json_str)
+
+                                        if (
+                                            isinstance(parsed_obs, list)
+                                            and parsed_obs
+                                            and isinstance(parsed_obs[0], dict)
+                                        ):
+                                            table_data = parsed_obs
+                                            logger.info(
+                                                f"[TABLE EXTRACTION] Extracted {len(table_data)} rows from tool observation"
+                                            )
+                                            break
+                                    except (
+                                        SyntaxError,
+                                        ValueError,
+                                        json.JSONDecodeError,
+                                    ) as e:
+                                        logger.debug(
+                                            f"Failed to parse with pattern {pattern}: {e}"
+                                        )
+                                        continue
+                                if table_data:
+                                    break
+                        # If observation is already a list/dict
+                        elif isinstance(observation, (list, dict)):
+                            if (
+                                isinstance(observation, list)
+                                and observation
+                                and isinstance(observation[0], dict)
+                            ):
+                                table_data = observation
+                                logger.info(
+                                    f"[TABLE EXTRACTION] Found {len(table_data)} rows directly in observation"
+                                )
+                                break
+
+                    if table_data:
+                        break
+            except Exception as e:
+                logger.warning(f"Failed to extract table from intermediate_steps: {e}")
+
         # If we have direct_data from return_direct=True, use it
-        if direct_data and isinstance(direct_data, list):
+        if not table_data and direct_data and isinstance(direct_data, list):
             table_data = direct_data
         else:
             # Otherwise, try to extract from output string
@@ -842,18 +943,7 @@ def ask(body: QueryWithConsigneeBody):
         # ============ PANDAS CODE GENERATION FALLBACK ============
         # Detect if agent couldn't answer properly and fall back to pandas code generation
         should_use_pandas_fallback = False
-        
-        # High-priority rule: job number queries should be answered via
-        # pandas analysis since there is no dedicated job_no tool.
-        try:
-            q_lower_for_fallback = q.lower()
-        except Exception:
-            q_lower_for_fallback = str(q).lower()
 
-        if re.search(r"\bjob(?:_no| number| no)?\b", q_lower_for_fallback):
-            should_use_pandas_fallback = True
-            logger.info("[PANDAS FALLBACK] Triggered: job number query -> route to pandas engine")
-        
         # Condition 1: Response contains phrases indicating agent couldn't understand
         unable_to_answer_patterns = [
             r"i couldn't understand",
@@ -864,23 +954,25 @@ def ask(body: QueryWithConsigneeBody):
             r"cannot determine",
             r"no information available",
             r"i don't know",
-            r"not available",           # Catches "is not available", "are not available"
-            r"not found",               # Catches "was not found", "were not found"
-            r"no.*\bdata\b.*found",     # Catches "no data found"
-            r"no.*\bresult",            # Catches "no results", "no result found"
-            r"not explicitly listed",    # Catches "not explicitly listed in the provided information"
+            r"not available",  # Catches "is not available", "are not available"
+            r"not found",  # Catches "was not found", "were not found"
+            r"no.*\bdata\b.*found",  # Catches "no data found"
+            r"no.*\bresult",  # Catches "no results", "no result found"
+            r"not explicitly listed",  # Catches "not explicitly listed in the provided information"
         ]
-        
+
         message_lower = message.lower()
-        if any(re.search(pattern, message_lower) for pattern in unable_to_answer_patterns):
+        if any(
+            re.search(pattern, message_lower) for pattern in unable_to_answer_patterns
+        ):
             should_use_pandas_fallback = True
             logger.info("[PANDAS FALLBACK]Triggered: Agent couldn't understand query")
-        
+
         # Condition 2: Router returned generic error message
         if "I couldn't understand your query" in message:
             should_use_pandas_fallback = True
             logger.info("[PANDAS FALLBACK] Triggered: Router returned error message")
-        
+
         # Execute pandas fallback if conditions are met
         if should_use_pandas_fallback:
             from agents.azure_agent import pandas_code_generator_fallback
@@ -906,38 +998,50 @@ def ask(body: QueryWithConsigneeBody):
             # narrow the table to rows for that container so the answer and
             # table stay aligned with the user's context.
             q_lower_for_pandas = q.lower()
-            if (
-                pandas_table
-                and any(phrase in q_lower_for_pandas for phrase in ["job number", "job no", "job_no"])
+            if pandas_table and any(
+                phrase in q_lower_for_pandas
+                for phrase in ["job number", "job no", "job_no"]
             ):
                 import re as _re
 
                 # Try to find container ID in the resolved query first
                 container_match = _re.search(r"\b[A-Z]{4}\d{7}\b", q, _re.IGNORECASE)
                 target_container = None
-                
+
                 if container_match:
                     target_container = container_match.group(0).upper()
-                    logger.info(f"[JOB NUMBER FILTER] Found container in query: {target_container}")
+                    logger.info(
+                        f"[JOB NUMBER FILTER] Found container in query: {target_container}"
+                    )
                 else:
                     # Fallback: get the most recent container from memory
                     if session_id in memory_manager.memories:
-                        recent_containers = memory_manager.memories[session_id]["entities"]["containers"]
+                        recent_containers = memory_manager.memories[session_id][
+                            "entities"
+                        ]["containers"]
                         if recent_containers:
                             target_container = recent_containers[-1]
-                            logger.info(f"[JOB NUMBER FILTER] Using recent container from memory: {target_container}")
-                
+                            logger.info(
+                                f"[JOB NUMBER FILTER] Using recent container from memory: {target_container}"
+                            )
+
                 # Filter table to only rows matching the target container
                 if target_container:
                     filtered_rows = [
-                        r for r in pandas_table 
-                        if str(r.get("container_number", "")).upper() == target_container.upper()
+                        r
+                        for r in pandas_table
+                        if str(r.get("container_number", "")).upper()
+                        == target_container.upper()
                     ]
                     if filtered_rows:
-                        logger.info(f"[JOB NUMBER FILTER] Filtered {len(pandas_table)} rows to {len(filtered_rows)} for container {target_container}")
+                        logger.info(
+                            f"[JOB NUMBER FILTER] Filtered {len(pandas_table)} rows to {len(filtered_rows)} for container {target_container}"
+                        )
                         pandas_table = filtered_rows
                     else:
-                        logger.warning(f"[JOB NUMBER FILTER] No rows found for container {target_container}, keeping all {len(pandas_table)} rows")
+                        logger.warning(
+                            f"[JOB NUMBER FILTER] No rows found for container {target_container}, keeping all {len(pandas_table)} rows"
+                        )
 
             # If we have structured rows, build a concise natural-language
             # summary for the first row and prefer that over the generic
@@ -948,8 +1052,14 @@ def ask(body: QueryWithConsigneeBody):
                     pandas_text = nl_summary
 
             # Check if pandas fallback succeeded (didn't return error message)
-            if pandas_text and not pandas_text.startswith("Error") and not pandas_text.startswith("Unable"):
-                logger.info("[PANDAS FALLBACK] Successfully generated response using pandas")
+            if (
+                pandas_text
+                and not pandas_text.startswith("Error")
+                and not pandas_text.startswith("Unable")
+            ):
+                logger.info(
+                    "[PANDAS FALLBACK] Successfully generated response using pandas"
+                )
                 return {
                     "response": sanitize_response(pandas_text),
                     "observation": "Pandas code generation fallback",
@@ -961,6 +1071,128 @@ def ask(body: QueryWithConsigneeBody):
                 logger.warning(f"[PANDAS FALLBACK] Failed: {pandas_result}")
                 # Continue with original response
         # =========================================================
+
+        # ========= FILL TABLE DATA FROM CONTAINER LOOKUPS =========
+        # If table_data is still empty but response mentions a specific container,
+        # fetch and include the container details in the table
+        if not table_data:
+            # Extract container numbers from the query
+            container_pattern = r"\b[A-Z]{4}\d{7}\b"
+            containers_in_query = re.findall(container_pattern, q)
+            containers_in_response = re.findall(container_pattern, response_message)
+            all_container_refs = set(containers_in_query + containers_in_response)
+
+            if (
+                all_container_refs and len(all_container_refs) <= 5
+            ):  # Limit to prevent too many lookups
+                logger.info(
+                    f"[CONTAINER LOOKUP] Attempting to fetch data for: {all_container_refs}"
+                )
+                try:
+                    # Filter DataFrame for authorized consignees and requested containers
+                    container_matches = authorized_df[
+                        authorized_df["container_number"].isin(all_container_refs)
+                    ]
+
+                    if not container_matches.empty:
+                        # Select key columns to display (prioritize important info)
+                        key_columns = [
+                            "container_number",
+                            "po_number_multiple",
+                            "ocean_bl_no_multiple",
+                            "booking_number_multiple",
+                            "job_number",
+                            "discharge_port",
+                            "consignee_code_multiple",
+                            "status",
+                            "etd_lp",
+                            "eta_dp",
+                            "atd_lp",
+                            "ata_dp",
+                        ]
+                        # Only include columns that exist in the dataframe
+                        available_columns = [
+                            col
+                            for col in key_columns
+                            if col in container_matches.columns
+                        ]
+
+                        # If no key columns found, just use all columns
+                        if not available_columns:
+                            available_columns = list(container_matches.columns)
+
+                        # Limit to reasonable number of columns for display
+                        if len(available_columns) > 15:
+                            available_columns = available_columns[:15]
+
+                        table_data = container_matches[available_columns].to_dict(
+                            "records"
+                        )
+
+                        # Clean non-serializable data
+                        import json
+
+                        import pandas as pd
+
+                        def clean_non_serializable(obj):
+                            if isinstance(obj, dict):
+                                return {
+                                    k: clean_non_serializable(v) for k, v in obj.items()
+                                }
+                            elif isinstance(obj, list):
+                                return [clean_non_serializable(i) for i in obj]
+                            elif pd.isna(obj) or obj in [float("inf"), float("-inf")]:
+                                return None
+                            elif isinstance(obj, pd.Timestamp):
+                                return obj.strftime("%Y-%m-%d")
+                            else:
+                                return obj
+
+                        table_data = clean_non_serializable(table_data)
+
+                        # Verify JSON serialization works
+                        try:
+                            json.dumps(table_data)
+                            logger.info(
+                                f"[CONTAINER LOOKUP] Found {len(table_data)} container(s) to display"
+                            )
+                        except TypeError:
+                            logger.error("Failed to serialize container table data")
+                            table_data = []
+                except Exception as e:
+                    logger.error(
+                        f"[CONTAINER LOOKUP] Failed to fetch container data: {e}"
+                    )
+        # ===========================================================
+
+        # ========= FINAL TABLE DATA CLEANING =========
+        # Ensure table_data is JSON-serializable regardless of source
+        if table_data:
+            import json
+
+            import pandas as pd
+
+            def clean_non_serializable(obj):
+                if isinstance(obj, dict):
+                    return {k: clean_non_serializable(v) for k, v in obj.items()}
+                elif isinstance(obj, list):
+                    return [clean_non_serializable(i) for i in obj]
+                elif pd.isna(obj) or obj in [float("inf"), float("-inf")]:
+                    return None
+                elif isinstance(obj, pd.Timestamp):
+                    return obj.strftime("%Y-%m-%d")
+                else:
+                    return obj
+
+            table_data = clean_non_serializable(table_data)
+
+            try:
+                json.dumps(table_data)
+                logger.info(f"[TABLE DATA] Returning {len(table_data)} rows in table")
+            except TypeError as e:
+                logger.error(f"Failed to serialize final table data: {e}")
+                table_data = []
+        # ==============================================
 
         return {
             "response": response_message,  # now surfaces the detailed observation in Postman
@@ -1018,18 +1250,42 @@ def ask(body: QueryWithConsigneeBody):
 
             # Default string response
             fallback_str = str(fallback) if not isinstance(fallback, str) else fallback
+
+            # Try to extract table data from fallback string response
+            fallback_table = []
+            if isinstance(fallback_str, str):
+                # Try to find JSON array in the fallback response
+                json_match = re.search(
+                    r"(\[\s*\{[^\]]*\}[^\]]*\])", fallback_str, re.DOTALL
+                )
+                if json_match:
+                    try:
+                        json_str = json_match.group(1)
+                        parsed_fallback = ast.literal_eval(json_str)
+                        if (
+                            isinstance(parsed_fallback, list)
+                            and parsed_fallback
+                            and isinstance(parsed_fallback[0], dict)
+                        ):
+                            fallback_table = parsed_fallback
+                            logger.info(
+                                f"[ROUTER FALLBACK] Extracted {len(fallback_table)} rows from response"
+                            )
+                    except (SyntaxError, ValueError) as e:
+                        logger.debug(
+                            f"Failed to extract table from router fallback: {e}"
+                        )
+
             return {
                 "response": sanitize_response(fallback_str),
                 "observation": "Fallback response due to agent error",
-                "table": [],
+                "table": fallback_table,
                 "mode": "router-fallback",
                 "session_id": session_id,
             }
         except Exception as fallback_exc:
             logger.error(f"Router fallback also failed: {fallback_exc}")
             raise HTTPException(status_code=500, detail=f"Agent failed: {exc}")
-
-
 
 
 # ----------------------------------------------------------------------

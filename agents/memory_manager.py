@@ -5,7 +5,12 @@ import threading
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
-from langchain.memory import ConversationBufferWindowMemory
+try:
+    # LangChain 0.2.x style import
+    from langchain.memory import ConversationBufferWindowMemory
+except ImportError:
+    # LangChain 1.x compatibility fallback
+    from langchain_classic.memory import ConversationBufferWindowMemory
 
 logger = logging.getLogger("shipping_chatbot")
 
@@ -62,6 +67,15 @@ class MemoryManager:
                         "pos": [],
                         "bls": [],
                         "bookings": [],
+                        "vessels": [],
+                        "jobs": [],
+                    },
+                    "last_query_context": {  # Track context from last query
+                        "consignee_name": None,
+                        "location": None,
+                        "time_period": None,
+                        "carrier": None,
+                        "query_type": None,  # e.g., "container_lookup", "hot_containers", etc.
                     },
                 }
             else:
@@ -230,6 +244,44 @@ class MemoryManager:
                     if len(entities["bookings"]) > 5:
                         entities["bookings"].pop(0)
 
+        # Extract vessel names (common vessel name patterns)
+        vessel_patterns = [
+            r"\b(?:vessel|ship)[:\s]+([A-Z][A-Z\s]{3,30})\b",  # "vessel: GUDRUN MAERSK"
+            r"['\"']([A-Z][A-Z\s]{3,30})['\"']",  # 'GUDRUN MAERSK'
+            r"final_vessel_name['\"]?:\s*['\"]([^'\"]+)['\"]",  # JSON field
+            r"\bwith\s+([A-Z]{3,}(?:\s+[A-Z]{3,})+)\b",  # "with GUDRUN MAERSK"
+            r"\bassociated with\s+([A-Z]{3,}(?:\s+[A-Z]{3,})+)\b",  # "associated with GUDRUN MAERSK"
+            r"\bfor\s+([A-Z]{3,}(?:\s+[A-Z]{3,})+)\b",  # "for MAERSK FORTALEZA"
+        ]
+        for pattern in vessel_patterns:
+            vessels = re.findall(pattern, text, re.IGNORECASE)
+            for vessel in vessels:
+                vessel = vessel.strip().upper()
+                # Ensure it looks like a vessel name (2+ words, each word 3+ chars)
+                words = vessel.split()
+                if (
+                    len(words) >= 2
+                    and all(len(w) >= 3 for w in words)
+                    and vessel not in entities["vessels"]
+                ):
+                    entities["vessels"].append(vessel)
+                    if len(entities["vessels"]) > 5:
+                        entities["vessels"].pop(0)
+
+        # Extract job numbers (pattern: 2-3 letters, 1-2 digits, 3-4 letters/digits, optional suffix)
+        job_patterns = [
+            r"\b((?:CN|VN|TH|HK|SG|ID|MY|PH|IN|KR|JP)\d{1,2}[A-Z]{3,4}\d{4}(?:-\d{3,4}(?:[A-Z]\d{3})?)?|[A-Z]{2}\d[A-Z]{3}\d{2}[A-Z]\d{3}[A-Z])\b",  # CN8WSG2507-0021, HK3WSG25C003M
+            r"\bjob[_\s]?(?:no|number)?[:\s]*([A-Z]{2,3}\d[A-Z]{3,4}\d{4}(?:-\d{3,4})?)",  # "job_no: TH2WSG1712"
+        ]
+        for pattern in job_patterns:
+            jobs = re.findall(pattern, text, re.IGNORECASE)
+            for job in jobs:
+                job = job.upper().strip()
+                if job and job not in entities["jobs"] and len(job) >= 6:
+                    entities["jobs"].append(job)
+                    if len(entities["jobs"]) > 10:  # Keep more job numbers
+                        entities["jobs"].pop(0)
+
     def extract_and_track_entities(self, session_id: str, text: str):
         """
         Extract and track entities (containers, POs, BLs, bookings) from text.
@@ -249,7 +301,14 @@ class MemoryManager:
 
             # Log what was added
             added = []
-            for entity_type in ["containers", "pos", "bls", "bookings"]:
+            for entity_type in [
+                "containers",
+                "pos",
+                "bls",
+                "bookings",
+                "vessels",
+                "jobs",
+            ]:
                 if new_count[entity_type] > old_count[entity_type]:
                     new_items = entities[entity_type][old_count[entity_type] :]
                     added.append(f"{entity_type}: {new_items}")
@@ -372,10 +431,181 @@ class MemoryManager:
                     )
                     logger.info(f"Resolved 'these containers' to '{containers_str}'")
 
+            # Resolve vessel references
+            if re.search(
+                r"\b(?:this|that|the)\s+(?:vessel|ship)\b", query, re.IGNORECASE
+            ):
+                if entities["vessels"]:
+                    last_vessel = entities["vessels"][-1]
+                    resolved_query = re.sub(
+                        r"\b(?:this|that|the)\s+(?:vessel|ship)\b",
+                        f"vessel {last_vessel}",
+                        resolved_query,
+                        flags=re.IGNORECASE,
+                    )
+                    logger.info(f"✅ Resolved 'this vessel' to '{last_vessel}'")
+
+            # Resolve generic "this" - try to infer from context
+            if (
+                re.search(r"\bthis\b", query, re.IGNORECASE)
+                and "associated with this" in query.lower()
+            ):
+                # Priority: vessel > job > container > PO
+                if entities["vessels"]:
+                    last_vessel = entities["vessels"][-1]
+                    resolved_query = re.sub(
+                        r"\bassociated with this\b",
+                        f"associated with vessel {last_vessel}",
+                        resolved_query,
+                        flags=re.IGNORECASE,
+                    )
+                    logger.info(
+                        f"✅ Resolved 'associated with this' to vessel '{last_vessel}'"
+                    )
+                elif entities["jobs"]:
+                    # Use last 5 job numbers if multiple tracked
+                    recent_jobs = entities["jobs"][-5:]
+                    jobs_str = ", ".join(recent_jobs)
+                    resolved_query = re.sub(
+                        r"\bassociated with this\b",
+                        f"associated with jobs {jobs_str}",
+                        resolved_query,
+                        flags=re.IGNORECASE,
+                    )
+                    logger.info(
+                        f"✅ Resolved 'associated with this' to jobs '{jobs_str}'"
+                    )
+                elif entities["containers"]:
+                    last_container = entities["containers"][-1]
+                    resolved_query = re.sub(
+                        r"\bassociated with this\b",
+                        f"associated with container {last_container}",
+                        resolved_query,
+                        flags=re.IGNORECASE,
+                    )
+                    logger.info(
+                        f"✅ Resolved 'associated with this' to container '{last_container}'"
+                    )
+
             if resolved_query != query:
                 logger.info(f"Entity resolution: '{query}' -> '{resolved_query}'")
 
             return resolved_query
+
+    def update_query_context(
+        self,
+        session_id: str,
+        consignee_name: str = None,
+        location: str = None,
+        time_period: str = None,
+        carrier: str = None,
+        query_type: str = None,
+    ):
+        """
+        Update the last query context for a session.
+
+        Args:
+            session_id: Unique identifier for the session
+            consignee_name: Consignee name mentioned in query
+            location: Location/port mentioned in query
+            time_period: Time period mentioned in query
+            carrier: Carrier mentioned in query
+            query_type: Type of query (e.g., "hot_containers", "delayed_containers")
+        """
+        with self.lock:
+            if session_id not in self.memories:
+                return
+
+            context = self.memories[session_id]["last_query_context"]
+            if consignee_name:
+                context["consignee_name"] = consignee_name
+            if location:
+                context["location"] = location
+            if time_period:
+                context["time_period"] = time_period
+            if carrier:
+                context["carrier"] = carrier
+            if query_type:
+                context["query_type"] = query_type
+
+            logger.info(f"Updated query context for {session_id}: {context}")
+
+    def resolve_contextual_query(self, session_id: str, query: str) -> str:
+        """
+        Resolve vague queries like "are there any hot containers in this"
+        using the last query context.
+
+        Args:
+            session_id: Unique identifier for the session
+            query: User query that may need context resolution
+
+        Returns:
+            Query enriched with context from previous query
+        """
+        with self.lock:
+            if session_id not in self.memories:
+                return query
+
+            context = self.memories[session_id]["last_query_context"]
+            resolved_query = query
+
+            # Check if query is asking about "hot containers in this/these"
+            hot_in_this_pattern = (
+                r"\bhot\s+containers?\s+(?:in|from|for)\s+(?:this|these|that|those)\b"
+            )
+            if re.search(hot_in_this_pattern, query, re.IGNORECASE):
+                # Build query using previous context
+                query_parts = ["hot containers"]
+
+                if context.get("consignee_name"):
+                    query_parts.append(f"for {context['consignee_name']}")
+                if context.get("location"):
+                    query_parts.append(f"at {context['location']}")
+                if context.get("time_period"):
+                    query_parts.append(f"{context['time_period']}")
+                if context.get("carrier"):
+                    query_parts.append(f"with {context['carrier']}")
+
+                resolved_query = " ".join(query_parts)
+                logger.info(
+                    f"✅ Resolved contextual query: '{query}' -> '{resolved_query}' "
+                    f"using context: {context}"
+                )
+
+            # Check for other vague "this" references
+            elif re.search(r"\bin\s+(?:this|these|that|those)\b", query, re.IGNORECASE):
+                # Try to add context from previous query
+                if context.get("consignee_name") and "consignee" not in query.lower():
+                    resolved_query = f"{query} for {context['consignee_name']}"
+                    logger.info(
+                        f"✅ Added consignee context: '{query}' -> '{resolved_query}'"
+                    )
+                elif (
+                    context.get("location")
+                    and "location" not in query.lower()
+                    and "port" not in query.lower()
+                ):
+                    resolved_query = f"{query} at {context['location']}"
+                    logger.info(
+                        f"✅ Added location context: '{query}' -> '{resolved_query}'"
+                    )
+
+            return resolved_query
+
+    def get_query_context(self, session_id: str) -> dict:
+        """
+        Get the last query context for a session.
+
+        Args:
+            session_id: Unique identifier for the session
+
+        Returns:
+            Dictionary containing last query context
+        """
+        with self.lock:
+            if session_id in self.memories:
+                return self.memories[session_id]["last_query_context"].copy()
+            return {}
 
 
 # Global memory manager instance

@@ -10,7 +10,14 @@ from difflib import get_close_matches
 
 import pandas as pd
 from fuzzywuzzy import process
-from langchain.agents import Tool
+
+try:
+    # LangChain 0.2.x style import
+    from langchain.agents import Tool
+except ImportError:
+    # LangChain 1.x compatibility fallback
+    from langchain_classic.agents import Tool
+
 from langchain_community.agent_toolkits import create_sql_agent
 from langchain_openai import AzureChatOpenAI
 from sqlalchemy import create_engine
@@ -165,7 +172,7 @@ def handle_non_shipping_queries(query: str) -> str:
             )
 
             # Use LangChain message schema for clarity
-            from langchain.schema import HumanMessage, SystemMessage
+            from langchain_core.messages import HumanMessage, SystemMessage
 
             messages = [
                 SystemMessage(
@@ -4485,11 +4492,36 @@ def get_hot_containers(
     hot_df = df[df[hot_flag_col].apply(_is_hot)].copy()
 
     try:
+        # Enhanced logging to diagnose filtering issues
+        total_rows = len(df)
+        hot_rows = len(hot_df)
+        removed_rows = total_rows - hot_rows
+
         logger.info(
-            f"[get_hot_containers] After strict hot flag filter: {len(hot_df)} rows (removed {len(df) - len(hot_df)} non-hot)"
+            f"[get_hot_containers] 🔥 HOT FLAG FILTER: {total_rows} total -> {hot_rows} hot (removed {removed_rows} non-hot)"
         )
-    except:
-        pass
+
+        # Log sample of hot flag values from original dataframe
+        if total_rows > 0:
+            hot_flag_distribution = (
+                df[hot_flag_col].value_counts(dropna=False).to_dict()
+            )
+            logger.info(
+                f"[get_hot_containers] Hot flag distribution in input: {hot_flag_distribution}"
+            )
+
+        # Log sample container numbers from filtered result
+        if hot_rows > 0:
+            sample_containers = (
+                hot_df["container_number"].head(5).tolist()
+                if "container_number" in hot_df.columns
+                else []
+            )
+            logger.info(
+                f"[get_hot_containers] Sample hot containers: {sample_containers}"
+            )
+    except Exception as e:
+        logger.error(f"[get_hot_containers] Error in logging: {e}")
 
     if hot_df.empty:
         return "No hot containers found for your authorized consignees."
@@ -4499,10 +4531,13 @@ def get_hot_containers(
         non_hot_check = hot_df[~hot_df[hot_flag_col].apply(_is_hot)]
         if not non_hot_check.empty:
             logger.error(
-                f"[get_hot_containers] CRITICAL: Found {len(non_hot_check)} non-hot containers in result! Container IDs: {non_hot_check['container_number'].tolist()}"
+                f"[get_hot_containers] ❌ CRITICAL BUG: Found {len(non_hot_check)} non-hot containers in result! Container IDs: {non_hot_check['container_number'].tolist()}"
             )
             # Remove them explicitly
             hot_df = hot_df[hot_df[hot_flag_col].apply(_is_hot)].copy()
+            logger.info(
+                f"[get_hot_containers] ✅ Removed non-hot containers, now {len(hot_df)} rows"
+            )
     except Exception as e:
         logger.error(f"[get_hot_containers] Error in validation check: {e}")
 
@@ -16159,7 +16194,7 @@ TOOLS = [
     Tool(
         name="Get Container Milestones",
         func=get_container_milestones,
-        #return_direct=True,
+        # return_direct=True,
         description=(
             "PRIMARY TOOL FOR CONTAINER STATUS AND MILESTONE QUERIES ONLY.\n"
             "\n"
@@ -16185,7 +16220,7 @@ TOOLS = [
     Tool(
         name="Get PO Booking OBL Status",
         func=get_po_booking_obl_status,
-        #return_direct=True,
+        # return_direct=True,
         description=(
             "PRIMARY TOOL FOR PO, BOOKING, AND OBL STATUS QUERIES.\n"
             "\n"
@@ -16225,7 +16260,7 @@ TOOLS = [
     Tool(
         name="Get Consignee Info",
         func=get_consignee_info,
-        #return_direct=True,
+        # return_direct=True,
         description=(
             "**PRIMARY TOOL** for consignee-related queries. "
             "Use this tool when user asks about CONSIGNEE information for PO, Container, or OBL.\n"
@@ -16486,7 +16521,7 @@ TOOLS = [
     Tool(
         name="Get Vessel Info",
         func=get_vessel_info,
-        #return_direct=True,
+        # return_direct=True,
         description=(
             "PRIMARY TOOL for ALL VESSEL-RELATED QUERIES (mother vessel, feeder vessel, first vessel, final vessel).\n"
             "\n"
@@ -17149,7 +17184,7 @@ TOOLS = [
     Tool(
         name="Get Job Number Info",
         func=get_job_number_info,
-        return_direct=True,
+        # return_direct=True,
         description=(
             "PRIMARY TOOL for ALL JOB NUMBER QUERIES AND LOOKUPS.\n"
             "\n"

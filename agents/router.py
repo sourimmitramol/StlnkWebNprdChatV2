@@ -100,6 +100,25 @@ def route_query(query: str, consignee_codes: list = None) -> str:
 
         q = query.lower()
 
+        # ========== EXTRACT QUERY CONTEXT FOR MEMORY TRACKING ==========
+        # Extract consignee names, locations, carriers from query for context tracking
+        consignee_name_match = re.search(
+            r"for\s+([A-Z][A-Za-z\s&]+?)(?:\s+hot|\s+container|$)", query
+        )
+        consignee_name = (
+            consignee_name_match.group(1).strip() if consignee_name_match else None
+        )
+
+        location_match = re.search(
+            r"(?:at|to|from|in)\s+([A-Z][A-Za-z\s]{3,30})\b", query
+        )
+        location = location_match.group(1).strip() if location_match else None
+
+        carrier_match = re.search(
+            r"(?:with|carrier|line|by)\s+([A-Z][A-Za-z\s&]+?)(?:\s+in|$)", query
+        )
+        carrier = carrier_match.group(1).strip() if carrier_match else None
+
         # Enhanced container/PO/OBL/Booking detection (do this early)
         from utils.container import (extract_booking_number,
                                      extract_container_number, extract_job_no,
