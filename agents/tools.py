@@ -2178,31 +2178,19 @@ def get_po_booking_obl_status(input_str: str) -> str:
         "final_load_port",
         "discharge_port",
         "final_destination",
-        "last_cy_location",
+        # "last_cy_location",
         "final_carrier_name",
-        "vessel_name",
-        "voyage_number",
+        "final_vessel_name",
+        "final_voyage_code",
         "transport_mode",
         # Milestone dates
+        "etd_lp",
         "atd_lp",
         "ata_flp",
         "atd_flp",
-        "etd_lp",
+        # "etd_lp",
         "eta_dp",
         "ata_dp",
-        # "derived_ata_dp",
-        "revised_eta",
-        # "equipment_arrived_at_last_cy",
-        # "out_gate_at_last_cy",
-        # "delivery_date_to_consignee",
-        # "empty_container_return_date",
-        # Location details
-        # Cargo info
-        # "cargo_count",
-        # "cargo_um",
-        # "cargo_detail_count",
-        # "detail_cargo_um",
-        # "cargo_weight",
     ]
 
     # Include only columns that exist
@@ -6007,9 +5995,9 @@ def get_field_info(query: str) -> str:
 
 def get_vessel_info(input_str: str) -> str:
     """
-    Get vessel details for a specific container or booking number.
-    Input: Provide a valid container number (partial or full) or booking number.
-    Output: Vessel codes and names for the container/booking with related information.
+    Get vessel details for a specific container, booking number, or job number.
+    Input: Provide a valid container number (partial or full), booking number, or job number.
+    Output: Vessel codes and names for the container/booking/job with related information.
     If not found, prompts for a valid identifier.
     here mother vessel is final_vessel_name and feeder vessel is first_vessel_name.
     """
@@ -6017,7 +6005,9 @@ def get_vessel_info(input_str: str) -> str:
 
     input_str = (input_str or "").strip()
     if not input_str:
-        return "Please specify a valid container number or booking number."
+        return (
+            "Please specify a valid container number or booking number or job number."
+        )
 
     try:
         logger.info(f"[get_vessel_info] Processing input: {input_str}")
@@ -6132,7 +6122,157 @@ def get_vessel_info(input_str: str) -> str:
                 orient="records"
             )
 
-    # ========== 2) TRY CONTAINER NUMBER ==========
+    # ========== 2) TRY JOB NUMBER ==========
+    # Support explicit and implicit job formats (e.g., CN2BBO2510-0001)
+    job_no = extract_job_no(input_str)
+    strong_job_candidate = False
+
+    if job_no:
+        strong_job_candidate = True
+
+    if not job_no:
+        # Common enterprise job pattern: ALPHANUMERIC-####
+        m_job_hyphen = re.search(r"\b([A-Z0-9]{6,20}-\d{3,6})\b", input_str.upper())
+        if m_job_hyphen:
+            job_no = m_job_hyphen.group(1)
+            strong_job_candidate = True
+
+    if not job_no and re.search(r"\bjob\b", input_str, flags=re.IGNORECASE):
+        # Fallback for explicitly job-oriented phrasing
+        m_job_generic = re.search(r"\b([A-Z0-9]{6,25})\b", input_str.upper())
+        if m_job_generic:
+            job_no = m_job_generic.group(1)
+            strong_job_candidate = True
+
+    if job_no:
+        try:
+            logger.info(f"[get_vessel_info] Detected as potential job number: {job_no}")
+        except:
+            pass
+
+    # Check for common job number column variants
+    job_col = None
+    if "job_no" in df.columns:
+        job_col = "job_no"
+    elif "job_number" in df.columns:
+        job_col = "job_number"
+    elif "job_number_multiple" in df.columns:
+        job_col = "job_number_multiple"
+    elif "job_no_multiple" in df.columns:
+        job_col = "job_no_multiple"
+
+    if job_no and job_col:
+        try:
+            logger.info(
+                f"[get_vessel_info] Attempting job number match in column: {job_col}"
+            )
+        except:
+            pass
+
+        # Normalize job number for matching
+        job_norm = str(job_no).strip().upper()
+        job_norm_compact = re.sub(r"[\s\-]", "", job_norm)
+
+        try:
+            logger.info(
+                f"[get_vessel_info] Normalized job number: '{job_no}' -> '{job_norm}'"
+            )
+        except:
+            pass
+
+        def _job_in_cell(cell) -> bool:
+            if pd.isna(cell):
+                return False
+            raw = str(cell).upper().strip()
+            if not raw:
+                return False
+            # Split multi-value cells and compare both exact and compact forms
+            parts = [p.strip() for p in re.split(r"[,;/|]", raw) if p.strip()]
+            if not parts:
+                parts = [raw]
+            for part in parts:
+                if part == job_norm:
+                    return True
+                part_compact = re.sub(r"[\s\-]", "", part)
+                if part_compact == job_norm_compact:
+                    return True
+            return False
+
+        rows = df[df[job_col].apply(_job_in_cell)].copy()
+
+        try:
+            logger.info(
+                f"[get_vessel_info] Job number search results: {len(rows)} rows found"
+            )
+            if len(rows) > 0:
+                sample_jobs = rows[job_col].head(3).tolist()
+                logger.info(
+                    f"[get_vessel_info] Sample matching job numbers: {sample_jobs}"
+                )
+        except:
+            pass
+
+        if not rows.empty:
+            try:
+                logger.info(
+                    f"[get_vessel_info] Found {len(rows)} record(s) for job number {job_no}"
+                )
+            except:
+                pass
+
+            # Parse dates for sorting (get most recent record)
+            date_cols = [
+                c for c in ["etd_lp", "eta_dp", "revised_eta"] if c in rows.columns
+            ]
+            if date_cols:
+                rows = ensure_datetime(rows, date_cols)
+                rows["_sort_date"] = rows[date_cols].max(axis=1)
+                rows = rows.sort_values("_sort_date", ascending=False)
+
+            # Prepare output columns (include job number column)
+            output_cols = [
+                job_col,
+                "booking_number_multiple",
+                "container_number",
+                "po_number_multiple",
+                "first_vessel_name",
+                "final_vessel_name",
+                "load_port",
+                "discharge_port",
+                "etd_lp",
+                "eta_dp",
+                "revised_eta",
+                "final_carrier_name",
+                "consignee_code_multiple",
+            ]
+
+            # Filter to available columns
+            output_cols = [c for c in output_cols if c in rows.columns]
+            result_df = rows[output_cols].head(50).copy()
+
+            # Format date columns
+            for dcol in ["etd_lp", "eta_dp", "revised_eta"]:
+                if dcol in result_df.columns and pd.api.types.is_datetime64_any_dtype(
+                    result_df[dcol]
+                ):
+                    result_df[dcol] = result_df[dcol].dt.strftime("%Y-%m-%d")
+
+            try:
+                logger.info(
+                    f"[get_vessel_info] Returning {len(result_df)} vessel record(s) for job number {job_no}"
+                )
+            except:
+                pass
+
+            return result_df.where(pd.notnull(result_df), None).to_dict(
+                orient="records"
+            )
+
+        # If input is clearly a job number, do not fall through to container lookup.
+        if strong_job_candidate:
+            return f"No data found for job number {job_no}."
+
+    # ========== 3) TRY CONTAINER NUMBER ==========
     container_no = extract_container_number(input_str)
 
     if not container_no:
@@ -6181,12 +6321,8 @@ def get_vessel_info(input_str: str) -> str:
             "container_number",
             "booking_number_multiple",
             "po_number_multiple",
-            "first_vessel_code",
             "first_vessel_name",
-            "first_voyage_code",
-            "final_vessel_code",
             "final_vessel_name",
-            "final_voyage_code",
             "load_port",
             "discharge_port",
             "etd_lp",
@@ -6216,8 +6352,8 @@ def get_vessel_info(input_str: str) -> str:
 
         return [result]
 
-    # ========== 3) NO VALID IDENTIFIER FOUND ==========
-    return f"Please specify a valid container number or booking number. Input received: {input_str}"
+    # ========== 4) NO VALID IDENTIFIER FOUND ==========
+    return f"Please specify a valid container number, booking number, or job number. Input received: {input_str}"
 
 
 # ------------------------------------------------------------------
@@ -14187,19 +14323,44 @@ def get_job_number_info(question: str = None, consignee_code: str = None, **kwar
         except:
             pass
 
-    # Filter by vessel name
-    if vessel_name and "final_vessel_name" in df.columns:
-        # Fuzzy match on vessel name
-        mask |= (
-            df["final_vessel_name"]
-            .fillna("")
-            .str.upper()
-            .str.contains(re.escape(vessel_name), regex=True, na=False)
-        )
-        try:
-            logger.info(f"[get_job_number_info] Filtering by vessel: {vessel_name}")
-        except:
-            pass
+    # Filter by vessel name/code across both mother(final) and feeder(first) vessels
+    if vessel_name:
+        vessel_norm = vessel_name.upper().strip()
+        vessel_cols = [
+            c
+            for c in [
+                "final_vessel_name",
+                "first_vessel_name",
+                "final_vessel_code",
+                "first_vessel_code",
+            ]
+            if c in df.columns
+        ]
+
+        if vessel_cols:
+            vessel_mask = pd.Series([False] * len(df), index=df.index)
+            for vcol in vessel_cols:
+                # Normalize spaces to avoid misses caused by inconsistent spacing
+                col_series = (
+                    df[vcol]
+                    .fillna("")
+                    .astype(str)
+                    .str.upper()
+                    .str.replace(r"\s+", " ", regex=True)
+                    .str.strip()
+                )
+                vessel_mask |= col_series.str.contains(
+                    re.escape(vessel_norm), regex=True, na=False
+                )
+
+            mask |= vessel_mask
+
+            try:
+                logger.info(
+                    f"[get_job_number_info] Filtering by vessel: {vessel_name} across columns: {vessel_cols}; matched rows={int(vessel_mask.sum())}"
+                )
+            except:
+                pass
 
     # Apply filters
     filtered = df[mask].copy()
@@ -14304,8 +14465,16 @@ def get_job_number_info(question: str = None, consignee_code: str = None, **kwar
         result_df = result_df.sort_values("_sort_date", ascending=False)
         result_df = result_df.drop(columns=["_sort_date"])
 
-    # Limit to 150 records
-    result_df = result_df.head(150)
+    # Do not silently truncate normal responses; apply only a high safety cap.
+    safety_cap = 2000
+    if len(result_df) > safety_cap:
+        result_df = result_df.head(safety_cap)
+        try:
+            logger.info(
+                f"[get_job_number_info] Applied safety cap: returning first {safety_cap} of {len(filtered)} matched rows"
+            )
+        except:
+            pass
 
     # Format date columns
     for dcol in ["etd_lp", "eta_dp", "ata_dp", "revised_eta"]:
