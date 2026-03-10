@@ -3251,6 +3251,7 @@ def get_delayed_containers(question: str = None, **kwargs) -> str:
         "delay_days",
         "discharge_port",
         "consignee_code_multiple",
+        "hot_container_flag"
     ]
     additional_cols = ["po_number_multiple", "final_carrier_name"]
     for col in additional_cols:
@@ -3557,6 +3558,7 @@ def get_delayed_containers_not_arrived(question: str = None, **kwargs) -> str:
         "delay_days",
         "discharge_port",
         "consignee_code_multiple",
+        "hot_container_flag"
     ]
 
     # Add optional columns if they exist
@@ -4880,6 +4882,97 @@ def get_hot_containers(
             return f"No hot containers found for carrier/vessel '{carrier_or_vessel}' for your authorized consignees."
 
     # -----------------------
+    # Delay filtering (NEW)
+    # -----------------------
+    q_lower = query.lower()
+    is_delay_query = any(
+        w in q_lower for w in ["delay", "delayed", "late", "overdue", "behind", "missed"]
+    )
+
+    if is_delay_query:
+        if "eta_dp" not in hot_df.columns:
+            return "ETA column (eta_dp) is required to filter delayed hot containers."
+
+        hot_df = ensure_datetime(
+            hot_df,
+            [c for c in ["eta_dp", "ata_dp"] if c in hot_df.columns],
+        )
+
+        today = pd.Timestamp.today().normalize()
+
+        # Delay definition:
+        # - Arrived late: ata_dp > eta_dp
+        # - Not yet arrived but overdue: ata_dp is null and eta_dp < today
+        if "ata_dp" in hot_df.columns:
+            arrived_late_days = (
+                (hot_df["ata_dp"] - hot_df["eta_dp"]).dt.total_seconds() / 86400
+            )
+            in_transit_overdue_days = (
+                (today - hot_df["eta_dp"]).dt.total_seconds() / 86400
+            )
+            hot_df["delay_days"] = (
+                arrived_late_days.where(hot_df["ata_dp"].notna(), in_transit_overdue_days)
+                .round()
+                .fillna(0)
+                .astype(int)
+            )
+        else:
+            hot_df["delay_days"] = (
+                ((today - hot_df["eta_dp"]).dt.total_seconds() / 86400)
+                .round()
+                .fillna(0)
+                .astype(int)
+            )
+
+        delay_threshold = None
+        delay_operator = ">"
+        patterns = [
+            (r"(?:less\\s+than|under|below|<)\\s*(\\d+)\\s+days?", "<"),
+            (r"(?:more\\s+than|over|above|>)\\s*(\\d+)\\s+days?", ">"),
+            (r"(?:at\\s+least|minimum|>=)\\s*(\\d+)\\s+days?", ">="),
+            (r"(?:up\\s+to|maximum|<=|no\\s+more\\s+than|within)\\s*(\\d+)\\s+days?", "<="),
+            (r"(?:exactly|equal\\s+to|=|delayed\\s+by|late\\s+by)\\s*(\\d+)\\s+days?", "=="),
+        ]
+        for pat, op in patterns:
+            m = re.search(pat, q_lower)
+            if m:
+                delay_threshold = int(m.group(1))
+                delay_operator = op
+                break
+
+        if delay_threshold is not None:
+            if delay_operator == "<":
+                delay_mask = (hot_df["delay_days"] > 0) & (
+                    hot_df["delay_days"] < delay_threshold
+                )
+            elif delay_operator == ">":
+                delay_mask = hot_df["delay_days"] > delay_threshold
+            elif delay_operator == ">=":
+                delay_mask = hot_df["delay_days"] >= delay_threshold
+            elif delay_operator == "==":
+                delay_mask = hot_df["delay_days"] == delay_threshold
+            elif delay_operator == "<=":
+                delay_mask = (hot_df["delay_days"] > 0) & (
+                    hot_df["delay_days"] <= delay_threshold
+                )
+            else:
+                delay_mask = hot_df["delay_days"] > 0
+        else:
+            delay_mask = hot_df["delay_days"] > 0
+
+        hot_df = hot_df[delay_mask].copy()
+
+        try:
+            logger.info(
+                f"[get_hot_containers] After delay filter ({'any positive delay' if delay_threshold is None else f'{delay_operator} {delay_threshold}'}): {len(hot_df)} rows"
+            )
+        except:
+            pass
+
+        if hot_df.empty:
+            return "No hot delayed containers found for your authorized consignees."
+
+    # -----------------------
     # Build output columns
     # -----------------------
     out_cols = [
@@ -4898,6 +4991,9 @@ def get_hot_containers(
         "supplier_vendor_name",
         "consignee_code_multiple",
     ]
+
+    if is_delay_query and "delay_days" in hot_df.columns:
+        out_cols.append("delay_days")
 
     out_cols = [c for c in out_cols if c in hot_df.columns]
     result = (
@@ -16329,9 +16425,10 @@ TOOLS = [
             "- 'hot containers delayed by N days' (combines hot filter with delay threshold)\n"
             "- 'containers delayed more than/less than/at least N days'\n"
             "- 'delayed containers in [time period]' or 'at [port]'\n"
-            "- Any query with 'delay/late/overdue' AND a specific number of days\n\n"
+            "- Any query with 'delay/late/overdue' and arrived-late intent (ata_dp based), with or without a number\n"
+            "- Vague delay intent like 'show hot delayed containers' (if no 'arriving' wording is present)\n\n"
             "This tool has built-in hot container filtering - when query mentions 'hot' AND a delay threshold, "
-            "this tool applies both filters correctly. Do NOT use 'Get Hot Containers' for delay threshold queries."
+            "this tool applies both filters correctly. Do NOT use 'Get Hot Containers' for delay queries."
         ),
     ),
     Tool(
@@ -16388,7 +16485,8 @@ TOOLS = [
             "**KEY INDICATORS - USE THIS TOOL IF ANY OF THESE ARE PRESENT:**\n"
             "1. Query contains: 'arriving at', 'arriving in', 'arriving to', 'which are arriving'\n"
             "2. Query contains: 'delayed' + 'arriving'\n"
-            "3. Query asks about delayed containers at a specific PORT (discharge port context)\n"
+            "3. Query asks about delayed containers at a specific PORT with future/in-transit arrival context\n"
+            "4. Query like 'hot delayed containers arriving ...' should route here (not to Get Hot Containers)\n"
             "\n"
             "**Key difference from 'Get Delayed Containers':**\n"
             "- This tool: ata_dp = NULL (not arrived yet), eta_dp < today (delayed in transit)\n"
@@ -16777,15 +16875,18 @@ TOOLS = [
             "Get ALL hot/priority containers (past + future) without arrival restrictions.\n"
             "\n"
             "**CRITICAL**: DO NOT use if query has 'arriving', 'upcoming', 'next', 'coming' → Use 'Get Hot Upcoming Arrivals' instead.\n"
+            "**CRITICAL**: DO NOT use for delay-intent queries ('delayed', 'late', 'overdue', 'behind', 'missed'). "
+            "Use 'Get Delayed Containers' or 'Get Delayed Containers Not Arrived' instead.\n"
             "\n"
             "Use this tool for:\n"
             "- Generic: 'Show my hot containers', 'List all priority shipments'\n"
             "- Status: 'hot containers that have arrived', 'priority shipments already reached'\n"
             "- Historical: 'hot containers from June to September', 'hot containers in July 2025'\n"
-            "- Delays: 'hot containers delayed by 3 days', 'late hot shipments'\n"
+            "- Non-delay hot queries only (no delayed/late intent)\n"
             "\n"
             "DO NOT USE for:\n"
             "- ARRIVING/UPCOMING queries → Use 'Get Hot Upcoming Arrivals'\n"
+            "- DELAY/LATE/OVERDUE queries (with or without numbers) → Use delayed tools\n"
             "- DEPARTURE queries → Use 'Get Containers Departing From Load Port'\n"
             "\n"
             "Features:\n"

@@ -148,6 +148,63 @@ def sanitize_response(response_text: str) -> str:
     return response_text
 
 
+def truncate_long_bullet_list(message: str, max_bullets: int = 12, threshold: int = 20) -> str:
+    """
+    Truncate long bullet-pointed lists to improve UX when responses contain many items.
+    
+    When a response contains more than 'threshold' bullet points, keeps only the first
+    'max_bullets' items and appends a message directing users to the detailed table.
+    
+    Args:
+        message: The response message that may contain bullet points
+        max_bullets: Maximum number of bullets to keep (default: 12)
+        threshold: Minimum number of bullets required before truncation (default: 20)
+    
+    Returns:
+        Truncated message if threshold exceeded, otherwise original message
+    """
+    if not message or not isinstance(message, str):
+        return message
+    
+    # Detect bullet points with patterns like "• Container", "- Container", "* Container"
+    bullet_pattern = r'^[\s]*[•\-\*]\s+.*$'
+    lines = message.split('\n')
+    
+    # Find all bullet lines and their indices
+    bullet_lines = []
+    bullet_indices = []
+    for idx, line in enumerate(lines):
+        if re.match(bullet_pattern, line.strip()):
+            bullet_lines.append(line)
+            bullet_indices.append(idx)
+    
+    bullet_count = len(bullet_lines)
+    
+    # Only truncate if we exceed threshold
+    if bullet_count <= threshold:
+        return message
+    
+    logger.info(f"[BULLET TRUNCATION] Detected {bullet_count} bullets, truncating to {max_bullets}")
+    
+    # Keep lines before bullets, first N bullets, then add summary message
+    first_bullet_idx = bullet_indices[0]
+    last_kept_bullet_idx = bullet_indices[max_bullets - 1]
+    
+    # Build truncated response
+    pre_bullet_lines = lines[:first_bullet_idx]
+    kept_bullets = lines[first_bullet_idx:last_kept_bullet_idx + 1]
+    
+    truncated_lines = pre_bullet_lines + kept_bullets
+    
+    # Add summary message
+    remaining_count = bullet_count - max_bullets
+    summary_msg = f"\n\n... and {remaining_count} more containers.\n\n**Detailed list provided in table below.**"
+    
+    truncated_message = '\n'.join(truncated_lines) + summary_msg
+    
+    return truncated_message
+
+
 def infer_concept_used(tool_name: str, tool_input: str) -> str:
     """
     Infer the concept/strategy used based on the tool and input.
@@ -925,6 +982,10 @@ def ask(body: QueryWithConsigneeBody):
 
         # Enrich observation with concept_used field
         enriched_observation = enrich_observation_with_concept(observation)
+
+        # Truncate long bullet lists before sanitization (only if we have table data to reference)
+        if table_data and len(table_data) > 20:
+            message = truncate_long_bullet_list(message, max_bullets=12, threshold=20)
 
         # Bypass sanitize_response for milestone queries to preserve newline formatting
         response_message = (
