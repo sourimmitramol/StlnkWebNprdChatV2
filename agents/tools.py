@@ -13091,26 +13091,38 @@ def get_containers_by_final_destination(query: str) -> str:
     # Clean up temporary columns
     df.drop(columns=["_fd_norm", "_fd_code"], inplace=True, errors="ignore")
 
-    df_filtered = df[fd_mask].copy()
+    df_fd_filtered = df[fd_mask].copy()
 
-    # If no results in final_destination, try discharge_port
-    if df_filtered.empty:
-        try:
-            logger.info(
-                f"[get_containers_by_final_destination] No matches in final_destination, trying discharge_port"
-            )
-        except:
-            pass
+    try:
+        logger.info(
+            f"[get_containers_by_final_destination] Found {len(df_fd_filtered)} containers after FD filter"
+        )
+    except:
+        pass
 
-        # Check if discharge_port and eta_dp columns exist
-        if "discharge_port" not in df.columns or "eta_dp" not in df.columns:
-            return f"No containers found going to final destination '{fd_location or fd_code}'."
+    # ========== 6) FILTER BY DATE WINDOW USING ETA_FD ONLY ==========
+    results_fd = pd.DataFrame()
+    if not df_fd_filtered.empty:
+        date_mask_fd = (
+            df_fd_filtered["eta_fd"].notna()
+            & (df_fd_filtered["eta_fd"].dt.normalize() >= start_date)
+            & (df_fd_filtered["eta_fd"].dt.normalize() <= end_date)
+        )
+        results_fd = df_fd_filtered[date_mask_fd].copy()
 
-        # Parse eta_dp column
-        df = ensure_datetime(df, ["eta_dp"])
+    try:
+        logger.info(
+            f"[get_containers_by_final_destination] Found {len(results_fd)} containers after FD date filter (using eta_fd only)"
+        )
+    except:
+        pass
 
-        # Apply same matching logic to discharge_port
-        dp_mask = pd.Series(False, index=df.index)
+    # ========== 7) ALSO CHECK DISCHARGE_PORT (MERGE WHEN BOTH MATCH) ==========
+    results_dp = pd.DataFrame()
+
+    if "discharge_port" in df.columns and "eta_dp" in df.columns:
+        df_dp = ensure_datetime(df.copy(), ["eta_dp"])
+        dp_mask = pd.Series(False, index=df_dp.index)
 
         def normalize_dp_string(s):
             """Normalize discharge port string for matching"""
@@ -13129,13 +13141,12 @@ def get_containers_by_final_destination(query: str) -> str:
             match = re.search(r"\(([A-Z0-9]{4,6})\)", str(s))
             return match.group(1) if match else None
 
-        # Create normalized columns for discharge_port matching
-        df["_dp_norm"] = df["discharge_port"].apply(normalize_dp_string)
-        df["_dp_code"] = df["discharge_port"].apply(extract_dp_code)
+        df_dp["_dp_norm"] = df_dp["discharge_port"].apply(normalize_dp_string)
+        df_dp["_dp_code"] = df_dp["discharge_port"].apply(extract_dp_code)
 
         # Strategy 1: Exact code match
         if fd_code:
-            code_mask = df["_dp_code"].fillna("").str.upper() == fd_code.upper()
+            code_mask = df_dp["_dp_code"].fillna("").str.upper() == fd_code.upper()
             dp_mask |= code_mask
             try:
                 logger.info(
@@ -13147,7 +13158,7 @@ def get_containers_by_final_destination(query: str) -> str:
         # Strategy 2: Exact normalized name match
         if not dp_mask.any() and fd_location:
             fd_location_norm = normalize_dp_string(fd_location)
-            exact_mask = df["_dp_norm"] == fd_location_norm
+            exact_mask = df_dp["_dp_norm"] == fd_location_norm
             dp_mask |= exact_mask
             try:
                 logger.info(
@@ -13169,7 +13180,7 @@ def get_containers_by_final_destination(query: str) -> str:
                     dp_str_norm = normalize_dp_string(dp_str)
                     return all(word in dp_str_norm for word in fd_words)
 
-                word_mask = df["_dp_norm"].apply(word_match)
+                word_mask = df_dp["_dp_norm"].apply(word_match)
                 dp_mask |= word_mask
                 try:
                     logger.info(
@@ -13180,16 +13191,14 @@ def get_containers_by_final_destination(query: str) -> str:
 
         # Strategy 4: Fuzzy substring matching
         if not dp_mask.any() and fd_location:
-            from difflib import get_close_matches
-
             fd_location_norm = normalize_dp_string(fd_location)
-            unique_dps = df["_dp_norm"].dropna().unique().tolist()
+            unique_dps = df_dp["_dp_norm"].dropna().unique().tolist()
             close_matches = get_close_matches(
                 fd_location_norm, unique_dps, n=5, cutoff=0.6
             )
 
             if close_matches:
-                fuzzy_mask = df["_dp_norm"].isin(close_matches)
+                fuzzy_mask = df_dp["_dp_norm"].isin(close_matches)
                 dp_mask |= fuzzy_mask
                 try:
                     logger.info(
@@ -13198,68 +13207,86 @@ def get_containers_by_final_destination(query: str) -> str:
                 except:
                     pass
 
-        # Clean up temporary columns
-        df.drop(columns=["_dp_norm", "_dp_code"], inplace=True, errors="ignore")
+        df_dp.drop(columns=["_dp_norm", "_dp_code"], inplace=True, errors="ignore")
+        df_dp_filtered = df_dp[dp_mask].copy()
 
-        df_filtered = df[dp_mask].copy()
-
-        if df_filtered.empty:
-            return f"No containers found going to final destination or discharge port '{fd_location or fd_code}'."
+        if not df_dp_filtered.empty:
+            date_mask_dp = (
+                df_dp_filtered["eta_dp"].notna()
+                & (df_dp_filtered["eta_dp"].dt.normalize() >= start_date)
+                & (df_dp_filtered["eta_dp"].dt.normalize() <= end_date)
+            )
+            results_dp = df_dp_filtered[date_mask_dp].copy()
 
         try:
             logger.info(
-                f"[get_containers_by_final_destination] Found {len(df_filtered)} containers after discharge_port filter"
+                f"[get_containers_by_final_destination] Found {len(results_dp)} containers after discharge_port date filter (using eta_dp)"
             )
         except:
             pass
 
-        # Use eta_dp for date filtering when matching discharge_port
-        date_mask = (
-            df_filtered["eta_dp"].notna()
-            & (df_filtered["eta_dp"].dt.normalize() >= start_date)
-            & (df_filtered["eta_dp"].dt.normalize() <= end_date)
-        )
+    if results_fd.empty and results_dp.empty:
+        return f"No containers found arriving at '{fd_location or fd_code}' {period_desc}."
 
-        results = df_filtered[date_mask].copy()
+    # Preserve legacy single-source output shape to avoid side effects.
+    if results_dp.empty:
+        results = results_fd.sort_values("eta_fd", ascending=True)
+
+        output_cols = [
+            "container_number",
+            "po_number_multiple",
+            "final_destination",
+            "eta_fd",
+        ]
+        additional_cols = [
+            "discharge_port",
+            "consignee_code_multiple",
+            "final_carrier_name",
+            "transport_mode",
+        ]
+        for col in additional_cols:
+            if col in results.columns and col not in output_cols:
+                output_cols.append(col)
+
+        output_cols = [c for c in output_cols if c in results.columns]
+        out = results[output_cols].head(200).copy()
+
+        if "eta_fd" in out.columns and pd.api.types.is_datetime64_any_dtype(
+            out["eta_fd"]
+        ):
+            out["eta_fd"] = out["eta_fd"].dt.strftime("%Y-%m-%d")
 
         try:
             logger.info(
-                f"[get_containers_by_final_destination] Found {len(results)} containers after date filter (using eta_dp)"
+                f"[get_containers_by_final_destination] Returning {len(out)} containers (from final_destination)"
             )
         except:
             pass
 
-        if results.empty:
-            return f"No containers found arriving at '{fd_location or fd_code}' {period_desc}."
+        return out.where(pd.notnull(out), None).to_dict(orient="records")
 
-        # Sort by eta_dp
-        results = results.sort_values("eta_dp", ascending=True)
+    if results_fd.empty:
+        results = results_dp.sort_values("eta_dp", ascending=True)
 
-        # Prepare output with eta_dp
         output_cols = [
             "container_number",
             "po_number_multiple",
             "discharge_port",
             "eta_dp",
         ]
-
-        # Add additional context columns
         additional_cols = [
             "final_destination",
             "consignee_code_multiple",
             "final_carrier_name",
             "transport_mode",
         ]
-
         for col in additional_cols:
             if col in results.columns and col not in output_cols:
                 output_cols.append(col)
 
-        # Filter to available columns
         output_cols = [c for c in output_cols if c in results.columns]
         out = results[output_cols].head(200).copy()
 
-        # Format eta_dp dates
         if "eta_dp" in out.columns and pd.api.types.is_datetime64_any_dtype(
             out["eta_dp"]
         ):
@@ -13274,68 +13301,73 @@ def get_containers_by_final_destination(query: str) -> str:
 
         return out.where(pd.notnull(out), None).to_dict(orient="records")
 
-    try:
-        logger.info(
-            f"[get_containers_by_final_destination] Found {len(df_filtered)} containers after FD filter"
-        )
-    except:
-        pass
+    # Both matched: merge and show matches from both columns.
+    fd_tagged = results_fd.copy()
+    fd_tagged["matched_on"] = "final_destination"
+    dp_tagged = results_dp.copy()
+    dp_tagged["matched_on"] = "discharge_port"
+    combined = pd.concat([fd_tagged, dp_tagged], ignore_index=True)
 
-    # ========== 6) FILTER BY DATE WINDOW USING ETA_FD ONLY ==========
-    date_mask = (
-        df_filtered["eta_fd"].notna()
-        & (df_filtered["eta_fd"].dt.normalize() >= start_date)
-        & (df_filtered["eta_fd"].dt.normalize() <= end_date)
+    dedupe_cols = [
+        c
+        for c in [
+            "container_number",
+            "po_number_multiple",
+            "final_destination",
+            "discharge_port",
+            "eta_fd",
+            "eta_dp",
+            "consignee_code_multiple",
+            "final_carrier_name",
+            "transport_mode",
+        ]
+        if c in combined.columns
+    ]
+
+    if dedupe_cols:
+        combined = (
+            combined.groupby(dedupe_cols, dropna=False, as_index=False)["matched_on"]
+            .apply(
+                lambda s: ", ".join(
+                    [
+                        src
+                        for src in ["final_destination", "discharge_port"]
+                        if src in set(s.tolist())
+                    ]
+                )
+            )
+            .reset_index(drop=True)
+        )
+
+    combined["_sort_eta"] = pd.to_datetime(
+        combined.get("eta_fd"), errors="coerce"
+    ).combine_first(pd.to_datetime(combined.get("eta_dp"), errors="coerce"))
+    combined = combined.sort_values("_sort_eta", ascending=True).drop(
+        columns=["_sort_eta"], errors="ignore"
     )
 
-    results = df_filtered[date_mask].copy()
-
-    try:
-        logger.info(
-            f"[get_containers_by_final_destination] Found {len(results)} containers after date filter (using eta_fd only)"
-        )
-    except:
-        pass
-
-    if results.empty:
-        return (
-            f"No containers found arriving at '{fd_location or fd_code}' {period_desc}."
-        )
-
-    # ========== 7) SORT BY ETA_FD (EARLIEST FIRST) ==========
-    results = results.sort_values("eta_fd", ascending=True)
-
-    # ========== 8) PREPARE OUTPUT ==========
     output_cols = [
         "container_number",
         "po_number_multiple",
         "final_destination",
-        "eta_fd",
-    ]
-
-    # Add additional context columns
-    additional_cols = [
         "discharge_port",
+        "eta_fd",
+        "eta_dp",
+        "matched_on",
         "consignee_code_multiple",
         "final_carrier_name",
         "transport_mode",
     ]
+    output_cols = [c for c in output_cols if c in combined.columns]
+    out = combined[output_cols].head(200).copy()
 
-    for col in additional_cols:
-        if col in results.columns and col not in output_cols:
-            output_cols.append(col)
-
-    # Filter to available columns
-    output_cols = [c for c in output_cols if c in results.columns]
-    out = results[output_cols].head(200).copy()
-
-    # ========== 9) FORMAT DATES ==========
-    if "eta_fd" in out.columns and pd.api.types.is_datetime64_any_dtype(out["eta_fd"]):
-        out["eta_fd"] = out["eta_fd"].dt.strftime("%Y-%m-%d")
+    for dcol in ["eta_fd", "eta_dp"]:
+        if dcol in out.columns and pd.api.types.is_datetime64_any_dtype(out[dcol]):
+            out[dcol] = out[dcol].dt.strftime("%Y-%m-%d")
 
     try:
         logger.info(
-            f"[get_containers_by_final_destination] Returning {len(out)} containers"
+            f"[get_containers_by_final_destination] Returning {len(out)} containers (combined final_destination + discharge_port)"
         )
     except:
         pass
@@ -13446,7 +13478,7 @@ def get_eta_for_po(question: str = None, consignee_code: str = None, **kwargs) -
         if d in out.columns and pd.api.types.is_datetime64_any_dtype(out[d]):
             out[d] = out[d].dt.strftime("%Y-%m-%d")
 
-    return out.head(100).where(pd.notnull(out), None).to_dict(orient="records")
+    return out.head(150).where(pd.notnull(out), None).to_dict(orient="records")
 
 
 def get_container_transit_analysis(query: str) -> str:
