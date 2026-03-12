@@ -13226,7 +13226,9 @@ def get_containers_by_final_destination(query: str) -> str:
             pass
 
     if results_fd.empty and results_dp.empty:
-        return f"No containers found arriving at '{fd_location or fd_code}' {period_desc}."
+        return (
+            f"No containers found arriving at '{fd_location or fd_code}' {period_desc}."
+        )
 
     # Preserve legacy single-source output shape to avoid side effects.
     if results_dp.empty:
@@ -13353,7 +13355,7 @@ def get_containers_by_final_destination(query: str) -> str:
         "discharge_port",
         "eta_fd",
         "eta_dp",
-        "matched_on",
+        # "matched_on",
         "consignee_code_multiple",
         "final_carrier_name",
         "transport_mode",
