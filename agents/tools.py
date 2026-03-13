@@ -5746,12 +5746,12 @@ import pandas as pd
 
 def get_arrivals_by_port(query: str) -> str:
     """
-    Find containers arriving at a specific port or country within the next N days.
+    Find containers by port for either arrived or upcoming windows.
     Behaviour:
     - Parse timeframe using centralized parse_time_period() helper.
-    - For each row, prefer revised_eta; if null use eta_dp (eta_for_filter).
-    - Exclude rows that already have ata_dp (already arrived).
-    - Return up to 50 matching rows (dict records) with formatted dates.
+    - For arrived intent, filter by ata_dp in [start_date, end_date].
+    - For upcoming/arriving intent, prefer revised_eta then eta_dp and exclude ata_dp rows.
+    - Return up to 100 matching rows (dict records) with formatted dates.
     """
 
     df = _df()
@@ -5777,7 +5777,7 @@ def get_arrivals_by_port(query: str) -> str:
         port_code_query = m_paren.group(2).strip().upper()
     else:
         m = re.search(
-            r"(?:arriv(?:ing)?\s+(?:in|at|to)|in\s+|at\s+|port\s+)\s*([A-Za-z0-9\-\s\(\)\.]{2,60}?)\s*(?:,|for|in\s+next|within|next|\b\d+\s+days?\b|$)",
+            r"(?:arriv(?:e|ed|ing)\s+(?:in|at|to)|in\s+|at\s+|port\s+)\s*([A-Za-z0-9\-\s\(\)\.]{2,60}?)\s*(?:,|for|in\s+the\s+(?:last|past|next)|in\s+next|within|next|\b\d+\s+days?\b|$)",
             query,
             re.IGNORECASE,
         )
@@ -5795,15 +5795,25 @@ def get_arrivals_by_port(query: str) -> str:
         port_name_query = port_name_query.upper()
 
     # ---------- 3) Which port columns to check ----------
-    preferred_cols = ["discharge_port", "final_load_port"]
+    # For arrival queries, destination semantics should default to discharge_port.
+    # Only switch to origin semantics when query explicitly asks for load/origin/from.
+    query_lower = query.lower()
+    wants_origin_port = bool(
+        re.search(r"\b(from|origin|load\s*port|loading\s*port|pol)\b", query_lower)
+    )
+    preferred_cols = ["final_load_port", "discharge_port"] if wants_origin_port else ["discharge_port", "final_load_port"]
     existing_port_cols = [c for c in preferred_cols if c in df.columns]
+    primary_port_col = existing_port_cols[0] if existing_port_cols else None
     if not existing_port_cols:
         return "No port-related columns found in the data."
 
     # ---------- 4) Build match mask ----------
     mask = pd.Series(False, index=df.index)
+    cols_for_matching = [primary_port_col] if primary_port_col else []
+    if not cols_for_matching:
+        cols_for_matching = existing_port_cols
     if port_code_query:
-        for col in existing_port_cols:
+        for col in cols_for_matching:
             mask |= (
                 df[col]
                 .astype(str)
@@ -5812,10 +5822,10 @@ def get_arrivals_by_port(query: str) -> str:
             )
     else:
         port_choices = set()
-        for col in existing_port_cols:
+        for col in cols_for_matching:
             port_choices.update(df[col].dropna().astype(str).str.upper().unique())
         if port_name_query in port_choices:
-            for col in existing_port_cols:
+            for col in cols_for_matching:
                 mask |= df[col].astype(str).str.upper() == port_name_query
         else:
             close = (
@@ -5825,7 +5835,7 @@ def get_arrivals_by_port(query: str) -> str:
             )
             if close:
                 for candidate in close:
-                    for col in existing_port_cols:
+                    for col in cols_for_matching:
                         mask |= (
                             df[col]
                             .astype(str)
@@ -5837,7 +5847,7 @@ def get_arrivals_by_port(query: str) -> str:
                     w for w in re.split(r"\W+", port_name_query or "") if len(w) >= 3
                 ]
                 for w in words:
-                    for col in existing_port_cols:
+                    for col in cols_for_matching:
                         mask |= (
                             df[col]
                             .astype(str)
@@ -5863,50 +5873,74 @@ def get_arrivals_by_port(query: str) -> str:
             .apply(lambda s: any(m in s for m in modes))
         ]
 
-    # ---------- 5) Dates: per-row ETA selection ----------
-    date_priority = [c for c in ["revised_eta", "eta_dp"] if c in filtered.columns]
-    if not date_priority:
-        return "No ETA/arrival date columns found (expected 'revised_eta' or 'eta_dp')."
+    # ---------- 5) Dates: choose ATA for arrived-intent, ETA for arriving-intent ----------
+    is_arrived_intent = bool(
+        re.search(
+            r"\b(arrived|already\s+arrived|has\s+arrived|have\s+arrived|reached)\b",
+            query_lower,
+        )
+    )
 
+    date_priority = [c for c in ["revised_eta", "eta_dp"] if c in filtered.columns]
     parse_cols = date_priority.copy()
     if "ata_dp" in filtered.columns:
         parse_cols.append("ata_dp")
     filtered = ensure_datetime(filtered, parse_cols)
 
-    # Create per-row preferred ETA (revised_eta > eta_dp)
-    if "revised_eta" in filtered.columns and "eta_dp" in filtered.columns:
-        filtered["eta_for_filter"] = filtered["revised_eta"].where(
-            filtered["revised_eta"].notna(), filtered["eta_dp"]
+    if is_arrived_intent:
+        if "ata_dp" not in filtered.columns:
+            return "No actual arrival date column found (expected 'ata_dp')."
+        date_mask = (
+            filtered["ata_dp"].notna()
+            & (filtered["ata_dp"] >= start_date)
+            & (filtered["ata_dp"] <= end_date)
         )
-    elif "revised_eta" in filtered.columns:
-        filtered["eta_for_filter"] = filtered["revised_eta"]
+        arrivals = filtered[date_mask].copy()
+        sort_col = "ata_dp"
+        if arrivals.empty:
+            return (
+                f"No containers with ATA between {format_date_for_display(start_date)} and {format_date_for_display(end_date)} "
+                f"for the requested port ('{port_code_query or port_name_query}')."
+            )
     else:
-        filtered["eta_for_filter"] = filtered["eta_dp"]
+        if not date_priority:
+            return "No ETA/arrival date columns found (expected 'revised_eta' or 'eta_dp')."
 
-    # **CRITICAL FIX**: Use start_date and end_date from parse_time_period()
-    date_mask = (filtered["eta_for_filter"] >= start_date) & (
-        filtered["eta_for_filter"] <= end_date
-    )
-    if "ata_dp" in filtered.columns:
-        date_mask &= filtered["ata_dp"].isna()
+        # Create per-row preferred ETA (revised_eta > eta_dp)
+        if "revised_eta" in filtered.columns and "eta_dp" in filtered.columns:
+            filtered["eta_for_filter"] = filtered["revised_eta"].where(
+                filtered["revised_eta"].notna(), filtered["eta_dp"]
+            )
+        elif "revised_eta" in filtered.columns:
+            filtered["eta_for_filter"] = filtered["revised_eta"]
+        else:
+            filtered["eta_for_filter"] = filtered["eta_dp"]
 
-    arrivals = filtered[date_mask].copy()
-    if arrivals.empty:
-        return (
-            f"No containers with ETA between {format_date_for_display(start_date)} and {format_date_for_display(end_date)} "
-            f"for the requested port ('{port_code_query or port_name_query}')."
+        date_mask = (filtered["eta_for_filter"] >= start_date) & (
+            filtered["eta_for_filter"] <= end_date
         )
+        if "ata_dp" in filtered.columns:
+            date_mask &= filtered["ata_dp"].isna()
+
+        arrivals = filtered[date_mask].copy()
+        sort_col = "eta_for_filter"
+        if arrivals.empty:
+            return (
+                f"No containers with ETA between {format_date_for_display(start_date)} and {format_date_for_display(end_date)} "
+                f"for the requested port ('{port_code_query or port_name_query}')."
+            )
 
     # ---------- 6) Build display ----------
     display_cols = [
         "container_number",
         "po_number_multiple",
         "discharge_port",
+        "ata_dp",
         "revised_eta",
         "eta_dp",
     ]
     # include the matching port column for context
-    for pc in ["discharge_port", "final_load_port"] + existing_port_cols:
+    for pc in ["discharge_port", "final_load_port", primary_port_col] + existing_port_cols:
         if pc in arrivals.columns:
             sample = arrivals[pc].astype(str).str.upper()
             if port_code_query:
@@ -5925,15 +5959,20 @@ def get_arrivals_by_port(query: str) -> str:
                     display_cols.append(pc)
                     break
 
-    # Always include eta_for_filter for sorting, then drop before returning
-    display_cols = [
-        c for c in (display_cols + ["eta_for_filter"]) if c in arrivals.columns
-    ]
+    # Always include eta_for_filter for sorting, then drop before returning.
+    # Deduplicate while preserving order to avoid duplicate DataFrame columns.
+    dedup_display_cols = []
+    seen = set()
+    for col in display_cols + [sort_col]:
+        if col in arrivals.columns and col not in seen:
+            dedup_display_cols.append(col)
+            seen.add(col)
+    display_cols = dedup_display_cols
 
-    result_df = arrivals[display_cols].sort_values("eta_for_filter").head(100).copy()
+    result_df = arrivals[display_cols].sort_values(sort_col).head(100).copy()
 
     # Format date columns
-    for dcol in ["revised_eta", "eta_dp", "eta_for_filter"]:
+    for dcol in ["ata_dp", "revised_eta", "eta_dp", "eta_for_filter"]:
         if dcol in result_df.columns and pd.api.types.is_datetime64_any_dtype(
             result_df[dcol]
         ):
