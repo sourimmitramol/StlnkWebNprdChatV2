@@ -26,7 +26,8 @@ from services.azure_blob import get_shipment_df
 from services.vectorstore import get_vectorstore
 from utils.container import (extract_booking_number, extract_container_number,
                              extract_job_no, extract_ocean_bl_number,
-                             extract_po_number, extract_vessel_name)
+                             extract_po_number, extract_vessel_name,
+                             extract_voyage_code)
 from utils.logger import logger
 from utils.misc import clean_container_number, to_datetime
 
@@ -14305,6 +14306,7 @@ def get_job_number_info(question: str = None, consignee_code: str = None, **kwar
     obl_no = extract_ocean_bl_number(q_extract)
     booking_no = extract_booking_number(q_extract)
     vessel_name = extract_vessel_name(q_extract)
+    voyage_code = extract_voyage_code(q_extract)
 
     # Fallback extraction for bare identifiers
     if not container_no:
@@ -14328,7 +14330,7 @@ def get_job_number_info(question: str = None, consignee_code: str = None, **kwar
     try:
         logger.info(
             f"[get_job_number_info] Extracted identifiers: job_no={job_no_input}, container={container_no}, po={po_no}, "
-            f"obl={obl_no}, booking={booking_no}, vessel={vessel_name}"
+            f"obl={obl_no}, booking={booking_no}, vessel={vessel_name}, voyage={voyage_code}"
         )
     except:
         pass
@@ -14415,15 +14417,16 @@ def get_job_number_info(question: str = None, consignee_code: str = None, **kwar
             pass
 
     # Filter by vessel name/code across both mother(final) and feeder(first) vessels
+    vessel_mask = None
     if vessel_name:
         vessel_norm = vessel_name.upper().strip()
         vessel_cols = [
             c
             for c in [
                 "final_vessel_name",
-                "first_vessel_name",
+                # "first_vessel_name",
                 "final_vessel_code",
-                "first_vessel_code",
+                # "first_vessel_code",
             ]
             if c in df.columns
         ]
@@ -14444,14 +14447,46 @@ def get_job_number_info(question: str = None, consignee_code: str = None, **kwar
                     re.escape(vessel_norm), regex=True, na=False
                 )
 
-            mask |= vessel_mask
-
             try:
                 logger.info(
                     f"[get_job_number_info] Filtering by vessel: {vessel_name} across columns: {vessel_cols}; matched rows={int(vessel_mask.sum())}"
                 )
             except:
                 pass
+
+    voyage_mask = None
+    if voyage_code:
+        voyage_cols = [c for c in ["final_voyage_code"] if c in df.columns]
+
+        if voyage_cols:
+            voyage_mask = pd.Series([False] * len(df), index=df.index)
+            for vcol in voyage_cols:
+                col_series = df[vcol].fillna("").astype(str).str.upper().str.strip()
+                voyage_mask |= col_series.str.contains(
+                    re.escape(voyage_code.upper()), regex=True, na=False
+                )
+
+            try:
+                logger.info(
+                    f"[get_job_number_info] Filtering by voyage: {voyage_code} across columns: {voyage_cols}; matched rows={int(voyage_mask.sum())}"
+                )
+            except:
+                pass
+
+    if vessel_mask is not None and voyage_mask is not None:
+        combined_mask = vessel_mask & voyage_mask
+        mask |= combined_mask
+        try:
+            logger.info(
+                f"[get_job_number_info] Combined vessel/voyage filter: vessel={vessel_name}, voyage={voyage_code}; matched rows={int(combined_mask.sum())}"
+            )
+        except:
+            pass
+    else:
+        if vessel_mask is not None:
+            mask |= vessel_mask
+        if voyage_mask is not None:
+            mask |= voyage_mask
 
     # Apply filters
     filtered = df[mask].copy()
@@ -14470,6 +14505,8 @@ def get_job_number_info(question: str = None, consignee_code: str = None, **kwar
             identifier_desc.append(f"booking {booking_no}")
         if vessel_name:
             identifier_desc.append(f"vessel {vessel_name}")
+        if voyage_code:
+            identifier_desc.append(f"voyage {voyage_code}")
 
         if job_no_input:
             return f"No containers, POs, or OBLs found for {' / '.join(identifier_desc) if identifier_desc else 'the provided identifier'}."
@@ -14512,6 +14549,8 @@ def get_job_number_info(question: str = None, consignee_code: str = None, **kwar
                 identifier_parts.append(f"container {container_no}")
             if vessel_name:
                 identifier_parts.append(f"vessel {vessel_name}")
+            if voyage_code:
+                identifier_parts.append(f"voyage {voyage_code}")
 
             identifier_str = (
                 " / ".join(identifier_parts)
@@ -14540,6 +14579,7 @@ def get_job_number_info(question: str = None, consignee_code: str = None, **kwar
         "supplier_vendor_name",
         "hot_container_flag",
         "transport_mode",
+        "final_voyage_code",
     ]
 
     # Filter to available columns
@@ -14624,6 +14664,8 @@ def get_job_number_info(question: str = None, consignee_code: str = None, **kwar
             identifier_parts.append(f"booking {booking_no}")
         if vessel_name:
             identifier_parts.append(f"vessel {vessel_name}")
+        if voyage_code:
+            identifier_parts.append(f"voyage {voyage_code}")
 
         identifier_str = (
             " / ".join(identifier_parts)
@@ -16894,6 +16936,7 @@ TOOLS = [
             "- Job number for OBL: 'which job number is associated with OBL HLCUSGN2503AQHF4'\n"
             "- Job number for booking: 'which job number is associated with booking number VN2084901'\n"
             "- Job numbers for vessel: 'Which jobs associated with MAERSK FORTALEZA', 'jobs for vessel MSC FLAMINIA'\n"
+            "- Job numbers for vessel plus voyage: 'Which jobs associated with MAERSK ALFIRK/545E', 'Which jobs associated with MAERSK ALFIRK and Voyage 545E'\n"
             "- General job lookups: 'job number for container X', 'show job no for PO Y'\n"
             "\n"
             "**QUERY PATTERNS - USE THIS TOOL FOR**:\n"
@@ -16911,7 +16954,8 @@ TOOLS = [
             "2. PO number: 5302865962, PO 5302865962 (6-20 digits)\n"
             "3. Ocean BL/OBL: HLCUSGN2503AQHF4, OBL MLGDMLWCN0001321 (alphanumeric)\n"
             "4. Booking number: VN2084901, EG2002468 (alphanumeric, 6-20 chars)\n"
-            "5. Vessel name: MAERSK FORTALEZA, MSC FLAMINIA (searches final_vessel_name column)\n"
+            "5. Vessel name: MAERSK FORTALEZA, MSC FLAMINIA (searches first/final vessel name and code columns)\n"
+            "6. Voyage code: 545E, 001W, or combined vessel/voyage forms like MAERSK ALFIRK/545E (searches first_voyage_code and final_voyage_code)\n"
             "\n"
             "**BARE IDENTIFIER SUPPORT**:\n"
             "- 'which job number is associated with HLBU1140676' → Detects as container\n"

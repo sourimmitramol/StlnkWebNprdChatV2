@@ -3,6 +3,30 @@ import re
 from typing import Optional
 
 
+def _clean_vessel_candidate(name: str) -> str:
+    """Normalize vessel-like text and drop common query wrappers."""
+    if not name:
+        return ""
+
+    cleaned = name.upper().strip()
+    cleaned = re.sub(r"\bASSOCIATED\s+WITH\b", "|", cleaned)
+    cleaned = re.sub(r"\bJOBS?\s+FOR\b", "|", cleaned)
+    cleaned = re.sub(r"\bVESSEL\s+NAME\b", "", cleaned)
+    cleaned = re.sub(r"\b(?:WHICH|WHAT|SHOW|LIST|FIND|GET|TELL|ME|THE)\b", " ", cleaned)
+    cleaned = re.sub(
+        r"\b(?:JOB|JOBS|ASSOCIATED|WITH|FOR|AND|VOYAGE|CODE)\b", " ", cleaned
+    )
+    if "|" in cleaned:
+        cleaned = cleaned.split("|")[-1]
+
+    cleaned = re.sub(r"\/[A-Z0-9]{2,6}\b", "", cleaned)
+    cleaned = re.sub(r"\bVOYAGE\s+[A-Z0-9]{2,6}\b", "", cleaned)
+    cleaned = re.sub(r"\b(?=[A-Z0-9]{2,6}\b)(?=.*\d)[A-Z0-9]+$", "", cleaned)
+    cleaned = re.sub(r"[^A-Z0-9\s\-']", " ", cleaned)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip(" -'")
+    return cleaned
+
+
 def extract_container_number(text: str) -> Optional[str]:
     """
     Detect a container number in free‑form text.
@@ -253,11 +277,7 @@ def extract_vessel_name(text: str) -> Optional[str]:
         m = re.search(pat, text, flags=re.IGNORECASE)
         if m:
             # Extract and clean the name
-            name = m.group(1).strip()
-            # Remove trailing punctuation and common stopwords
-            name = re.sub(r"[,.:;\s]+$", "", name)
-            # Clean up extra whitespace
-            name = re.sub(r"\s+", " ", name)
+            name = _clean_vessel_candidate(m.group(1))
             # Return if valid length (at least 3 characters, typically vessel names are longer)
             if len(name) >= 3:
                 return name.upper()
@@ -272,12 +292,7 @@ def extract_vessel_name(text: str) -> Optional[str]:
     for pat in associated_patterns:
         m = re.search(pat, text, flags=re.IGNORECASE)
         if m:
-            name = m.group(1).strip()
-            # Remove trailing punctuation
-            name = re.sub(r"[,.:;\s]+$", "", name)
-            # Clean up extra whitespace
-            name = re.sub(r"\s+", " ", name)
-            name_upper = name.upper()
+            name_upper = _clean_vessel_candidate(m.group(1))
 
             # Validate: Must be 2+ words of 3+ chars each (typical vessel name pattern)
             words = name_upper.split()
@@ -315,7 +330,7 @@ def extract_vessel_name(text: str) -> Optional[str]:
     matches = re.finditer(r"\b([A-Z]{3,}(?:\s+[A-Z]{3,})+)\b", text_upper)
 
     for match in matches:
-        name = match.group(1).strip()
+        name = _clean_vessel_candidate(match.group(1))
 
         # Basic length check
         if len(name) < 7:
@@ -377,5 +392,24 @@ def extract_vessel_name(text: str) -> Optional[str]:
         valid_words = [w for w in words if w not in excluded_words]
         if len(valid_words) >= 2:
             return name
+
+    return None
+
+
+def extract_voyage_code(text: str) -> Optional[str]:
+    """Detect a voyage code in free-form text, including vessel/voyage shorthand like MAERSK ALFIRK/545E."""
+    if not text:
+        return None
+
+    patterns = [
+        r"/\s*([A-Z0-9]{2,6})\b",
+        r"\bvoyage\s+(?:code\s+)?([A-Z0-9]{2,6})\b",
+        r"\bvoy\s+(?:code\s+)?([A-Z0-9]{2,6})\b",
+    ]
+
+    for pat in patterns:
+        match = re.search(pat, text, flags=re.IGNORECASE)
+        if match:
+            return match.group(1).upper()
 
     return None
